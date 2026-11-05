@@ -31,6 +31,8 @@ Data: 05/11/2026. Solicitação: organizar apps/api e apps/web e iniciar a inter
 
 Imagem API validada após reorganização: sha256:f60422eec8e2f82398287753d522f15ebf1c154f2c0448a2c4f52db499921b71. A validação visual está em [design-qa.md](../design-qa.md), com referências e screenshots versionados.
 
+A primeira execução remota passou por instalação, migrations, lint, tipos, build e testes de unidade/API, mas foi interrompida na instalação do Chromium: ubuntu-latest usava Ubuntu 26.04, não suportado pelo Playwright 1.58.2 fixado no lockfile. O workflow foi ajustado para ubuntu-24.04, preservando as versões e o código já validados localmente. A evidência da tentativa está na [execução inicial](https://github.com/danielharrisonlf/axial/actions/runs/42014848003).
+
 ## Limites explícitos
 
 A interface nesta entrega é uma **demonstração local interativa**, com os mesmos 11 projetos e 109 tarefas fictícias do protótipo. Suas mutações ainda não usam a API; não há fallback silencioso que esconda falhas de integração. A conexão real dependerá da sessão de identidade e do mapeamento dos contratos documentados em frontend.md.
