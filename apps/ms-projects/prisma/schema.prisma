@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["projects"]
+}
+
+model Project {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  key            String    @db.VarChar(12)
+  name           String    @db.VarChar(160)
+  description    String    @default("")
+  status         String    @default("active")
+  priority       String    @default("medium")
+  leadId         String?   @db.Uuid
+  teamIds        String[]  @default([]) @db.Uuid
+  startDate      DateTime? @db.Timestamptz(3)
+  endDate        DateTime? @db.Timestamptz(3)
+  archivedAt     DateTime? @db.Timestamptz(3)
+  version        Int       @default(1)
+  taskSequence   Int       @default(0)
+  createdBy      String    @db.Uuid
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+  epics          Epic[]
+  tasks          Task[]
+  sprints        Sprint[]
+  milestones     Milestone[]
+
+  @@unique([organizationId, key])
+  @@unique([id, organizationId])
+  @@index([organizationId, archivedAt, createdAt])
+  @@schema("projects")
+}
+
+model Epic {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  projectId      String   @db.Uuid
+  title          String   @db.VarChar(240)
+  description    String   @default("")
+  status         String   @default("todo")
+  ownerId        String?  @db.Uuid
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  project        Project  @relation(fields: [projectId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  tasks          Task[]
+
+  @@unique([id, organizationId, projectId])
+  @@index([organizationId, projectId, createdAt])
+  @@schema("projects")
+}
+
+model Sprint {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  projectId      String    @db.Uuid
+  name           String    @db.VarChar(160)
+  goal           String    @default("")
+  status         String    @default("planned")
+  startDate      DateTime   @db.Timestamptz(3)
+  endDate        DateTime   @db.Timestamptz(3)
+  startedAt      DateTime?  @db.Timestamptz(3)
+  completedAt    DateTime?  @db.Timestamptz(3)
+  version        Int       @default(1)
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
+  project        Project   @relation(fields: [projectId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  tasks          Task[]
+
+  @@unique([id, organizationId, projectId])
+  @@index([organizationId, projectId, status])
+  @@schema("projects")
+}
+
+model Task {
+  id                 String   @id @default(uuid()) @db.Uuid
+  organizationId     String   @db.Uuid
+  projectId          String   @db.Uuid
+  number             Int
+  ref                String   @db.VarChar(32)
+  title              String   @db.VarChar(240)
+  description        String   @default("")
+  type               String   @default("task")
+  status             String   @default("backlog")
+  priority           String   @default("medium")
+  assigneeId         String?  @db.Uuid
+  teamId             String?  @db.Uuid
+  epicId             String?  @db.Uuid
+  sprintId           String?  @db.Uuid
+  parentId           String?  @db.Uuid
+  labels             String[] @default([])
+  acceptanceCriteria String[] @default([])
+  estimate           Int?
+  position           Int      @default(0)
+  startDate          DateTime? @db.Timestamptz(3)
+  dueDate            DateTime? @db.Timestamptz(3)
+  completedAt        DateTime? @db.Timestamptz(3)
+  version            Int      @default(1)
+  createdBy          String   @db.Uuid
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+  project            Project  @relation(fields: [projectId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  epic               Epic?    @relation(fields: [epicId, organizationId, projectId], references: [id, organizationId, projectId], onDelete: Restrict)
+  sprint             Sprint?  @relation(fields: [sprintId, organizationId, projectId], references: [id, organizationId, projectId], onDelete: Restrict)
+  parent             Task?    @relation("Subtasks", fields: [parentId, organizationId, projectId], references: [id, organizationId, projectId], onDelete: Restrict)
+  subtasks           Task[]   @relation("Subtasks")
+  comments           Comment[]
+  dependencies       TaskDependency[] @relation("DependsOn")
+  dependents         TaskDependency[] @relation("Blocks")
+
+  @@unique([organizationId, projectId, number])
+  @@unique([organizationId, ref])
+  @@unique([id, organizationId, projectId])
+  @@index([organizationId, projectId, status, position])
+  @@index([organizationId, assigneeId, status])
+  @@index([organizationId, sprintId])
+  @@schema("projects")
+}
+
+model TaskDependency {
+  organizationId String @db.Uuid
+  projectId      String @db.Uuid
+  taskId         String @db.Uuid
+  dependsOnId    String @db.Uuid
+  task           Task   @relation("DependsOn", fields: [taskId, organizationId, projectId], references: [id, organizationId, projectId], onDelete: Cascade)
+  dependsOn      Task   @relation("Blocks", fields: [dependsOnId, organizationId, projectId], references: [id, organizationId, projectId], onDelete: Restrict)
+
+  @@id([taskId, dependsOnId])
+  @@index([organizationId, projectId])
+  @@schema("projects")
+}
+
+model Comment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  projectId      String   @db.Uuid
+  taskId         String   @db.Uuid
+  authorId       String   @db.Uuid
+  body           String   @db.VarChar(10000)
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  task           Task     @relation(fields: [taskId, organizationId, projectId], references: [id, organizationId, projectId], onDelete: Restrict)
+
+  @@index([organizationId, taskId, createdAt])
+  @@schema("projects")
+}
+
+model Milestone {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  projectId      String    @db.Uuid
+  name           String    @db.VarChar(160)
+  date           DateTime  @db.Timestamptz(3)
+  completedAt    DateTime? @db.Timestamptz(3)
+  version        Int       @default(1)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+  project        Project   @relation(fields: [projectId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@index([organizationId, projectId, date])
+  @@schema("projects")
+}
+
+model OutboxEvent {
+  id               String    @id @default(uuid()) @db.Uuid
+  organizationId   String    @db.Uuid
+  projectId        String?   @db.Uuid
+  aggregateType    String
+  aggregateId      String    @db.Uuid
+  aggregateVersion Int
+  eventType        String
+  eventVersion     Int       @default(1)
+  actorId          String    @db.Uuid
+  source           String
+  correlationId    String
+  payload          Json
+  occurredAt       DateTime  @default(now()) @db.Timestamptz(3)
+  publishedAt      DateTime? @db.Timestamptz(3)
+  attempts         Int       @default(0)
+  availableAt      DateTime  @default(now()) @db.Timestamptz(3)
+  lockedUntil      DateTime? @db.Timestamptz(3)
+  lockToken        String?   @db.Uuid
+  lastError        String?
+
+  @@index([publishedAt, availableAt, lockedUntil])
+  @@index([organizationId, aggregateId, occurredAt])
+  @@schema("projects")
+}

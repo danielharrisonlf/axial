@@ -1,0 +1,49 @@
+{
+  "name": "@axial/ms-projects",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "openapi": "tsx src/openapi.ts"
+  },
+  "dependencies": {
+    "@axial/contracts": "workspace:*",
+    "@nestjs/common": "12.3.3",
+    "@nestjs/core": "12.3.3",
+    "@nestjs/platform-express": "12.3.3",
+    "@nestjs/swagger": "12.1.0",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "bullmq": "5.81.5",
+    "dotenv": "16.6.1",
+    "helmet": "8.3.0",
+    "ioredis": "5.11.1",
+    "jose": "6.2.15",
+    "pg": "8.23.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "12.3.3",
+    "@types/express": "5.0.6",
+    "@types/node": "catalog:",
+    "@types/pg": "8.20.0",
+    "@types/supertest": "6.0.3",
+    "prisma": "7.10.1",
+    "supertest": "7.1.1",
+    "tsx": "4.20.6",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

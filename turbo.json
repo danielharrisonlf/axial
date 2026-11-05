@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "TEST_DATABASE_URL",
+    "REDIS_URL",
+    "TEST_REDIS_URL",
+    "PORT",
+    "JWT_ISSUER",
+    "JWT_AUDIENCE",
+    "JWT_PUBLIC_KEY_PATH",
+    "JWT_JWKS_URL",
+    "RELAY_ENABLED",
+    "RELAY_POLL_MS",
+    "CORS_ORIGINS"
+  ],
+  "tasks": {
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    "typecheck": { "dependsOn": ["^build"] },
+    "test:unit": { "dependsOn": ["^build"], "outputs": [] },
+    "dev": { "cache": false, "persistent": true }
+  }
+}
