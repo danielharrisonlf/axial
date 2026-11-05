@@ -1,0 +1,5744 @@
+{
+  "meta": {
+    "seedVersion": 7,
+    "seededAt": "2026-11-05T10:22:55.902Z"
+  },
+  "settings": {
+    "theme": "system",
+    "activeApp": "workspace",
+    "currentUserId": "u1",
+    "currentProjectId": "prj-pcl",
+    "navCollapsed": false
+  },
+  "orgs": [
+    {
+      "id": "org-vetor",
+      "name": "Vetor Labs",
+      "slug": "vetor-labs",
+      "desc": "Produto e engenharia de software",
+      "demo": true
+    },
+    {
+      "id": "org-atlas",
+      "name": "Atlas Engenharia & Consultoria",
+      "slug": "atlas",
+      "desc": "Consultoria em operações industriais",
+      "demo": true
+    }
+  ],
+  "roles": [
+    {
+      "id": "admin",
+      "name": "Administrador da organização",
+      "desc": "Configuração organizacional, usuários, integrações e auditoria."
+    },
+    {
+      "id": "pm",
+      "name": "Gestor de projetos",
+      "desc": "Gerencia projetos, sprints, tarefas e indicadores."
+    },
+    {
+      "id": "lead",
+      "name": "Líder de equipe",
+      "desc": "Gerencia atividades e integrantes da própria equipe."
+    },
+    {
+      "id": "dev",
+      "name": "Desenvolvedor / Colaborador",
+      "desc": "Vê projetos autorizados e trabalha nas próprias tarefas."
+    },
+    {
+      "id": "viewer",
+      "name": "Visualizador / Auditor",
+      "desc": "Acesso de leitura a relatórios e histórico."
+    }
+  ],
+  "users": [
+    {
+      "id": "u1",
+      "name": "Helena Costa",
+      "email": "helena.costa@vetorlabs.dev",
+      "initials": "HC",
+      "color": "#6D4FC4",
+      "title": "Head de Operações",
+      "roleId": "admin",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-plat"
+      ],
+      "active": true
+    },
+    {
+      "id": "u2",
+      "name": "Ricardo Nogueira",
+      "email": "ricardo.nogueira@vetorlabs.dev",
+      "initials": "RN",
+      "color": "#0E7490",
+      "title": "Gerente de Projetos",
+      "roleId": "pm",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-plat",
+        "tm-web"
+      ],
+      "active": true
+    },
+    {
+      "id": "u3",
+      "name": "Marina Duarte",
+      "email": "marina.duarte@vetorlabs.dev",
+      "initials": "MD",
+      "color": "#1D7A4C",
+      "title": "Gerente de Projetos",
+      "roleId": "pm",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-mob",
+        "tm-dados"
+      ],
+      "active": true
+    },
+    {
+      "id": "u4",
+      "name": "Ana Souza",
+      "email": "ana.souza@vetorlabs.dev",
+      "initials": "AS",
+      "color": "#9A5B00",
+      "title": "Tech Lead — Plataforma",
+      "roleId": "lead",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-plat"
+      ],
+      "active": true
+    },
+    {
+      "id": "u5",
+      "name": "Felipe Ramos",
+      "email": "felipe.ramos@vetorlabs.dev",
+      "initials": "FR",
+      "color": "#BE3030",
+      "title": "Tech Lead — Mobile",
+      "roleId": "lead",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-mob"
+      ],
+      "active": true
+    },
+    {
+      "id": "u6",
+      "name": "Juliana Pires",
+      "email": "juliana.pires@vetorlabs.dev",
+      "initials": "JP",
+      "color": "#B23A78",
+      "title": "Lead de Dados",
+      "roleId": "lead",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-dados"
+      ],
+      "active": true
+    },
+    {
+      "id": "u7",
+      "name": "Bruno Carvalho",
+      "email": "bruno.carvalho@vetorlabs.dev",
+      "initials": "BC",
+      "color": "#4A6572",
+      "title": "Engenheiro Backend Sr.",
+      "roleId": "dev",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-plat"
+      ],
+      "active": true
+    },
+    {
+      "id": "u8",
+      "name": "Camila Freitas",
+      "email": "camila.freitas@vetorlabs.dev",
+      "initials": "CF",
+      "color": "#7A5C2E",
+      "title": "Engenheira Frontend",
+      "roleId": "dev",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-web"
+      ],
+      "active": true
+    },
+    {
+      "id": "u9",
+      "name": "Diego Martins",
+      "email": "diego.martins@vetorlabs.dev",
+      "initials": "DM",
+      "color": "#3D7068",
+      "title": "Engenheiro Backend",
+      "roleId": "dev",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-plat",
+        "tm-infra"
+      ],
+      "active": true
+    },
+    {
+      "id": "u10",
+      "name": "Eduarda Lopes",
+      "email": "eduarda.lopes@vetorlabs.dev",
+      "initials": "EL",
+      "color": "#2B5FD9",
+      "title": "Engenheira Mobile",
+      "roleId": "dev",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-mob"
+      ],
+      "active": true
+    },
+    {
+      "id": "u11",
+      "name": "Gustavo Henrique",
+      "email": "gustavo.henrique@vetorlabs.dev",
+      "initials": "GH",
+      "color": "#6D4FC4",
+      "title": "Engenheiro de Dados",
+      "roleId": "dev",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-dados"
+      ],
+      "active": true
+    },
+    {
+      "id": "u12",
+      "name": "Isabela Rocha",
+      "email": "isabela.rocha@vetorlabs.dev",
+      "initials": "IR",
+      "color": "#0E7490",
+      "title": "Engenheira Frontend Sr.",
+      "roleId": "dev",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-web"
+      ],
+      "active": true
+    },
+    {
+      "id": "u13",
+      "name": "João Pedro Alves",
+      "email": "joao.pedro.alves@vetorlabs.dev",
+      "initials": "JA",
+      "color": "#1D7A4C",
+      "title": "SRE",
+      "roleId": "dev",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-infra"
+      ],
+      "active": true
+    },
+    {
+      "id": "u14",
+      "name": "Larissa Mendes",
+      "email": "larissa.mendes@vetorlabs.dev",
+      "initials": "LM",
+      "color": "#9A5B00",
+      "title": "Analista de QA",
+      "roleId": "dev",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-qa"
+      ],
+      "active": true
+    },
+    {
+      "id": "u15",
+      "name": "Otávio Ferreira",
+      "email": "otavio.ferreira@vetorlabs.dev",
+      "initials": "OF",
+      "color": "#BE3030",
+      "title": "Engenheiro Mobile",
+      "roleId": "dev",
+      "orgId": "org-vetor",
+      "teamIds": [
+        "tm-mob"
+      ],
+      "active": true
+    },
+    {
+      "id": "u16",
+      "name": "Renata Siqueira",
+      "email": "renata.siqueira@atlas.eng.br",
+      "initials": "RS",
+      "color": "#B23A78",
+      "title": "Consultora de Processos",
+      "roleId": "dev",
+      "orgId": "org-atlas",
+      "teamIds": [
+        "tm-consult"
+      ],
+      "active": true
+    },
+    {
+      "id": "u17",
+      "name": "Thiago Barbosa",
+      "email": "thiago.barbosa@atlas.eng.br",
+      "initials": "TB",
+      "color": "#4A6572",
+      "title": "Consultor Industrial",
+      "roleId": "dev",
+      "orgId": "org-atlas",
+      "teamIds": [
+        "tm-consult"
+      ],
+      "active": true
+    },
+    {
+      "id": "u18",
+      "name": "Sérgio Tavares",
+      "email": "sergio.tavares@vetorlabs.dev",
+      "initials": "ST",
+      "color": "#7A5C2E",
+      "title": "Auditor Interno",
+      "roleId": "viewer",
+      "orgId": "org-vetor",
+      "teamIds": [],
+      "active": true
+    }
+  ],
+  "teams": [
+    {
+      "id": "tm-plat",
+      "orgId": "org-vetor",
+      "name": "Plataforma",
+      "desc": "APIs core, serviços e integrações",
+      "leadId": "u4",
+      "memberIds": [
+        "u1",
+        "u2",
+        "u4",
+        "u7",
+        "u9"
+      ]
+    },
+    {
+      "id": "tm-web",
+      "orgId": "org-vetor",
+      "name": "Produto & Web",
+      "desc": "Frontends web e experiência do cliente",
+      "leadId": "u12",
+      "memberIds": [
+        "u2",
+        "u8",
+        "u12"
+      ]
+    },
+    {
+      "id": "tm-mob",
+      "orgId": "org-vetor",
+      "name": "Mobile",
+      "desc": "Aplicativos iOS e Android",
+      "leadId": "u5",
+      "memberIds": [
+        "u3",
+        "u5",
+        "u10",
+        "u15"
+      ]
+    },
+    {
+      "id": "tm-dados",
+      "orgId": "org-vetor",
+      "name": "Dados & IA",
+      "desc": "Pipelines, analytics e modelos",
+      "leadId": "u6",
+      "memberIds": [
+        "u3",
+        "u6",
+        "u11"
+      ]
+    },
+    {
+      "id": "tm-infra",
+      "orgId": "org-vetor",
+      "name": "Infra & SRE",
+      "desc": "Nuvem, observabilidade e confiabilidade",
+      "leadId": "u13",
+      "memberIds": [
+        "u9",
+        "u13"
+      ]
+    },
+    {
+      "id": "tm-qa",
+      "orgId": "org-vetor",
+      "name": "Qualidade",
+      "desc": "Testes, automação e release",
+      "leadId": "u14",
+      "memberIds": [
+        "u14"
+      ]
+    },
+    {
+      "id": "tm-consult",
+      "orgId": "org-atlas",
+      "name": "Consultoria",
+      "desc": "Projetos de consultoria Atlas",
+      "leadId": "u16",
+      "memberIds": [
+        "u16",
+        "u17"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "status": "active",
+      "priority": "high",
+      "favorite": true,
+      "archived": false,
+      "createdAt": "2026-08-02T13:29:48.000Z",
+      "progressNote": "",
+      "id": "prj-pcl",
+      "orgId": "org-vetor",
+      "key": "PCL",
+      "name": "Portal do Cliente 2.0",
+      "desc": "Reconstrução do portal de autoatendimento com nova central de faturas, contratos e suporte.",
+      "teamIds": [
+        "tm-web",
+        "tm-plat"
+      ],
+      "leadId": "u2",
+      "startDate": "2026-08-02",
+      "targetDate": "2026-12-09",
+      "age": 95,
+      "color": "#2B5FD9"
+    },
+    {
+      "status": "active",
+      "priority": "urgent",
+      "favorite": true,
+      "archived": false,
+      "createdAt": "2026-07-08T13:45:32.000Z",
+      "progressNote": "",
+      "id": "prj-pag",
+      "orgId": "org-vetor",
+      "key": "PAG",
+      "name": "Plataforma de Pagamentos",
+      "desc": "Gateway interno de cobrança: Pix, cartão e conciliação automática com o financeiro.",
+      "teamIds": [
+        "tm-plat",
+        "tm-qa"
+      ],
+      "leadId": "u2",
+      "startDate": "2026-07-08",
+      "targetDate": "2026-11-23",
+      "age": 120,
+      "color": "#1D7A4C"
+    },
+    {
+      "status": "active",
+      "priority": "high",
+      "favorite": false,
+      "archived": false,
+      "createdAt": "2026-08-17T13:31:45.000Z",
+      "progressNote": "",
+      "id": "prj-apc",
+      "orgId": "org-vetor",
+      "key": "APC",
+      "name": "Aplicativo de Campo",
+      "desc": "App offline-first para técnicos em campo: ordens de serviço, fotos e assinatura digital.",
+      "teamIds": [
+        "tm-mob",
+        "tm-qa"
+      ],
+      "leadId": "u3",
+      "startDate": "2026-08-17",
+      "targetDate": "2026-12-20",
+      "age": 80,
+      "color": "#6D4FC4"
+    },
+    {
+      "status": "active",
+      "priority": "medium",
+      "favorite": false,
+      "archived": false,
+      "createdAt": "2026-06-18T13:09:38.000Z",
+      "progressNote": "",
+      "id": "prj-nuv",
+      "orgId": "org-vetor",
+      "key": "NUV",
+      "name": "Migração para Nuvem",
+      "desc": "Migração dos serviços legados do datacenter para AWS com IaC e esteira de deploy.",
+      "teamIds": [
+        "tm-infra",
+        "tm-plat"
+      ],
+      "leadId": "u13",
+      "startDate": "2026-06-18",
+      "targetDate": "2027-01-04",
+      "age": 140,
+      "color": "#0E7490"
+    },
+    {
+      "status": "active",
+      "priority": "medium",
+      "favorite": false,
+      "archived": false,
+      "createdAt": "2026-08-27T13:45:04.000Z",
+      "progressNote": "",
+      "id": "prj-dlk",
+      "orgId": "org-vetor",
+      "key": "DLK",
+      "name": "Data Lake Corporativo",
+      "desc": "Ingestão unificada de dados de produto e financeiro para analytics e relatórios executivos.",
+      "teamIds": [
+        "tm-dados"
+      ],
+      "leadId": "u6",
+      "startDate": "2026-08-27",
+      "targetDate": "2027-01-19",
+      "age": 70,
+      "color": "#9A5B00"
+    },
+    {
+      "status": "active",
+      "priority": "high",
+      "favorite": false,
+      "archived": false,
+      "createdAt": "2026-09-11T13:14:38.000Z",
+      "progressNote": "",
+      "id": "prj-obs",
+      "orgId": "org-vetor",
+      "key": "OBS",
+      "name": "Observabilidade & SRE",
+      "desc": "Padronização de métricas, tracing distribuído e alertas acionáveis para todos os serviços.",
+      "teamIds": [
+        "tm-infra"
+      ],
+      "leadId": "u13",
+      "startDate": "2026-09-11",
+      "targetDate": "2026-12-03",
+      "age": 55,
+      "color": "#BE3030"
+    },
+    {
+      "status": "paused",
+      "priority": "medium",
+      "favorite": false,
+      "archived": false,
+      "createdAt": "2026-05-29T13:04:28.000Z",
+      "progressNote": "",
+      "id": "prj-fat",
+      "orgId": "org-vetor",
+      "key": "FAT",
+      "name": "Automação de Faturamento",
+      "desc": "Robôs de emissão de notas e régua de cobrança integrada ao ERP.",
+      "teamIds": [
+        "tm-plat"
+      ],
+      "leadId": "u4",
+      "startDate": "2026-05-29",
+      "targetDate": "2027-02-03",
+      "age": 160,
+      "color": "#4A6572"
+    },
+    {
+      "status": "done",
+      "priority": "medium",
+      "favorite": false,
+      "archived": false,
+      "createdAt": "2026-04-09T13:07:12.000Z",
+      "progressNote": "",
+      "id": "prj-onb",
+      "orgId": "org-vetor",
+      "key": "ONB",
+      "name": "Onboarding Digital",
+      "desc": "Fluxo de cadastro e ativação de novos clientes com verificação de identidade.",
+      "teamIds": [
+        "tm-web"
+      ],
+      "leadId": "u12",
+      "startDate": "2026-04-09",
+      "targetDate": "2026-10-11",
+      "age": 210,
+      "color": "#3D7068"
+    },
+    {
+      "status": "active",
+      "priority": "low",
+      "favorite": false,
+      "archived": false,
+      "createdAt": "2026-09-26T13:59:13.000Z",
+      "progressNote": "",
+      "id": "prj-web",
+      "orgId": "org-vetor",
+      "key": "WEB",
+      "name": "Website Institucional",
+      "desc": "Novo site institucional com blog, carreiras e páginas de produto.",
+      "teamIds": [
+        "tm-web"
+      ],
+      "leadId": "u12",
+      "startDate": "2026-09-26",
+      "targetDate": "2026-12-25",
+      "age": 40,
+      "color": "#B23A78"
+    },
+    {
+      "status": "active",
+      "priority": "high",
+      "favorite": false,
+      "archived": false,
+      "createdAt": "2026-09-16T13:08:50.000Z",
+      "progressNote": "",
+      "id": "prj-cma",
+      "orgId": "org-atlas",
+      "key": "CMA",
+      "name": "Diagnóstico Industrial Andrade",
+      "desc": "Mapeamento de processos e plano de eficiência operacional para a Metalúrgica Andrade.",
+      "teamIds": [
+        "tm-consult"
+      ],
+      "leadId": "u16",
+      "startDate": "2026-09-16",
+      "targetDate": "2026-11-27",
+      "age": 50,
+      "color": "#7A5C2E"
+    },
+    {
+      "status": "active",
+      "priority": "medium",
+      "favorite": false,
+      "archived": false,
+      "createdAt": "2026-10-06T13:50:48.000Z",
+      "progressNote": "",
+      "id": "prj-erp",
+      "orgId": "org-atlas",
+      "key": "ERP",
+      "name": "Integração ERP Protheus",
+      "desc": "Integração de pedidos e estoque entre o chão de fábrica e o ERP Protheus.",
+      "teamIds": [
+        "tm-consult"
+      ],
+      "leadId": "u16",
+      "startDate": "2026-10-06",
+      "targetDate": "2027-01-14",
+      "age": 30,
+      "color": "#2B5FD9"
+    }
+  ],
+  "epics": [
+    {
+      "id": "ep-pcl-1",
+      "projectId": "prj-pcl",
+      "name": "Central de faturas",
+      "desc": "Consulta, download e contestação de faturas.",
+      "status": "active",
+      "ownerId": "u12"
+    },
+    {
+      "id": "ep-pcl-2",
+      "projectId": "prj-pcl",
+      "name": "Área de contratos",
+      "desc": "Visualização e aditivos de contratos.",
+      "status": "active",
+      "ownerId": "u8"
+    },
+    {
+      "id": "ep-pag-1",
+      "projectId": "prj-pag",
+      "name": "Pix e QR dinâmico",
+      "desc": "Cobranças instantâneas com conciliação.",
+      "status": "active",
+      "ownerId": "u4"
+    },
+    {
+      "id": "ep-pag-2",
+      "projectId": "prj-pag",
+      "name": "Conciliação financeira",
+      "desc": "Baixa automática e relatório de divergências.",
+      "status": "active",
+      "ownerId": "u7"
+    },
+    {
+      "id": "ep-apc-1",
+      "projectId": "prj-apc",
+      "name": "Modo offline",
+      "desc": "Sincronização resiliente e fila local.",
+      "status": "active",
+      "ownerId": "u5"
+    },
+    {
+      "id": "ep-apc-2",
+      "projectId": "prj-apc",
+      "name": "Ordens de serviço",
+      "desc": "Ciclo completo da OS no app.",
+      "status": "active",
+      "ownerId": "u10"
+    },
+    {
+      "id": "ep-nuv-1",
+      "projectId": "prj-nuv",
+      "name": "Fundação AWS",
+      "desc": "Landing zone, redes e IAM.",
+      "status": "done",
+      "ownerId": "u13"
+    },
+    {
+      "id": "ep-nuv-2",
+      "projectId": "prj-nuv",
+      "name": "Migração de serviços",
+      "desc": "Containers e banco gerenciado.",
+      "status": "active",
+      "ownerId": "u9"
+    },
+    {
+      "id": "ep-dlk-1",
+      "projectId": "prj-dlk",
+      "name": "Ingestão de fontes",
+      "desc": "Conectores de produto e financeiro.",
+      "status": "active",
+      "ownerId": "u11"
+    },
+    {
+      "id": "ep-obs-1",
+      "projectId": "prj-obs",
+      "name": "Tracing distribuído",
+      "desc": "OpenTelemetry nos serviços core.",
+      "status": "active",
+      "ownerId": "u13"
+    },
+    {
+      "id": "ep-obs-2",
+      "projectId": "prj-obs",
+      "name": "Alertas acionáveis",
+      "desc": "Revisão de alertas e runbooks.",
+      "status": "active",
+      "ownerId": "u9"
+    },
+    {
+      "id": "ep-cma-1",
+      "projectId": "prj-cma",
+      "name": "Mapeamento de processos",
+      "desc": "AS-IS das linhas de produção.",
+      "status": "active",
+      "ownerId": "u16"
+    },
+    {
+      "id": "ep-erp-1",
+      "projectId": "prj-erp",
+      "name": "Pedidos e estoque",
+      "desc": "Fluxos de integração com o Protheus.",
+      "status": "active",
+      "ownerId": "u17"
+    },
+    {
+      "id": "ep-web-1",
+      "projectId": "prj-web",
+      "name": "Lançamento do site",
+      "desc": "Home, produto e blog.",
+      "status": "active",
+      "ownerId": "u8"
+    }
+  ],
+  "sprints": [
+    {
+      "id": "sp-pcl-14",
+      "projectId": "prj-pcl",
+      "name": "Sprint 14",
+      "goal": "Fechar fluxo de download de faturas",
+      "status": "done",
+      "startDate": "2026-10-08",
+      "endDate": "2026-10-22"
+    },
+    {
+      "id": "sp-pcl-15",
+      "projectId": "prj-pcl",
+      "name": "Sprint 15",
+      "goal": "Contestação de faturas de ponta a ponta",
+      "status": "active",
+      "startDate": "2026-10-23",
+      "endDate": "2026-11-06"
+    },
+    {
+      "id": "sp-pcl-16",
+      "projectId": "prj-pcl",
+      "name": "Sprint 16",
+      "goal": "Área de contratos navegável",
+      "status": "planned",
+      "startDate": "2026-11-07",
+      "endDate": "2026-11-21"
+    },
+    {
+      "id": "sp-pag-8",
+      "projectId": "prj-pag",
+      "name": "Sprint 8",
+      "goal": "Pix em produção para piloto",
+      "status": "done",
+      "startDate": "2026-10-06",
+      "endDate": "2026-10-20"
+    },
+    {
+      "id": "sp-pag-9",
+      "projectId": "prj-pag",
+      "name": "Sprint 9",
+      "goal": "Conciliação automática do Pix",
+      "status": "active",
+      "startDate": "2026-10-21",
+      "endDate": "2026-11-04"
+    },
+    {
+      "id": "sp-apc-5",
+      "projectId": "prj-apc",
+      "name": "Sprint 5",
+      "goal": "Sincronização offline estável",
+      "status": "active",
+      "startDate": "2026-10-26",
+      "endDate": "2026-11-09"
+    },
+    {
+      "id": "sp-dlk-3",
+      "projectId": "prj-dlk",
+      "name": "Sprint 3",
+      "goal": "Conector do financeiro ingerindo",
+      "status": "planned",
+      "startDate": "2026-11-08",
+      "endDate": "2026-11-22"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "ms-pcl-1",
+      "projectId": "prj-pcl",
+      "name": "Beta fechado com 10 clientes",
+      "date": "2026-11-17",
+      "status": "open"
+    },
+    {
+      "id": "ms-pcl-2",
+      "projectId": "prj-pcl",
+      "name": "GA do portal",
+      "date": "2026-12-09",
+      "status": "open"
+    },
+    {
+      "id": "ms-pag-1",
+      "projectId": "prj-pag",
+      "name": "Pix piloto em produção",
+      "date": "2026-10-24",
+      "status": "done"
+    },
+    {
+      "id": "ms-pag-2",
+      "projectId": "prj-pag",
+      "name": "Go-live cartão",
+      "date": "2026-11-23",
+      "status": "open"
+    },
+    {
+      "id": "ms-apc-1",
+      "projectId": "prj-apc",
+      "name": "Piloto com equipe de campo SP",
+      "date": "2026-11-25",
+      "status": "open"
+    },
+    {
+      "id": "ms-nuv-1",
+      "projectId": "prj-nuv",
+      "name": "Landing zone aprovada",
+      "date": "2026-09-06",
+      "status": "done"
+    },
+    {
+      "id": "ms-nuv-2",
+      "projectId": "prj-nuv",
+      "name": "50% dos serviços migrados",
+      "date": "2026-11-30",
+      "status": "open"
+    },
+    {
+      "id": "ms-obs-1",
+      "projectId": "prj-obs",
+      "name": "Tracing nos serviços core",
+      "date": "2026-11-19",
+      "status": "open"
+    },
+    {
+      "id": "ms-cma-1",
+      "projectId": "prj-cma",
+      "name": "Entrega do diagnóstico AS-IS",
+      "date": "2026-11-13",
+      "status": "open"
+    },
+    {
+      "id": "ms-erp-1",
+      "projectId": "prj-erp",
+      "name": "Homologação pedidos",
+      "date": "2026-12-15",
+      "status": "open"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "tsk1",
+      "ref": "PCL-101",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Implementar listagem de faturas com filtros por período",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "medium",
+      "assigneeId": "u9",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "performance"
+      ],
+      "acceptance": [
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": true
+        },
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": true
+        },
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-17T12:43:06.000Z",
+      "updatedAt": "2026-10-24T19:41:47.000Z",
+      "dueDate": "2026-11-03",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk2",
+      "ref": "PCL-102",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Download de fatura em PDF com código de barras",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u2",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [
+        "seguranca",
+        "infra"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-01T19:33:06.000Z",
+      "updatedAt": "2026-10-09T17:29:59.000Z",
+      "dueDate": "2026-10-06",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk3",
+      "ref": "PCL-103",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Fluxo de contestação de fatura com anexos",
+      "desc": "",
+      "status": "todo",
+      "priority": "urgent",
+      "assigneeId": "u4",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": false
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": false
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-08-20T13:38:28.000Z",
+      "updatedAt": "2026-08-21T18:54:33.000Z",
+      "dueDate": "2026-11-19",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk4",
+      "ref": "PCL-104",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Tela de detalhe do contrato com histórico de aditivos",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u12",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "cliente"
+      ],
+      "acceptance": [
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": true
+        },
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": true
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": true
+        },
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-28T12:33:26.000Z",
+      "updatedAt": "2026-11-04T18:14:39.000Z",
+      "dueDate": "2026-11-09",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk5",
+      "ref": "PCL-105",
+      "projectId": "prj-pcl",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Autenticação com verificação em duas etapas",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "urgent",
+      "assigneeId": "u4",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [
+        "performance"
+      ],
+      "acceptance": [
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-08-11T20:33:09.000Z",
+      "updatedAt": "2026-08-13T13:43:31.000Z",
+      "dueDate": "2026-11-11",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk6",
+      "ref": "PCL-106",
+      "projectId": "prj-pcl",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Página de suporte com abertura de chamado",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u1",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "infra"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-02T16:10:11.000Z",
+      "updatedAt": "2026-10-08T14:26:41.000Z",
+      "dueDate": "2026-10-11",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk7",
+      "ref": "PCL-107",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-1",
+      "parentId": null,
+      "type": "bug",
+      "title": "Corrigir quebra de layout na tabela de faturas no Safari",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "urgent",
+      "assigneeId": "u12",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [
+        "tsk1"
+      ],
+      "createdAt": "2026-08-21T18:12:57.000Z",
+      "updatedAt": "2026-08-25T17:26:11.000Z",
+      "dueDate": "2026-11-05",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk8",
+      "ref": "PCL-108",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Notificar cliente quando fatura é gerada",
+      "desc": "",
+      "status": "done",
+      "priority": "high",
+      "assigneeId": "u7",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-14",
+      "labels": [
+        "seguranca"
+      ],
+      "acceptance": [
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": true
+        },
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": true
+        },
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": true
+        },
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-02T20:16:13.000Z",
+      "updatedAt": "2026-09-12T14:35:52.000Z",
+      "dueDate": "2026-09-13",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk9",
+      "ref": "PCL-109",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Assinatura eletrônica de aditivo contratual",
+      "desc": "",
+      "status": "backlog",
+      "priority": "medium",
+      "assigneeId": null,
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "documentacao"
+      ],
+      "acceptance": [
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": false
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": true
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-22T13:28:57.000Z",
+      "updatedAt": "2026-10-31T11:15:23.000Z",
+      "dueDate": "2026-11-06",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk10",
+      "ref": "PCL-110",
+      "projectId": "prj-pcl",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Dashboard inicial do cliente com resumo financeiro",
+      "desc": "",
+      "status": "in_review",
+      "priority": "medium",
+      "assigneeId": "u2",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [
+        "backend",
+        "ux"
+      ],
+      "acceptance": [
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": false
+        },
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-12T11:18:14.000Z",
+      "updatedAt": "2026-10-16T15:13:44.000Z",
+      "dueDate": "2026-11-05",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk11",
+      "ref": "PCL-111",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Exportação de contratos em lote",
+      "desc": "",
+      "status": "todo",
+      "priority": "low",
+      "assigneeId": "u1",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [
+        "documentacao"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-09-05T18:38:14.000Z",
+      "updatedAt": "2026-09-09T17:51:03.000Z",
+      "dueDate": "2026-11-20",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk12",
+      "ref": "PCL-112",
+      "projectId": "prj-pcl",
+      "epicId": null,
+      "parentId": null,
+      "type": "bug",
+      "title": "Bug: sessão expira sem aviso durante preenchimento",
+      "desc": "",
+      "status": "done",
+      "priority": "high",
+      "assigneeId": "u1",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-14",
+      "labels": [
+        "seguranca",
+        "documentacao"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-08-31T20:37:17.000Z",
+      "updatedAt": "2026-09-03T14:20:30.000Z",
+      "dueDate": "2026-09-05",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk13",
+      "ref": "PCL-113",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Acessibilidade: navegação por teclado na central de faturas",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u9",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-14",
+      "labels": [
+        "backend"
+      ],
+      "acceptance": [
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": true
+        },
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        },
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": true
+        },
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-17T15:53:01.000Z",
+      "updatedAt": "2026-10-19T18:48:05.000Z",
+      "dueDate": "2026-10-21",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk14",
+      "ref": "PCL-114",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Testes e2e do fluxo de contestação",
+      "desc": "",
+      "status": "done",
+      "priority": "urgent",
+      "assigneeId": "u7",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "seguranca"
+      ],
+      "acceptance": [
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": true
+        },
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        },
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-30T15:43:07.000Z",
+      "updatedAt": "2026-10-31T16:35:33.000Z",
+      "dueDate": "2026-11-03",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk15",
+      "ref": "PAG-101",
+      "projectId": "prj-pag",
+      "epicId": "ep-pag-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Gerar cobrança Pix com QR dinâmico",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "high",
+      "assigneeId": "u4",
+      "teamId": "tm-plat",
+      "sprintId": "sp-pag-9",
+      "labels": [
+        "cliente",
+        "frontend"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-06T21:47:45.000Z",
+      "updatedAt": "2026-10-15T12:08:37.000Z",
+      "dueDate": "2026-11-18",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk16",
+      "ref": "PAG-102",
+      "projectId": "prj-pag",
+      "epicId": "ep-pag-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Webhook de confirmação de pagamento Pix",
+      "desc": "",
+      "status": "backlog",
+      "priority": "high",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-07-18T11:12:04.000Z",
+      "updatedAt": "2026-07-26T17:59:04.000Z",
+      "dueDate": "2026-10-29",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk17",
+      "ref": "PAG-103",
+      "projectId": "prj-pag",
+      "epicId": "ep-pag-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Conciliação automática de recebimentos Pix",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "low",
+      "assigneeId": "u2",
+      "teamId": "tm-plat",
+      "sprintId": "sp-pag-9",
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        },
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": false
+        },
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": false
+        },
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-10T21:50:33.000Z",
+      "updatedAt": "2026-10-16T11:10:40.000Z",
+      "dueDate": "2026-11-27",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk18",
+      "ref": "PAG-104",
+      "projectId": "prj-pag",
+      "epicId": "ep-pag-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Relatório diário de divergências de conciliação",
+      "desc": "",
+      "status": "backlog",
+      "priority": "low",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-09-11T19:52:40.000Z",
+      "updatedAt": "2026-09-18T21:20:21.000Z",
+      "dueDate": "2026-11-24",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk19",
+      "ref": "PAG-105",
+      "projectId": "prj-pag",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Tokenização de cartão com gateway parceiro",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u14",
+      "teamId": "tm-plat",
+      "sprintId": "sp-pag-8",
+      "labels": [
+        "mobile"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-09-25T16:26:57.000Z",
+      "updatedAt": "2026-10-04T14:49:29.000Z",
+      "dueDate": "2026-10-10",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk20",
+      "ref": "PAG-106",
+      "projectId": "prj-pag",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Retentativa de cobrança para cartões recusados",
+      "desc": "",
+      "status": "backlog",
+      "priority": "urgent",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-07T15:07:51.000Z",
+      "updatedAt": "2026-10-15T15:48:57.000Z",
+      "dueDate": "2026-11-30",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk21",
+      "ref": "PAG-107",
+      "projectId": "prj-pag",
+      "epicId": "ep-pag-2",
+      "parentId": null,
+      "type": "bug",
+      "title": "Bug: valor duplicado na baixa de pagamentos simultâneos",
+      "desc": "",
+      "status": "todo",
+      "priority": "urgent",
+      "assigneeId": "u1",
+      "teamId": "tm-plat",
+      "sprintId": "sp-pag-9",
+      "labels": [
+        "ux",
+        "backend"
+      ],
+      "acceptance": [
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-01T21:55:21.000Z",
+      "updatedAt": "2026-09-02T16:19:14.000Z",
+      "dueDate": null,
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk22",
+      "ref": "PAG-108",
+      "projectId": "prj-pag",
+      "epicId": "ep-pag-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Idempotência na API de criação de cobranças",
+      "desc": "",
+      "status": "backlog",
+      "priority": "medium",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [
+        "seguranca",
+        "backend"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-07-19T20:55:07.000Z",
+      "updatedAt": "2026-07-29T14:02:46.000Z",
+      "dueDate": null,
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk23",
+      "ref": "PAG-109",
+      "projectId": "prj-pag",
+      "epicId": "ep-pag-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Monitorar fila de conciliação com alerta de atraso",
+      "desc": "",
+      "status": "todo",
+      "priority": "high",
+      "assigneeId": "u2",
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": false
+        },
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": false
+        },
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": false
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-07-22T20:40:47.000Z",
+      "updatedAt": "2026-07-23T16:04:01.000Z",
+      "dueDate": null,
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk24",
+      "ref": "PAG-110",
+      "projectId": "prj-pag",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Antifraude: regras de velocidade por CPF",
+      "desc": "",
+      "status": "backlog",
+      "priority": "high",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [
+        "mobile",
+        "seguranca"
+      ],
+      "acceptance": [
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": false
+        },
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": false
+        },
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-21T17:04:51.000Z",
+      "updatedAt": "2026-10-31T19:28:09.000Z",
+      "dueDate": "2026-10-27",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk25",
+      "ref": "PAG-111",
+      "projectId": "prj-pag",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Estorno parcial de transações de cartão",
+      "desc": "",
+      "status": "done",
+      "priority": "high",
+      "assigneeId": "u1",
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [
+        "backend",
+        "performance"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-06T20:39:18.000Z",
+      "updatedAt": "2026-10-10T17:51:14.000Z",
+      "dueDate": "2026-10-17",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk26",
+      "ref": "PAG-112",
+      "projectId": "prj-pag",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Documentar API de cobranças para parceiros",
+      "desc": "",
+      "status": "todo",
+      "priority": "urgent",
+      "assigneeId": "u7",
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": false
+        },
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-20T18:58:57.000Z",
+      "updatedAt": "2026-09-29T19:05:32.000Z",
+      "dueDate": "2026-11-06",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk27",
+      "ref": "APC-101",
+      "projectId": "prj-apc",
+      "epicId": "ep-apc-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Fila local de sincronização com retry exponencial",
+      "desc": "",
+      "status": "backlog",
+      "priority": "medium",
+      "assigneeId": "u3",
+      "teamId": "tm-mob",
+      "sprintId": null,
+      "labels": [
+        "infra"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-08-30T19:47:34.000Z",
+      "updatedAt": "2026-09-05T16:01:05.000Z",
+      "dueDate": "2026-11-16",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk28",
+      "ref": "APC-102",
+      "projectId": "prj-apc",
+      "epicId": "ep-apc-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Resolver conflitos de edição offline na OS",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u14",
+      "teamId": "tm-mob",
+      "sprintId": "sp-apc-5",
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-11T11:12:48.000Z",
+      "updatedAt": "2026-10-14T15:30:20.000Z",
+      "dueDate": "2026-10-27",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk29",
+      "ref": "APC-103",
+      "projectId": "prj-apc",
+      "epicId": "ep-apc-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Captura de fotos com compressão no dispositivo",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u10",
+      "teamId": "tm-mob",
+      "sprintId": "sp-apc-5",
+      "labels": [
+        "backend"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-26T15:43:38.000Z",
+      "updatedAt": "2026-10-29T15:55:58.000Z",
+      "dueDate": "2026-11-13",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk30",
+      "ref": "APC-104",
+      "projectId": "prj-apc",
+      "epicId": "ep-apc-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Assinatura do cliente na conclusão da OS",
+      "desc": "",
+      "status": "backlog",
+      "priority": "low",
+      "assigneeId": "u5",
+      "teamId": "tm-mob",
+      "sprintId": null,
+      "labels": [
+        "cliente"
+      ],
+      "acceptance": [
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        },
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-17T21:56:30.000Z",
+      "updatedAt": "2026-09-20T15:28:04.000Z",
+      "dueDate": "2026-11-11",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk31",
+      "ref": "APC-105",
+      "projectId": "prj-apc",
+      "epicId": "ep-apc-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Checklist dinâmico por tipo de serviço",
+      "desc": "",
+      "status": "in_review",
+      "priority": "urgent",
+      "assigneeId": "u3",
+      "teamId": "tm-mob",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": true
+        },
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-08-21T19:05:11.000Z",
+      "updatedAt": "2026-08-26T18:57:06.000Z",
+      "dueDate": "2026-11-04",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk32",
+      "ref": "APC-106",
+      "projectId": "prj-apc",
+      "epicId": "ep-apc-1",
+      "parentId": null,
+      "type": "bug",
+      "title": "Bug: app trava ao sincronizar 200+ fotos",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u15",
+      "teamId": "tm-mob",
+      "sprintId": null,
+      "labels": [
+        "ux",
+        "infra"
+      ],
+      "acceptance": [
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": true
+        },
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": true
+        },
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-15T15:10:41.000Z",
+      "updatedAt": "2026-09-23T20:14:01.000Z",
+      "dueDate": "2026-09-27",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk33",
+      "ref": "APC-107",
+      "projectId": "prj-apc",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Mapa com roteirização das OS do dia",
+      "desc": "",
+      "status": "todo",
+      "priority": "low",
+      "assigneeId": "u3",
+      "teamId": "tm-mob",
+      "sprintId": null,
+      "labels": [
+        "infra"
+      ],
+      "acceptance": [
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": false
+        },
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": false
+        },
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-15T11:15:26.000Z",
+      "updatedAt": "2026-10-25T18:06:25.000Z",
+      "dueDate": "2026-10-29",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk34",
+      "ref": "APC-108",
+      "projectId": "prj-apc",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Modo escuro no aplicativo",
+      "desc": "",
+      "status": "in_review",
+      "priority": "low",
+      "assigneeId": "u5",
+      "teamId": "tm-mob",
+      "sprintId": "sp-apc-5",
+      "labels": [
+        "mobile"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-18T12:38:04.000Z",
+      "updatedAt": "2026-10-21T18:54:07.000Z",
+      "dueDate": "2026-11-25",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk35",
+      "ref": "APC-109",
+      "projectId": "prj-apc",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Notificação push de nova OS atribuída",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u3",
+      "teamId": "tm-mob",
+      "sprintId": "sp-apc-5",
+      "labels": [
+        "dados",
+        "documentacao"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-19T16:31:38.000Z",
+      "updatedAt": "2026-10-28T13:15:57.000Z",
+      "dueDate": "2026-10-28",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk36",
+      "ref": "APC-110",
+      "projectId": "prj-apc",
+      "epicId": "ep-apc-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Telemetria de uso offline para produto",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u10",
+      "teamId": "tm-mob",
+      "sprintId": "sp-apc-5",
+      "labels": [
+        "frontend",
+        "documentacao"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-08-24T14:20:54.000Z",
+      "updatedAt": "2026-09-02T11:13:00.000Z",
+      "dueDate": "2026-09-09",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk37",
+      "ref": "APC-111",
+      "projectId": "prj-apc",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Reduzir tamanho do bundle Android em 30%",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u10",
+      "teamId": "tm-mob",
+      "sprintId": "sp-apc-5",
+      "labels": [
+        "cliente"
+      ],
+      "acceptance": [
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": true
+        },
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-09T21:41:12.000Z",
+      "updatedAt": "2026-10-18T19:41:25.000Z",
+      "dueDate": "2026-10-13",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk38",
+      "ref": "NUV-101",
+      "projectId": "prj-nuv",
+      "epicId": "ep-nuv-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Provisionar VPC e sub-redes com Terraform",
+      "desc": "",
+      "status": "backlog",
+      "priority": "low",
+      "assigneeId": null,
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "backend"
+      ],
+      "acceptance": [
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": false
+        },
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-08-09T14:01:49.000Z",
+      "updatedAt": "2026-08-12T20:30:04.000Z",
+      "dueDate": "2026-11-23",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk39",
+      "ref": "NUV-102",
+      "projectId": "prj-nuv",
+      "epicId": "ep-nuv-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Pipeline de deploy com aprovação por ambiente",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u1",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "ux"
+      ],
+      "acceptance": [
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": true
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-06T21:17:27.000Z",
+      "updatedAt": "2026-10-12T12:50:16.000Z",
+      "dueDate": "2026-10-17",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk40",
+      "ref": "NUV-103",
+      "projectId": "prj-nuv",
+      "epicId": "ep-nuv-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Migrar serviço de autenticação para ECS",
+      "desc": "",
+      "status": "backlog",
+      "priority": "low",
+      "assigneeId": "u7",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "mobile",
+        "ux"
+      ],
+      "acceptance": [
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": false
+        },
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-07-12T19:22:10.000Z",
+      "updatedAt": "2026-07-20T18:06:20.000Z",
+      "dueDate": null,
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk41",
+      "ref": "NUV-104",
+      "projectId": "prj-nuv",
+      "epicId": "ep-nuv-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Migrar banco do faturamento para RDS",
+      "desc": "",
+      "status": "todo",
+      "priority": "medium",
+      "assigneeId": "u9",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "frontend",
+        "backend"
+      ],
+      "acceptance": [
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        },
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-07-14T13:30:45.000Z",
+      "updatedAt": "2026-07-18T13:14:35.000Z",
+      "dueDate": "2026-11-26",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk42",
+      "ref": "NUV-105",
+      "projectId": "prj-nuv",
+      "epicId": "ep-nuv-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Plano de rollback da migração do core",
+      "desc": "",
+      "status": "backlog",
+      "priority": "medium",
+      "assigneeId": null,
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "backend"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-08-01T17:40:36.000Z",
+      "updatedAt": "2026-08-04T13:43:08.000Z",
+      "dueDate": "2026-11-03",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk43",
+      "ref": "NUV-106",
+      "projectId": "prj-nuv",
+      "epicId": "ep-nuv-2",
+      "parentId": null,
+      "type": "bug",
+      "title": "Bug: DNS interno intermitente após cutover",
+      "desc": "",
+      "status": "done",
+      "priority": "urgent",
+      "assigneeId": "u4",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "dados",
+        "mobile"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-08-31T21:43:30.000Z",
+      "updatedAt": "2026-09-08T15:15:13.000Z",
+      "dueDate": "2026-09-10",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk44",
+      "ref": "NUV-107",
+      "projectId": "prj-nuv",
+      "epicId": "ep-nuv-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Política de backups e retenção no S3",
+      "desc": "",
+      "status": "in_review",
+      "priority": "low",
+      "assigneeId": "u9",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": false
+        },
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": false
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-18T16:29:22.000Z",
+      "updatedAt": "2026-09-20T20:32:11.000Z",
+      "dueDate": "2026-11-14",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk45",
+      "ref": "NUV-108",
+      "projectId": "prj-nuv",
+      "epicId": "ep-nuv-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Teste de carga pós-migração do serviço de pedidos",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u4",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "seguranca"
+      ],
+      "acceptance": [
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": true
+        },
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": true
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": true
+        },
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-07-05T13:43:46.000Z",
+      "updatedAt": "2026-07-07T14:12:47.000Z",
+      "dueDate": "2026-07-18",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk46",
+      "ref": "NUV-109",
+      "projectId": "prj-nuv",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Reduzir custo de instâncias subutilizadas",
+      "desc": "",
+      "status": "backlog",
+      "priority": "low",
+      "assigneeId": null,
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "seguranca",
+        "mobile"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-08-03T19:43:52.000Z",
+      "updatedAt": "2026-08-07T20:23:25.000Z",
+      "dueDate": "2026-11-14",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk47",
+      "ref": "DLK-101",
+      "projectId": "prj-dlk",
+      "epicId": "ep-dlk-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Conector de ingestão do banco de produto",
+      "desc": "",
+      "status": "todo",
+      "priority": "low",
+      "assigneeId": "u11",
+      "teamId": "tm-dados",
+      "sprintId": null,
+      "labels": [
+        "dados"
+      ],
+      "acceptance": [
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": false
+        },
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-19T15:50:41.000Z",
+      "updatedAt": "2026-09-23T17:17:27.000Z",
+      "dueDate": null,
+      "createdBy": "u6"
+    },
+    {
+      "id": "tsk48",
+      "ref": "DLK-102",
+      "projectId": "prj-dlk",
+      "epicId": "ep-dlk-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Conector de ingestão do ERP financeiro",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "low",
+      "assigneeId": "u3",
+      "teamId": "tm-dados",
+      "sprintId": null,
+      "labels": [
+        "infra"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-20T17:37:34.000Z",
+      "updatedAt": "2026-10-26T15:40:21.000Z",
+      "dueDate": "2026-10-30",
+      "createdBy": "u6"
+    },
+    {
+      "id": "tsk49",
+      "ref": "DLK-103",
+      "projectId": "prj-dlk",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Modelagem da camada silver de clientes",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u11",
+      "teamId": "tm-dados",
+      "sprintId": null,
+      "labels": [
+        "frontend"
+      ],
+      "acceptance": [
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": true
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": true
+        },
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-04T19:36:39.000Z",
+      "updatedAt": "2026-10-07T20:33:20.000Z",
+      "dueDate": "2026-10-22",
+      "createdBy": "u6"
+    },
+    {
+      "id": "tsk50",
+      "ref": "DLK-104",
+      "projectId": "prj-dlk",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Catálogo de dados com dicionário de métricas",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "low",
+      "assigneeId": "u3",
+      "teamId": "tm-dados",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-04T20:48:20.000Z",
+      "updatedAt": "2026-10-06T18:57:07.000Z",
+      "dueDate": "2026-10-31",
+      "createdBy": "u6"
+    },
+    {
+      "id": "tsk51",
+      "ref": "DLK-105",
+      "projectId": "prj-dlk",
+      "epicId": "ep-dlk-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Qualidade de dados: alertas de schema drift",
+      "desc": "",
+      "status": "done",
+      "priority": "urgent",
+      "assigneeId": "u3",
+      "teamId": "tm-dados",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-09-19T16:31:44.000Z",
+      "updatedAt": "2026-09-22T18:15:19.000Z",
+      "dueDate": "2026-10-06",
+      "createdBy": "u6"
+    },
+    {
+      "id": "tsk52",
+      "ref": "DLK-106",
+      "projectId": "prj-dlk",
+      "epicId": "ep-dlk-1",
+      "parentId": null,
+      "type": "bug",
+      "title": "Bug: duplicidade na ingestão incremental de pedidos",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "high",
+      "assigneeId": "u3",
+      "teamId": "tm-dados",
+      "sprintId": null,
+      "labels": [
+        "mobile",
+        "cliente"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-09-21T11:36:51.000Z",
+      "updatedAt": "2026-09-29T17:41:11.000Z",
+      "dueDate": "2026-11-02",
+      "createdBy": "u6"
+    },
+    {
+      "id": "tsk53",
+      "ref": "DLK-107",
+      "projectId": "prj-dlk",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Dashboard de receita recorrente para diretoria",
+      "desc": "",
+      "status": "todo",
+      "priority": "medium",
+      "assigneeId": "u11",
+      "teamId": "tm-dados",
+      "sprintId": null,
+      "labels": [
+        "seguranca"
+      ],
+      "acceptance": [
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": false
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        },
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": true
+        },
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-18T16:02:41.000Z",
+      "updatedAt": "2026-09-23T11:18:36.000Z",
+      "dueDate": "2026-10-27",
+      "createdBy": "u6"
+    },
+    {
+      "id": "tsk54",
+      "ref": "DLK-108",
+      "projectId": "prj-dlk",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Anonimização de dados pessoais na camada bronze",
+      "desc": "",
+      "status": "backlog",
+      "priority": "urgent",
+      "assigneeId": "u6",
+      "teamId": "tm-dados",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": false
+        },
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-18T20:25:35.000Z",
+      "updatedAt": "2026-10-28T11:09:14.000Z",
+      "dueDate": "2026-11-21",
+      "createdBy": "u6"
+    },
+    {
+      "id": "tsk55",
+      "ref": "DLK-109",
+      "projectId": "prj-dlk",
+      "epicId": "ep-dlk-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Orquestração dos pipelines com retentativa",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u3",
+      "teamId": "tm-dados",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": true
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": true
+        },
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        },
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-06T14:03:34.000Z",
+      "updatedAt": "2026-10-07T13:22:24.000Z",
+      "dueDate": "2026-10-14",
+      "createdBy": "u6"
+    },
+    {
+      "id": "tsk56",
+      "ref": "OBS-101",
+      "projectId": "prj-obs",
+      "epicId": "ep-obs-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Instrumentar serviço de pagamentos com OpenTelemetry",
+      "desc": "",
+      "status": "todo",
+      "priority": "low",
+      "assigneeId": "u9",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "backend",
+        "mobile"
+      ],
+      "acceptance": [
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": false
+        },
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": false
+        },
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-17T20:47:46.000Z",
+      "updatedAt": "2026-10-27T12:11:51.000Z",
+      "dueDate": "2026-11-01",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk57",
+      "ref": "OBS-102",
+      "projectId": "prj-obs",
+      "epicId": "ep-obs-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Instrumentar portal do cliente com RUM",
+      "desc": "",
+      "status": "backlog",
+      "priority": "urgent",
+      "assigneeId": null,
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "ux",
+        "cliente"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-06T14:19:45.000Z",
+      "updatedAt": "2026-10-10T14:25:10.000Z",
+      "dueDate": null,
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk58",
+      "ref": "OBS-103",
+      "projectId": "prj-obs",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Dashboards padrão de latência e erro por serviço",
+      "desc": "",
+      "status": "backlog",
+      "priority": "low",
+      "assigneeId": "u13",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "performance"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-20T18:45:33.000Z",
+      "updatedAt": "2026-10-28T15:27:35.000Z",
+      "dueDate": null,
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk59",
+      "ref": "OBS-104",
+      "projectId": "prj-obs",
+      "epicId": "ep-obs-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Revisar alertas: eliminar os não acionáveis",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u9",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "ux"
+      ],
+      "acceptance": [
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": true
+        },
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-17T15:38:09.000Z",
+      "updatedAt": "2026-10-27T19:45:45.000Z",
+      "dueDate": "2026-11-04",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk60",
+      "ref": "OBS-105",
+      "projectId": "prj-obs",
+      "epicId": "ep-obs-2",
+      "parentId": null,
+      "type": "task",
+      "title": "Runbook de incidente para fila de conciliação",
+      "desc": "",
+      "status": "todo",
+      "priority": "low",
+      "assigneeId": "u9",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "dados"
+      ],
+      "acceptance": [
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": false
+        },
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-22T20:34:13.000Z",
+      "updatedAt": "2026-09-27T21:01:56.000Z",
+      "dueDate": null,
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk61",
+      "ref": "OBS-106",
+      "projectId": "prj-obs",
+      "epicId": "ep-obs-2",
+      "parentId": null,
+      "type": "task",
+      "title": "SLO de disponibilidade do checkout",
+      "desc": "",
+      "status": "todo",
+      "priority": "low",
+      "assigneeId": "u13",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-09-19T12:09:09.000Z",
+      "updatedAt": "2026-09-27T16:56:28.000Z",
+      "dueDate": "2026-11-02",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk62",
+      "ref": "OBS-107",
+      "projectId": "prj-obs",
+      "epicId": "ep-obs-1",
+      "parentId": null,
+      "type": "bug",
+      "title": "Bug: traces órfãos sem contexto de requisição",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "high",
+      "assigneeId": "u9",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [
+        "documentacao",
+        "seguranca"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-24T14:06:25.000Z",
+      "updatedAt": "2026-10-29T12:29:36.000Z",
+      "dueDate": "2026-11-30",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk63",
+      "ref": "OBS-108",
+      "projectId": "prj-obs",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Rotação automática de API keys do coletor",
+      "desc": "",
+      "status": "done",
+      "priority": "high",
+      "assigneeId": "u9",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-25T20:11:46.000Z",
+      "updatedAt": "2026-11-01T13:25:53.000Z",
+      "dueDate": "2026-10-30",
+      "createdBy": "u13"
+    },
+    {
+      "id": "tsk64",
+      "ref": "FAT-101",
+      "projectId": "prj-fat",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Emissão automática de NF-e no fechamento",
+      "desc": "",
+      "status": "backlog",
+      "priority": "low",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-02T13:43:23.000Z",
+      "updatedAt": "2026-10-07T21:38:45.000Z",
+      "dueDate": "2026-11-15",
+      "createdBy": "u4"
+    },
+    {
+      "id": "tsk65",
+      "ref": "FAT-102",
+      "projectId": "prj-fat",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Régua de cobrança por e-mail com escalonamento",
+      "desc": "",
+      "status": "backlog",
+      "priority": "low",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [
+        "infra",
+        "cliente"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-06-08T15:33:53.000Z",
+      "updatedAt": "2026-06-12T21:42:55.000Z",
+      "dueDate": null,
+      "createdBy": "u4"
+    },
+    {
+      "id": "tsk66",
+      "ref": "FAT-103",
+      "projectId": "prj-fat",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Integração com ERP para baixa de títulos",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u1",
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [
+        "seguranca",
+        "documentacao"
+      ],
+      "acceptance": [
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": true
+        },
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        },
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-29T20:25:20.000Z",
+      "updatedAt": "2026-11-04T21:41:31.000Z",
+      "dueDate": "2026-11-11",
+      "createdBy": "u4"
+    },
+    {
+      "id": "tsk67",
+      "ref": "FAT-104",
+      "projectId": "prj-fat",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Painel de inadimplência por carteira",
+      "desc": "",
+      "status": "todo",
+      "priority": "low",
+      "assigneeId": "u4",
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [
+        "performance",
+        "documentacao"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-08-18T14:10:29.000Z",
+      "updatedAt": "2026-08-20T19:51:50.000Z",
+      "dueDate": null,
+      "createdBy": "u4"
+    },
+    {
+      "id": "tsk68",
+      "ref": "FAT-105",
+      "projectId": "prj-fat",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Validação fiscal por UF antes da emissão",
+      "desc": "",
+      "status": "backlog",
+      "priority": "urgent",
+      "assigneeId": "u2",
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": false
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": false
+        },
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-29T21:04:38.000Z",
+      "updatedAt": "2026-10-02T13:36:03.000Z",
+      "dueDate": "2026-11-10",
+      "createdBy": "u4"
+    },
+    {
+      "id": "tsk69",
+      "ref": "ONB-101",
+      "projectId": "prj-onb",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Formulário de cadastro com validação de CNPJ",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u8",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "infra"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-12T20:29:11.000Z",
+      "updatedAt": "2026-10-21T20:20:56.000Z",
+      "dueDate": "2026-10-27",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk70",
+      "ref": "ONB-102",
+      "projectId": "prj-onb",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Verificação de identidade com documento e selfie",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u12",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "mobile"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-03T21:58:30.000Z",
+      "updatedAt": "2026-10-08T18:10:46.000Z",
+      "dueDate": "2026-10-20",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk71",
+      "ref": "ONB-103",
+      "projectId": "prj-onb",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "E-mail de boas-vindas com primeiros passos",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u12",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": true
+        },
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": true
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-07-08T15:18:08.000Z",
+      "updatedAt": "2026-07-10T12:22:46.000Z",
+      "dueDate": "2026-07-17",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk72",
+      "ref": "ONB-104",
+      "projectId": "prj-onb",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Aprovação manual para casos de risco",
+      "desc": "",
+      "status": "done",
+      "priority": "urgent",
+      "assigneeId": "u12",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-07-28T18:28:28.000Z",
+      "updatedAt": "2026-08-04T13:24:37.000Z",
+      "dueDate": "2026-08-03",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk73",
+      "ref": "ONB-105",
+      "projectId": "prj-onb",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Métricas de conversão do funil de ativação",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u8",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "frontend"
+      ],
+      "acceptance": [
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": true
+        },
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": true
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": true
+        },
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-16T21:37:36.000Z",
+      "updatedAt": "2026-10-17T19:34:08.000Z",
+      "dueDate": "2026-10-29",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk74",
+      "ref": "ONB-106",
+      "projectId": "prj-onb",
+      "epicId": null,
+      "parentId": null,
+      "type": "bug",
+      "title": "Bug: upload de documento falha em conexões lentas",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u2",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": true
+        },
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-06-02T21:51:01.000Z",
+      "updatedAt": "2026-06-04T12:22:50.000Z",
+      "dueDate": "2026-06-12",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk75",
+      "ref": "WEB-101",
+      "projectId": "prj-web",
+      "epicId": "ep-web-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Home com seções de produto e prova social",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "low",
+      "assigneeId": "u12",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        },
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": true
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-15T19:37:48.000Z",
+      "updatedAt": "2026-10-23T13:01:32.000Z",
+      "dueDate": "2026-11-28",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk76",
+      "ref": "WEB-102",
+      "projectId": "prj-web",
+      "epicId": "ep-web-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Página de carreiras integrada ao ATS",
+      "desc": "",
+      "status": "done",
+      "priority": "urgent",
+      "assigneeId": "u2",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "documentacao"
+      ],
+      "acceptance": [
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": true
+        },
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-17T21:57:49.000Z",
+      "updatedAt": "2026-10-19T16:58:01.000Z",
+      "dueDate": "2026-10-27",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk77",
+      "ref": "WEB-103",
+      "projectId": "prj-web",
+      "epicId": "ep-web-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Blog com CMS headless",
+      "desc": "",
+      "status": "backlog",
+      "priority": "medium",
+      "assigneeId": "u8",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "documentacao"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-29T20:15:04.000Z",
+      "updatedAt": "2026-11-03T19:51:41.000Z",
+      "dueDate": "2026-11-14",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk78",
+      "ref": "WEB-104",
+      "projectId": "prj-web",
+      "epicId": "ep-web-1",
+      "parentId": null,
+      "type": "task",
+      "title": "SEO técnico: sitemap, meta tags e dados estruturados",
+      "desc": "",
+      "status": "backlog",
+      "priority": "medium",
+      "assigneeId": null,
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": false
+        },
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": false
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-09-30T13:44:02.000Z",
+      "updatedAt": "2026-10-01T12:48:24.000Z",
+      "dueDate": "2026-11-13",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk79",
+      "ref": "WEB-105",
+      "projectId": "prj-web",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Formulário de contato com proteção anti-spam",
+      "desc": "",
+      "status": "done",
+      "priority": "high",
+      "assigneeId": "u12",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "infra",
+        "cliente"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-07T15:32:18.000Z",
+      "updatedAt": "2026-10-14T19:19:53.000Z",
+      "dueDate": "2026-10-13",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk80",
+      "ref": "WEB-106",
+      "projectId": "prj-web",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Otimizar LCP das páginas de produto",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u12",
+      "teamId": "tm-web",
+      "sprintId": null,
+      "labels": [
+        "ux"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-11T20:14:53.000Z",
+      "updatedAt": "2026-10-19T15:54:19.000Z",
+      "dueDate": "2026-10-23",
+      "createdBy": "u12"
+    },
+    {
+      "id": "tsk81",
+      "ref": "CMA-101",
+      "projectId": "prj-cma",
+      "epicId": "ep-cma-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Entrevistas com líderes das linhas de produção",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "urgent",
+      "assigneeId": "u17",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        },
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-09T18:01:17.000Z",
+      "updatedAt": "2026-10-15T11:56:53.000Z",
+      "dueDate": "2026-12-03",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk82",
+      "ref": "CMA-102",
+      "projectId": "prj-cma",
+      "epicId": "ep-cma-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Mapear fluxo AS-IS da expedição",
+      "desc": "",
+      "status": "backlog",
+      "priority": "urgent",
+      "assigneeId": "u16",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [
+        "documentacao",
+        "mobile"
+      ],
+      "acceptance": [
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": true
+        },
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        },
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-29T20:41:54.000Z",
+      "updatedAt": "2026-10-30T19:00:16.000Z",
+      "dueDate": "2026-11-09",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk83",
+      "ref": "CMA-103",
+      "projectId": "prj-cma",
+      "epicId": "ep-cma-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Cronoanálise da linha de usinagem",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "medium",
+      "assigneeId": "u16",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-27T14:03:21.000Z",
+      "updatedAt": "2026-11-04T13:50:54.000Z",
+      "dueDate": "2026-12-03",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk84",
+      "ref": "CMA-104",
+      "projectId": "prj-cma",
+      "epicId": "ep-cma-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Matriz de desperdícios por processo",
+      "desc": "",
+      "status": "backlog",
+      "priority": "medium",
+      "assigneeId": "u17",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-09-23T21:32:15.000Z",
+      "updatedAt": "2026-10-03T11:54:01.000Z",
+      "dueDate": "2026-10-28",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk85",
+      "ref": "CMA-105",
+      "projectId": "prj-cma",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Plano de ação de eficiência priorizado",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u17",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": true
+        },
+        {
+          "text": "Comportamento coberto por testes automatizados",
+          "done": true
+        },
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-26T13:46:57.000Z",
+      "updatedAt": "2026-11-01T21:10:45.000Z",
+      "dueDate": "2026-11-09",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk86",
+      "ref": "CMA-106",
+      "projectId": "prj-cma",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Apresentação executiva do diagnóstico",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "urgent",
+      "assigneeId": "u17",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [
+        "mobile",
+        "performance"
+      ],
+      "acceptance": [
+        {
+          "text": "Sem regressão nos fluxos existentes",
+          "done": false
+        },
+        {
+          "text": "Documentação atualizada no espaço do projeto",
+          "done": true
+        },
+        {
+          "text": "Logs e métricas registrados para o fluxo",
+          "done": false
+        },
+        {
+          "text": "Revisado por outro membro da equipe",
+          "done": false
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-05T19:43:11.000Z",
+      "updatedAt": "2026-10-11T19:52:19.000Z",
+      "dueDate": null,
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk87",
+      "ref": "CMA-107",
+      "projectId": "prj-cma",
+      "epicId": "ep-cma-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Levantamento de indicadores atuais de OEE",
+      "desc": "",
+      "status": "done",
+      "priority": "urgent",
+      "assigneeId": "u17",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-19T16:19:35.000Z",
+      "updatedAt": "2026-10-22T15:07:38.000Z",
+      "dueDate": "2026-11-06",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk88",
+      "ref": "ERP-101",
+      "projectId": "prj-erp",
+      "epicId": "ep-erp-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Especificar contrato de integração de pedidos",
+      "desc": "",
+      "status": "done",
+      "priority": "urgent",
+      "assigneeId": "u17",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [
+        "performance"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-17T12:25:41.000Z",
+      "updatedAt": "2026-10-21T19:44:26.000Z",
+      "dueDate": "2026-10-26",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk89",
+      "ref": "ERP-102",
+      "projectId": "prj-erp",
+      "epicId": "ep-erp-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Sincronização de estoque a cada 15 minutos",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "low",
+      "assigneeId": "u16",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [
+        "seguranca",
+        "cliente"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-24T14:31:52.000Z",
+      "updatedAt": "2026-10-30T15:53:27.000Z",
+      "dueDate": null,
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk90",
+      "ref": "ERP-103",
+      "projectId": "prj-erp",
+      "epicId": "ep-erp-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Tratamento de erros e fila de reprocessamento",
+      "desc": "",
+      "status": "in_review",
+      "priority": "urgent",
+      "assigneeId": "u17",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [
+        {
+          "text": "Aprovado pelo responsável do projeto em homologação",
+          "done": true
+        },
+        {
+          "text": "Erros apresentam mensagem clara e caminho de recuperação",
+          "done": true
+        },
+        {
+          "text": "Funciona nos navegadores suportados (Chrome, Firefox, Safari, Edge)",
+          "done": false
+        },
+        {
+          "text": "Validado com dados próximos do volume real",
+          "done": true
+        }
+      ],
+      "blockedBy": [],
+      "createdAt": "2026-10-22T19:31:09.000Z",
+      "updatedAt": "2026-10-24T21:16:10.000Z",
+      "dueDate": "2026-11-14",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk91",
+      "ref": "ERP-104",
+      "projectId": "prj-erp",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Homologação com massa de dados do cliente",
+      "desc": "",
+      "status": "backlog",
+      "priority": "medium",
+      "assigneeId": null,
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [
+        "backend",
+        "ux"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-28T12:40:18.000Z",
+      "updatedAt": "2026-11-02T21:27:14.000Z",
+      "dueDate": "2026-11-06",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk92",
+      "ref": "ERP-105",
+      "projectId": "prj-erp",
+      "epicId": "ep-erp-1",
+      "parentId": null,
+      "type": "task",
+      "title": "Deduplicação de pedidos reenviados pelo chão de fábrica",
+      "desc": "",
+      "status": "backlog",
+      "priority": "medium",
+      "assigneeId": "u17",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [
+        "ux"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-11T11:34:26.000Z",
+      "updatedAt": "2026-10-21T11:17:23.000Z",
+      "dueDate": "2026-11-21",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk93",
+      "ref": "ERP-106",
+      "projectId": "prj-erp",
+      "epicId": null,
+      "parentId": null,
+      "type": "task",
+      "title": "Monitoramento da integração com alertas",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u17",
+      "teamId": "tm-consult",
+      "sprintId": null,
+      "labels": [
+        "dados",
+        "ux"
+      ],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-10T21:42:05.000Z",
+      "updatedAt": "2026-10-13T21:45:13.000Z",
+      "dueDate": "2026-10-27",
+      "createdBy": "u16"
+    },
+    {
+      "id": "tsk94",
+      "ref": "PCL-115",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-1",
+      "parentId": "tsk3",
+      "type": "subtask",
+      "title": "Escrever testes automatizados — PCL-103",
+      "desc": "",
+      "status": "done",
+      "priority": "urgent",
+      "assigneeId": "u4",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-08-20T13:38:28.000Z",
+      "updatedAt": "2026-10-31T20:35:47.000Z",
+      "dueDate": "2026-11-19",
+      "createdBy": "u4"
+    },
+    {
+      "id": "tsk95",
+      "ref": "PCL-116",
+      "projectId": "prj-pcl",
+      "epicId": "ep-pcl-1",
+      "parentId": "tsk3",
+      "type": "subtask",
+      "title": "Revisar com design — PCL-103",
+      "desc": "",
+      "status": "todo",
+      "priority": "urgent",
+      "assigneeId": "u4",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-08-20T13:38:28.000Z",
+      "updatedAt": "2026-11-03T12:54:45.000Z",
+      "dueDate": "2026-11-19",
+      "createdBy": "u4"
+    },
+    {
+      "id": "tsk96",
+      "ref": "PCL-117",
+      "projectId": "prj-pcl",
+      "epicId": null,
+      "parentId": "tsk10",
+      "type": "subtask",
+      "title": "Escrever testes automatizados — PCL-110",
+      "desc": "",
+      "status": "done",
+      "priority": "medium",
+      "assigneeId": "u2",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-12T11:18:14.000Z",
+      "updatedAt": "2026-11-02T16:55:20.000Z",
+      "dueDate": "2026-11-05",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk97",
+      "ref": "PCL-118",
+      "projectId": "prj-pcl",
+      "epicId": null,
+      "parentId": "tsk10",
+      "type": "subtask",
+      "title": "Ajustes de acessibilidade — PCL-110",
+      "desc": "",
+      "status": "todo",
+      "priority": "medium",
+      "assigneeId": "u2",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-12T11:18:14.000Z",
+      "updatedAt": "2026-11-05T16:11:47.000Z",
+      "dueDate": "2026-11-05",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk98",
+      "ref": "PCL-119",
+      "projectId": "prj-pcl",
+      "epicId": null,
+      "parentId": "tsk10",
+      "type": "subtask",
+      "title": "Revisar com design — PCL-110",
+      "desc": "",
+      "status": "todo",
+      "priority": "medium",
+      "assigneeId": "u2",
+      "teamId": "tm-web",
+      "sprintId": "sp-pcl-15",
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-12T11:18:14.000Z",
+      "updatedAt": "2026-11-01T20:52:36.000Z",
+      "dueDate": "2026-11-05",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk99",
+      "ref": "PAG-113",
+      "projectId": "prj-pag",
+      "epicId": "ep-pag-1",
+      "parentId": "tsk16",
+      "type": "subtask",
+      "title": "Escrever testes automatizados — PAG-102",
+      "desc": "",
+      "status": "todo",
+      "priority": "high",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-07-18T11:12:04.000Z",
+      "updatedAt": "2026-11-05T11:27:04.000Z",
+      "dueDate": "2026-10-29",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk100",
+      "ref": "PAG-114",
+      "projectId": "prj-pag",
+      "epicId": "ep-pag-1",
+      "parentId": "tsk16",
+      "type": "subtask",
+      "title": "Ajustes de acessibilidade — PAG-102",
+      "desc": "",
+      "status": "done",
+      "priority": "high",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-07-18T11:12:04.000Z",
+      "updatedAt": "2026-11-01T19:28:13.000Z",
+      "dueDate": "2026-10-29",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk101",
+      "ref": "PAG-115",
+      "projectId": "prj-pag",
+      "epicId": "ep-pag-1",
+      "parentId": "tsk16",
+      "type": "subtask",
+      "title": "Validar em homologação — PAG-102",
+      "desc": "",
+      "status": "done",
+      "priority": "high",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-07-18T11:12:04.000Z",
+      "updatedAt": "2026-11-05T16:25:45.000Z",
+      "dueDate": "2026-10-29",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk102",
+      "ref": "PAG-116",
+      "projectId": "prj-pag",
+      "epicId": null,
+      "parentId": "tsk20",
+      "type": "subtask",
+      "title": "Tratar casos de erro — PAG-106",
+      "desc": "",
+      "status": "done",
+      "priority": "urgent",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-07T15:07:51.000Z",
+      "updatedAt": "2026-11-05T20:19:58.000Z",
+      "dueDate": "2026-11-30",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk103",
+      "ref": "PAG-117",
+      "projectId": "prj-pag",
+      "epicId": null,
+      "parentId": "tsk20",
+      "type": "subtask",
+      "title": "Tratar casos de erro — PAG-106",
+      "desc": "",
+      "status": "done",
+      "priority": "urgent",
+      "assigneeId": null,
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-07T15:07:51.000Z",
+      "updatedAt": "2026-11-01T18:14:13.000Z",
+      "dueDate": "2026-11-30",
+      "createdBy": "u2"
+    },
+    {
+      "id": "tsk104",
+      "ref": "PAG-118",
+      "projectId": "prj-pag",
+      "epicId": null,
+      "parentId": "tsk26",
+      "type": "subtask",
+      "title": "Atualizar documentação — PAG-112",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "urgent",
+      "assigneeId": "u7",
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-09-20T18:58:57.000Z",
+      "updatedAt": "2026-11-01T13:50:01.000Z",
+      "dueDate": "2026-11-06",
+      "createdBy": "u7"
+    },
+    {
+      "id": "tsk105",
+      "ref": "PAG-119",
+      "projectId": "prj-pag",
+      "epicId": null,
+      "parentId": "tsk26",
+      "type": "subtask",
+      "title": "Tratar casos de erro — PAG-112",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "urgent",
+      "assigneeId": "u7",
+      "teamId": "tm-plat",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-09-20T18:58:57.000Z",
+      "updatedAt": "2026-11-02T13:45:38.000Z",
+      "dueDate": "2026-11-06",
+      "createdBy": "u7"
+    },
+    {
+      "id": "tsk106",
+      "ref": "APC-112",
+      "projectId": "prj-apc",
+      "epicId": null,
+      "parentId": "tsk33",
+      "type": "subtask",
+      "title": "Atualizar documentação — APC-107",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u3",
+      "teamId": "tm-mob",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-15T11:15:26.000Z",
+      "updatedAt": "2026-10-31T13:42:39.000Z",
+      "dueDate": "2026-10-29",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk107",
+      "ref": "APC-113",
+      "projectId": "prj-apc",
+      "epicId": null,
+      "parentId": "tsk33",
+      "type": "subtask",
+      "title": "Revisar com design — APC-107",
+      "desc": "",
+      "status": "todo",
+      "priority": "low",
+      "assigneeId": "u3",
+      "teamId": "tm-mob",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-10-15T11:15:26.000Z",
+      "updatedAt": "2026-11-04T13:08:59.000Z",
+      "dueDate": "2026-10-29",
+      "createdBy": "u3"
+    },
+    {
+      "id": "tsk108",
+      "ref": "NUV-110",
+      "projectId": "prj-nuv",
+      "epicId": "ep-nuv-2",
+      "parentId": "tsk40",
+      "type": "subtask",
+      "title": "Ajustes de acessibilidade — NUV-103",
+      "desc": "",
+      "status": "in_progress",
+      "priority": "low",
+      "assigneeId": "u7",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-07-12T19:22:10.000Z",
+      "updatedAt": "2026-10-31T19:48:05.000Z",
+      "dueDate": null,
+      "createdBy": "u7"
+    },
+    {
+      "id": "tsk109",
+      "ref": "NUV-111",
+      "projectId": "prj-nuv",
+      "epicId": "ep-nuv-2",
+      "parentId": "tsk40",
+      "type": "subtask",
+      "title": "Validar em homologação — NUV-103",
+      "desc": "",
+      "status": "done",
+      "priority": "low",
+      "assigneeId": "u7",
+      "teamId": "tm-infra",
+      "sprintId": null,
+      "labels": [],
+      "acceptance": [],
+      "blockedBy": [],
+      "createdAt": "2026-07-12T19:22:10.000Z",
+      "updatedAt": "2026-11-03T13:20:19.000Z",
+      "dueDate": null,
+      "createdBy": "u7"
+    }
+  ],
+  "comments": [
+    {
+      "id": "cm1",
+      "taskId": "tsk76",
+      "userId": "u2",
+      "text": "@Camila Freitas podemos alinhar amanhã cedo?",
+      "createdAt": "2026-10-23T20:38:40.000Z"
+    },
+    {
+      "id": "cm2",
+      "taskId": "tsk19",
+      "userId": "u14",
+      "text": "Encontrei um caso de borda quando o usuário não tem permissão — tratando.",
+      "createdAt": "2026-10-26T12:36:13.000Z"
+    },
+    {
+      "id": "cm3",
+      "taskId": "tsk72",
+      "userId": "u12",
+      "text": "Ajustei conforme a revisão, pronto para nova olhada.",
+      "createdAt": "2026-10-27T17:45:47.000Z"
+    },
+    {
+      "id": "cm4",
+      "taskId": "tsk9",
+      "userId": "u8",
+      "text": "Combinei com o cliente que essa entrega fica para a próxima sprint.",
+      "createdAt": "2026-10-31T14:51:12.000Z"
+    },
+    {
+      "id": "cm5",
+      "taskId": "tsk29",
+      "userId": "u10",
+      "text": "Subi uma primeira versão em homologação, podem validar?",
+      "createdAt": "2026-10-31T21:54:13.000Z"
+    },
+    {
+      "id": "cm6",
+      "taskId": "tsk77",
+      "userId": "u8",
+      "text": "Subi uma primeira versão em homologação, podem validar?",
+      "createdAt": "2026-10-28T20:02:04.000Z"
+    },
+    {
+      "id": "cm7",
+      "taskId": "tsk89",
+      "userId": "u16",
+      "text": "@Ana Souza podemos alinhar amanhã cedo?",
+      "createdAt": "2026-10-30T13:05:58.000Z"
+    },
+    {
+      "id": "cm8",
+      "taskId": "tsk82",
+      "userId": "u16",
+      "text": "Bloqueada até sair a credencial do ambiente de homologação.",
+      "createdAt": "2026-11-04T13:00:30.000Z"
+    },
+    {
+      "id": "cm9",
+      "taskId": "tsk64",
+      "userId": "u1",
+      "text": "Combinei com o cliente que essa entrega fica para a próxima sprint.",
+      "createdAt": "2026-10-23T20:05:35.000Z"
+    },
+    {
+      "id": "cm10",
+      "taskId": "tsk92",
+      "userId": "u17",
+      "text": "Dependemos da resposta do time de infra para seguir aqui.",
+      "createdAt": "2026-10-22T21:03:26.000Z"
+    },
+    {
+      "id": "cm11",
+      "taskId": "tsk82",
+      "userId": "u16",
+      "text": "Repliquei o problema localmente, é condição de corrida na fila.",
+      "createdAt": "2026-11-04T16:56:22.000Z"
+    },
+    {
+      "id": "cm12",
+      "taskId": "tsk22",
+      "userId": "u17",
+      "text": "Dependemos da resposta do time de infra para seguir aqui.",
+      "createdAt": "2026-10-29T12:46:09.000Z"
+    },
+    {
+      "id": "cm13",
+      "taskId": "tsk89",
+      "userId": "u16",
+      "text": "@Camila Freitas podemos alinhar amanhã cedo?",
+      "createdAt": "2026-10-27T18:52:11.000Z"
+    },
+    {
+      "id": "cm14",
+      "taskId": "tsk21",
+      "userId": "u1",
+      "text": "Precisamos alinhar o texto desse e-mail com o time de produto.",
+      "createdAt": "2026-11-03T16:06:37.000Z"
+    },
+    {
+      "id": "cm15",
+      "taskId": "tsk42",
+      "userId": "u6",
+      "text": "Ajustei conforme a revisão, pronto para nova olhada.",
+      "createdAt": "2026-11-03T19:17:32.000Z"
+    },
+    {
+      "id": "cm16",
+      "taskId": "tsk89",
+      "userId": "u16",
+      "text": "Subi uma primeira versão em homologação, podem validar?",
+      "createdAt": "2026-11-01T19:57:55.000Z"
+    },
+    {
+      "id": "cm17",
+      "taskId": "tsk22",
+      "userId": "u4",
+      "text": "Encontrei um caso de borda quando o usuário não tem permissão — tratando.",
+      "createdAt": "2026-11-01T21:00:05.000Z"
+    },
+    {
+      "id": "cm18",
+      "taskId": "tsk52",
+      "userId": "u3",
+      "text": "Precisamos alinhar o texto desse e-mail com o time de produto.",
+      "createdAt": "2026-11-05T14:40:48.000Z"
+    },
+    {
+      "id": "cm19",
+      "taskId": "tsk87",
+      "userId": "u17",
+      "text": "@Ana Souza consegue olhar isso hoje?",
+      "createdAt": "2026-11-01T20:18:50.000Z"
+    },
+    {
+      "id": "cm20",
+      "taskId": "tsk75",
+      "userId": "u12",
+      "text": "Combinei com o cliente que essa entrega fica para a próxima sprint.",
+      "createdAt": "2026-11-05T16:57:11.000Z"
+    },
+    {
+      "id": "cm21",
+      "taskId": "tsk27",
+      "userId": "u3",
+      "text": "Ajustei conforme a revisão, pronto para nova olhada.",
+      "createdAt": "2026-10-31T14:58:11.000Z"
+    },
+    {
+      "id": "cm22",
+      "taskId": "tsk7",
+      "userId": "u12",
+      "text": "Ajustei conforme a revisão, pronto para nova olhada.",
+      "createdAt": "2026-11-04T14:38:51.000Z"
+    },
+    {
+      "id": "cm23",
+      "taskId": "tsk76",
+      "userId": "u2",
+      "text": "A especificação está no documento do projeto, seção 3.2.",
+      "createdAt": "2026-10-22T13:49:16.000Z"
+    },
+    {
+      "id": "cm24",
+      "taskId": "tsk38",
+      "userId": "u3",
+      "text": "Teste de carga passou com folga, latência p95 em 180ms.",
+      "createdAt": "2026-10-29T17:19:45.000Z"
+    },
+    {
+      "id": "cm25",
+      "taskId": "tsk39",
+      "userId": "u1",
+      "text": "@Larissa Mendes consegue olhar isso hoje?",
+      "createdAt": "2026-10-22T13:53:29.000Z"
+    },
+    {
+      "id": "cm26",
+      "taskId": "tsk17",
+      "userId": "u2",
+      "text": "Encontrei um caso de borda quando o usuário não tem permissão — tratando.",
+      "createdAt": "2026-11-03T12:31:20.000Z"
+    },
+    {
+      "id": "cm27",
+      "taskId": "tsk71",
+      "userId": "u12",
+      "text": "Dependemos da resposta do time de infra para seguir aqui.",
+      "createdAt": "2026-10-27T15:04:33.000Z"
+    },
+    {
+      "id": "cm28",
+      "taskId": "tsk80",
+      "userId": "u12",
+      "text": "A especificação está no documento do projeto, seção 3.2.",
+      "createdAt": "2026-11-05T18:40:06.000Z"
+    },
+    {
+      "id": "cm29",
+      "taskId": "tsk82",
+      "userId": "u16",
+      "text": "Combinei com o cliente que essa entrega fica para a próxima sprint.",
+      "createdAt": "2026-10-24T14:51:05.000Z"
+    },
+    {
+      "id": "cm30",
+      "taskId": "tsk23",
+      "userId": "u2",
+      "text": "Encontrei um caso de borda quando o usuário não tem permissão — tratando.",
+      "createdAt": "2026-11-04T19:43:27.000Z"
+    },
+    {
+      "id": "cm31",
+      "taskId": "tsk49",
+      "userId": "u11",
+      "text": "@Otávio Ferreira esse ponto é com você, certo?",
+      "createdAt": "2026-11-05T14:42:28.000Z"
+    },
+    {
+      "id": "cm32",
+      "taskId": "tsk48",
+      "userId": "u3",
+      "text": "Combinei com o cliente que essa entrega fica para a próxima sprint.",
+      "createdAt": "2026-10-25T16:44:06.000Z"
+    },
+    {
+      "id": "cm33",
+      "taskId": "tsk15",
+      "userId": "u4",
+      "text": "Repliquei o problema localmente, é condição de corrida na fila.",
+      "createdAt": "2026-10-28T17:13:20.000Z"
+    },
+    {
+      "id": "cm34",
+      "taskId": "tsk24",
+      "userId": "u5",
+      "text": "Subi uma primeira versão em homologação, podem validar?",
+      "createdAt": "2026-10-24T19:07:04.000Z"
+    }
+  ],
+  "audit": [
+    {
+      "id": "au27",
+      "ts": "2026-11-05T20:29:06.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk25",
+      "projectId": "prj-pag",
+      "before": null,
+      "after": {
+        "title": "Estorno parcial de transações de cartão",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa PAG-111",
+      "source": "ui"
+    },
+    {
+      "id": "au22",
+      "ts": "2026-11-05T19:31:11.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk16",
+      "projectId": "prj-pag",
+      "before": null,
+      "after": {
+        "title": "Webhook de confirmação de pagamento Pix",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa PAG-102",
+      "source": "ui"
+    },
+    {
+      "id": "au12",
+      "ts": "2026-11-05T19:01:54.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk1",
+      "projectId": "prj-pcl",
+      "before": null,
+      "after": {
+        "title": "Implementar listagem de faturas com filtros por período",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa PCL-101",
+      "source": "ui"
+    },
+    {
+      "id": "au43",
+      "ts": "2026-11-05T15:11:57.000Z",
+      "userId": "u11",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk49",
+      "projectId": "prj-dlk",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu DLK-103",
+      "source": "ui"
+    },
+    {
+      "id": "au47",
+      "ts": "2026-11-05T14:31:19.000Z",
+      "userId": "u3",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk52",
+      "projectId": "prj-dlk",
+      "before": {
+        "status": "todo"
+      },
+      "after": {
+        "status": "in_progress"
+      },
+      "summary": "moveu DLK-106 para Em andamento",
+      "source": "automation"
+    },
+    {
+      "id": "au23",
+      "ts": "2026-11-04T19:14:11.000Z",
+      "userId": "u2",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk17",
+      "projectId": "prj-pag",
+      "before": {
+        "status": "todo"
+      },
+      "after": {
+        "status": "in_progress"
+      },
+      "summary": "moveu PAG-103 para Em andamento",
+      "source": "ui"
+    },
+    {
+      "id": "au17",
+      "ts": "2026-11-04T19:07:25.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk7",
+      "projectId": "prj-pcl",
+      "before": null,
+      "after": {
+        "title": "Corrigir quebra de layout na tabela de faturas no Safari",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa PCL-107",
+      "source": "ui"
+    },
+    {
+      "id": "au32",
+      "ts": "2026-11-04T14:05:38.000Z",
+      "userId": "u3",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk31",
+      "projectId": "prj-apc",
+      "before": null,
+      "after": {
+        "title": "Checklist dinâmico por tipo de serviço",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa APC-105",
+      "source": "ui"
+    },
+    {
+      "id": "au59",
+      "ts": "2026-11-04T13:17:40.000Z",
+      "userId": "u12",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk71",
+      "projectId": "prj-onb",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu ONB-103",
+      "source": "ui"
+    },
+    {
+      "id": "au29",
+      "ts": "2026-11-04T12:33:30.000Z",
+      "userId": "u14",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk28",
+      "projectId": "prj-apc",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu APC-102",
+      "source": "ui"
+    },
+    {
+      "id": "au63",
+      "ts": "2026-11-03T20:19:46.000Z",
+      "userId": "u12",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk75",
+      "projectId": "prj-web",
+      "before": {
+        "status": "todo"
+      },
+      "after": {
+        "status": "in_progress"
+      },
+      "summary": "moveu WEB-101 para Em andamento",
+      "source": "ui"
+    },
+    {
+      "id": "au16",
+      "ts": "2026-11-03T14:44:03.000Z",
+      "userId": "u4",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk5",
+      "projectId": "prj-pcl",
+      "before": {
+        "status": "todo"
+      },
+      "after": {
+        "status": "in_progress"
+      },
+      "summary": "moveu PCL-105 para Em andamento",
+      "source": "ui"
+    },
+    {
+      "id": "au55",
+      "ts": "2026-11-03T14:18:40.000Z",
+      "userId": "u4",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk64",
+      "projectId": "prj-fat",
+      "before": null,
+      "after": {
+        "title": "Emissão automática de NF-e no fechamento",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa FAT-101",
+      "source": "mcp"
+    },
+    {
+      "id": "au19",
+      "ts": "2026-11-03T13:44:55.000Z",
+      "userId": "u2",
+      "action": "assign",
+      "entityType": "task",
+      "entityId": "tsk10",
+      "projectId": "prj-pcl",
+      "before": {
+        "assigneeId": null
+      },
+      "after": {
+        "assigneeId": "u2"
+      },
+      "summary": "atribuiu PCL-110",
+      "source": "ui"
+    },
+    {
+      "id": "au57",
+      "ts": "2026-11-03T13:36:25.000Z",
+      "userId": "u12",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk70",
+      "projectId": "prj-onb",
+      "before": null,
+      "after": {
+        "title": "Verificação de identidade com documento e selfie",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa ONB-102",
+      "source": "ui"
+    },
+    {
+      "id": "au60",
+      "ts": "2026-11-02T14:00:43.000Z",
+      "userId": "u12",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk72",
+      "projectId": "prj-onb",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu ONB-104",
+      "source": "ui"
+    },
+    {
+      "id": "au34",
+      "ts": "2026-11-01T17:03:47.000Z",
+      "userId": "u3",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk35",
+      "projectId": "prj-apc",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu APC-109",
+      "source": "ui"
+    },
+    {
+      "id": "au58",
+      "ts": "2026-11-01T15:08:35.000Z",
+      "userId": "u12",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk70",
+      "projectId": "prj-onb",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu ONB-102",
+      "source": "ui"
+    },
+    {
+      "id": "au61",
+      "ts": "2026-10-31T21:43:24.000Z",
+      "userId": "u12",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk73",
+      "projectId": "prj-onb",
+      "before": null,
+      "after": {
+        "title": "Métricas de conversão do funil de ativação",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa ONB-105",
+      "source": "ui"
+    },
+    {
+      "id": "au25",
+      "ts": "2026-10-31T18:30:02.000Z",
+      "userId": "u2",
+      "action": "assign",
+      "entityType": "task",
+      "entityId": "tsk19",
+      "projectId": "prj-pag",
+      "before": {
+        "assigneeId": null
+      },
+      "after": {
+        "assigneeId": "u14"
+      },
+      "summary": "atribuiu PAG-105",
+      "source": "ui"
+    },
+    {
+      "id": "au53",
+      "ts": "2026-10-31T17:26:39.000Z",
+      "userId": "u9",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk62",
+      "projectId": "prj-obs",
+      "before": {
+        "status": "todo"
+      },
+      "after": {
+        "status": "in_progress"
+      },
+      "summary": "moveu OBS-107 para Em andamento",
+      "source": "ui"
+    },
+    {
+      "id": "au44",
+      "ts": "2026-10-31T17:15:31.000Z",
+      "userId": "u3",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk50",
+      "projectId": "prj-dlk",
+      "before": {
+        "status": "todo"
+      },
+      "after": {
+        "status": "in_progress"
+      },
+      "summary": "moveu DLK-104 para Em andamento",
+      "source": "ui"
+    },
+    {
+      "id": "au50",
+      "ts": "2026-10-31T13:10:41.000Z",
+      "userId": "u2",
+      "action": "assign",
+      "entityType": "task",
+      "entityId": "tsk55",
+      "projectId": "prj-dlk",
+      "before": {
+        "assigneeId": null
+      },
+      "after": {
+        "assigneeId": "u3"
+      },
+      "summary": "atribuiu DLK-109",
+      "source": "ui"
+    },
+    {
+      "id": "au21",
+      "ts": "2026-10-31T13:04:27.000Z",
+      "userId": "u4",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk15",
+      "projectId": "prj-pag",
+      "before": {
+        "status": "todo"
+      },
+      "after": {
+        "status": "in_progress"
+      },
+      "summary": "moveu PAG-101 para Em andamento",
+      "source": "ui"
+    },
+    {
+      "id": "au69",
+      "ts": "2026-10-30T21:03:55.000Z",
+      "userId": "u2",
+      "action": "assign",
+      "entityType": "task",
+      "entityId": "tsk82",
+      "projectId": "prj-cma",
+      "before": {
+        "assigneeId": null
+      },
+      "after": {
+        "assigneeId": "u16"
+      },
+      "summary": "atribuiu CMA-102",
+      "source": "mcp"
+    },
+    {
+      "id": "au37",
+      "ts": "2026-10-30T15:03:47.000Z",
+      "userId": "u2",
+      "action": "assign",
+      "entityType": "task",
+      "entityId": "tsk37",
+      "projectId": "prj-apc",
+      "before": {
+        "assigneeId": null
+      },
+      "after": {
+        "assigneeId": "u10"
+      },
+      "summary": "atribuiu APC-111",
+      "source": "ui"
+    },
+    {
+      "id": "au54",
+      "ts": "2026-10-29T13:57:16.000Z",
+      "userId": "u9",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk63",
+      "projectId": "prj-obs",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu OBS-108",
+      "source": "ui"
+    },
+    {
+      "id": "au70",
+      "ts": "2026-10-29T13:24:16.000Z",
+      "userId": "u16",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk85",
+      "projectId": "prj-cma",
+      "before": null,
+      "after": {
+        "title": "Plano de ação de eficiência priorizado",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa CMA-105",
+      "source": "ui"
+    },
+    {
+      "id": "au67",
+      "ts": "2026-10-29T11:05:17.000Z",
+      "userId": "u17",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk81",
+      "projectId": "prj-cma",
+      "before": {
+        "status": "todo"
+      },
+      "after": {
+        "status": "in_progress"
+      },
+      "summary": "moveu CMA-101 para Em andamento",
+      "source": "ui"
+    },
+    {
+      "id": "au31",
+      "ts": "2026-10-28T16:28:36.000Z",
+      "userId": "u10",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk29",
+      "projectId": "prj-apc",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu APC-103",
+      "source": "ui"
+    },
+    {
+      "id": "au35",
+      "ts": "2026-10-28T16:06:22.000Z",
+      "userId": "u10",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk36",
+      "projectId": "prj-apc",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu APC-110",
+      "source": "ui"
+    },
+    {
+      "id": "au33",
+      "ts": "2026-10-28T15:13:29.000Z",
+      "userId": "u3",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk34",
+      "projectId": "prj-apc",
+      "before": null,
+      "after": {
+        "title": "Modo escuro no aplicativo",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa APC-108",
+      "source": "ui"
+    },
+    {
+      "id": "au73",
+      "ts": "2026-10-26T19:44:14.000Z",
+      "userId": "u2",
+      "action": "sprint_start",
+      "entityType": "sprint",
+      "entityId": "sp-pcl-15",
+      "projectId": "prj-pcl",
+      "before": {
+        "status": "planned"
+      },
+      "after": {
+        "status": "active"
+      },
+      "summary": "iniciou a Sprint 15",
+      "source": "ui"
+    },
+    {
+      "id": "au75",
+      "ts": "2026-10-26T19:03:39.000Z",
+      "userId": "u2",
+      "action": "sprint_start",
+      "entityType": "sprint",
+      "entityId": "sp-apc-5",
+      "projectId": "prj-apc",
+      "before": {
+        "status": "planned"
+      },
+      "after": {
+        "status": "active"
+      },
+      "summary": "iniciou a Sprint 5",
+      "source": "ui"
+    },
+    {
+      "id": "au74",
+      "ts": "2026-10-26T18:05:02.000Z",
+      "userId": "u2",
+      "action": "sprint_start",
+      "entityType": "sprint",
+      "entityId": "sp-pag-9",
+      "projectId": "prj-pag",
+      "before": {
+        "status": "planned"
+      },
+      "after": {
+        "status": "active"
+      },
+      "summary": "iniciou a Sprint 9",
+      "source": "ui"
+    },
+    {
+      "id": "au14",
+      "ts": "2026-10-26T17:35:05.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk4",
+      "projectId": "prj-pcl",
+      "before": null,
+      "after": {
+        "title": "Tela de detalhe do contrato com histórico de aditivos",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa PCL-104",
+      "source": "ui"
+    },
+    {
+      "id": "au49",
+      "ts": "2026-10-26T14:51:51.000Z",
+      "userId": "u3",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk55",
+      "projectId": "prj-dlk",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu DLK-109",
+      "source": "ui"
+    },
+    {
+      "id": "au65",
+      "ts": "2026-10-25T21:08:48.000Z",
+      "userId": "u12",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk79",
+      "projectId": "prj-web",
+      "before": null,
+      "after": {
+        "title": "Formulário de contato com proteção anti-spam",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa WEB-105",
+      "source": "ui"
+    },
+    {
+      "id": "au45",
+      "ts": "2026-10-25T20:07:29.000Z",
+      "userId": "u3",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk51",
+      "projectId": "prj-dlk",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu DLK-105",
+      "source": "ui"
+    },
+    {
+      "id": "au66",
+      "ts": "2026-10-25T19:32:41.000Z",
+      "userId": "u12",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk79",
+      "projectId": "prj-web",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu WEB-105",
+      "source": "ui"
+    },
+    {
+      "id": "au40",
+      "ts": "2026-10-25T19:08:01.000Z",
+      "userId": "u4",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk43",
+      "projectId": "prj-nuv",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu NUV-106",
+      "source": "ui"
+    },
+    {
+      "id": "au72",
+      "ts": "2026-10-25T14:11:41.000Z",
+      "userId": "u16",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk91",
+      "projectId": "prj-erp",
+      "before": null,
+      "after": {
+        "title": "Homologação com massa de dados do cliente",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa ERP-104",
+      "source": "ui"
+    },
+    {
+      "id": "au13",
+      "ts": "2026-10-24T21:16:58.000Z",
+      "userId": "u2",
+      "action": "assign",
+      "entityType": "task",
+      "entityId": "tsk1",
+      "projectId": "prj-pcl",
+      "before": {
+        "assigneeId": null
+      },
+      "after": {
+        "assigneeId": "u9"
+      },
+      "summary": "atribuiu PCL-101",
+      "source": "ui"
+    },
+    {
+      "id": "au39",
+      "ts": "2026-10-24T20:39:08.000Z",
+      "userId": "u13",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk43",
+      "projectId": "prj-nuv",
+      "before": null,
+      "after": {
+        "title": "Bug: DNS interno intermitente após cutover",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa NUV-106",
+      "source": "ui"
+    },
+    {
+      "id": "au41",
+      "ts": "2026-10-24T19:12:21.000Z",
+      "userId": "u13",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk46",
+      "projectId": "prj-nuv",
+      "before": null,
+      "after": {
+        "title": "Reduzir custo de instâncias subutilizadas",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa NUV-109",
+      "source": "ui"
+    },
+    {
+      "id": "au62",
+      "ts": "2026-10-24T18:17:14.000Z",
+      "userId": "u2",
+      "action": "assign",
+      "entityType": "task",
+      "entityId": "tsk73",
+      "projectId": "prj-onb",
+      "before": {
+        "assigneeId": null
+      },
+      "after": {
+        "assigneeId": "u8"
+      },
+      "summary": "atribuiu ONB-105",
+      "source": "ui"
+    },
+    {
+      "id": "au42",
+      "ts": "2026-10-24T18:05:43.000Z",
+      "userId": "u6",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk49",
+      "projectId": "prj-dlk",
+      "before": null,
+      "after": {
+        "title": "Modelagem da camada silver de clientes",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa DLK-103",
+      "source": "ui"
+    },
+    {
+      "id": "au15",
+      "ts": "2026-10-24T15:07:55.000Z",
+      "userId": "u12",
+      "action": "status",
+      "entityType": "task",
+      "entityId": "tsk4",
+      "projectId": "prj-pcl",
+      "before": {
+        "status": "in_review"
+      },
+      "after": {
+        "status": "done"
+      },
+      "summary": "concluiu PCL-104",
+      "source": "ui"
+    },
+    {
+      "id": "au51",
+      "ts": "2026-10-24T13:49:53.000Z",
+      "userId": "u13",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk58",
+      "projectId": "prj-obs",
+      "before": null,
+      "after": {
+        "title": "Dashboards padrão de latência e erro por serviço",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa OBS-103",
+      "source": "ui"
+    },
+    {
+      "id": "au18",
+      "ts": "2026-10-23T20:44:31.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk10",
+      "projectId": "prj-pcl",
+      "before": null,
+      "after": {
+        "title": "Dashboard inicial do cliente com resumo financeiro",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa PCL-110",
+      "source": "mcp"
+    },
+    {
+      "id": "au71",
+      "ts": "2026-10-23T16:54:59.000Z",
+      "userId": "u16",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk88",
+      "projectId": "prj-erp",
+      "before": null,
+      "after": {
+        "title": "Especificar contrato de integração de pedidos",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa ERP-101",
+      "source": "ui"
+    },
+    {
+      "id": "au30",
+      "ts": "2026-10-23T15:07:43.000Z",
+      "userId": "u2",
+      "action": "assign",
+      "entityType": "task",
+      "entityId": "tsk28",
+      "projectId": "prj-apc",
+      "before": {
+        "assigneeId": null
+      },
+      "after": {
+        "assigneeId": "u14"
+      },
+      "summary": "atribuiu APC-102",
+      "source": "ui"
+    },
+    {
+      "id": "au24",
+      "ts": "2026-10-23T14:16:59.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk19",
+      "projectId": "prj-pag",
+      "before": null,
+      "after": {
+        "title": "Tokenização de cartão com gateway parceiro",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa PAG-105",
+      "source": "ui"
+    },
+    {
+      "id": "au52",
+      "ts": "2026-10-21T14:16:34.000Z",
+      "userId": "u13",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk61",
+      "projectId": "prj-obs",
+      "before": null,
+      "after": {
+        "title": "SLO de disponibilidade do checkout",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa OBS-106",
+      "source": "ui"
+    },
+    {
+      "id": "au56",
+      "ts": "2026-10-20T20:31:47.000Z",
+      "userId": "u4",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk67",
+      "projectId": "prj-fat",
+      "before": null,
+      "after": {
+        "title": "Painel de inadimplência por carteira",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa FAT-104",
+      "source": "mcp"
+    },
+    {
+      "id": "au38",
+      "ts": "2026-10-20T11:53:24.000Z",
+      "userId": "u13",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk40",
+      "projectId": "prj-nuv",
+      "before": null,
+      "after": {
+        "title": "Migrar serviço de autenticação para ECS",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa NUV-103",
+      "source": "ui"
+    },
+    {
+      "id": "au36",
+      "ts": "2026-10-20T11:35:25.000Z",
+      "userId": "u3",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk37",
+      "projectId": "prj-apc",
+      "before": null,
+      "after": {
+        "title": "Reduzir tamanho do bundle Android em 30%",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa APC-111",
+      "source": "ui"
+    },
+    {
+      "id": "au26",
+      "ts": "2026-10-18T15:56:36.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk22",
+      "projectId": "prj-pag",
+      "before": null,
+      "after": {
+        "title": "Idempotência na API de criação de cobranças",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa PAG-108",
+      "source": "ui"
+    },
+    {
+      "id": "au28",
+      "ts": "2026-10-18T14:37:47.000Z",
+      "userId": "u3",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk28",
+      "projectId": "prj-apc",
+      "before": null,
+      "after": {
+        "title": "Resolver conflitos de edição offline na OS",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa APC-102",
+      "source": "ui"
+    },
+    {
+      "id": "au64",
+      "ts": "2026-10-17T19:32:19.000Z",
+      "userId": "u12",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk76",
+      "projectId": "prj-web",
+      "before": null,
+      "after": {
+        "title": "Página de carreiras integrada ao ATS",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa WEB-102",
+      "source": "ui"
+    },
+    {
+      "id": "au68",
+      "ts": "2026-10-17T19:04:56.000Z",
+      "userId": "u16",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk82",
+      "projectId": "prj-cma",
+      "before": null,
+      "after": {
+        "title": "Mapear fluxo AS-IS da expedição",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa CMA-102",
+      "source": "ui"
+    },
+    {
+      "id": "au46",
+      "ts": "2026-10-17T17:21:41.000Z",
+      "userId": "u6",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk52",
+      "projectId": "prj-dlk",
+      "before": null,
+      "after": {
+        "title": "Bug: duplicidade na ingestão incremental de pedidos",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa DLK-106",
+      "source": "ui"
+    },
+    {
+      "id": "au48",
+      "ts": "2026-10-16T17:13:56.000Z",
+      "userId": "u6",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk55",
+      "projectId": "prj-dlk",
+      "before": null,
+      "after": {
+        "title": "Orquestração dos pipelines com retentativa",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa DLK-109",
+      "source": "ui"
+    },
+    {
+      "id": "au20",
+      "ts": "2026-10-16T13:28:55.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "tsk13",
+      "projectId": "prj-pcl",
+      "before": null,
+      "after": {
+        "title": "Acessibilidade: navegação por teclado na central de faturas",
+        "status": "backlog"
+      },
+      "summary": "criou a tarefa PCL-113",
+      "source": "ui"
+    },
+    {
+      "id": "au11",
+      "ts": "2026-10-06T14:00:35.000Z",
+      "userId": "u16",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-erp",
+      "projectId": "prj-erp",
+      "before": null,
+      "after": {
+        "name": "Integração ERP Protheus",
+        "status": "active"
+      },
+      "summary": "criou o projeto Integração ERP Protheus",
+      "source": "ui"
+    },
+    {
+      "id": "au9",
+      "ts": "2026-09-26T11:29:53.000Z",
+      "userId": "u12",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-web",
+      "projectId": "prj-web",
+      "before": null,
+      "after": {
+        "name": "Website Institucional",
+        "status": "active"
+      },
+      "summary": "criou o projeto Website Institucional",
+      "source": "ui"
+    },
+    {
+      "id": "au10",
+      "ts": "2026-09-16T18:38:18.000Z",
+      "userId": "u16",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-cma",
+      "projectId": "prj-cma",
+      "before": null,
+      "after": {
+        "name": "Diagnóstico Industrial Andrade",
+        "status": "active"
+      },
+      "summary": "criou o projeto Diagnóstico Industrial Andrade",
+      "source": "ui"
+    },
+    {
+      "id": "au6",
+      "ts": "2026-09-11T19:13:56.000Z",
+      "userId": "u13",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-obs",
+      "projectId": "prj-obs",
+      "before": null,
+      "after": {
+        "name": "Observabilidade & SRE",
+        "status": "active"
+      },
+      "summary": "criou o projeto Observabilidade & SRE",
+      "source": "ui"
+    },
+    {
+      "id": "au5",
+      "ts": "2026-08-27T16:35:30.000Z",
+      "userId": "u6",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-dlk",
+      "projectId": "prj-dlk",
+      "before": null,
+      "after": {
+        "name": "Data Lake Corporativo",
+        "status": "active"
+      },
+      "summary": "criou o projeto Data Lake Corporativo",
+      "source": "ui"
+    },
+    {
+      "id": "au3",
+      "ts": "2026-08-17T14:52:48.000Z",
+      "userId": "u3",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-apc",
+      "projectId": "prj-apc",
+      "before": null,
+      "after": {
+        "name": "Aplicativo de Campo",
+        "status": "active"
+      },
+      "summary": "criou o projeto Aplicativo de Campo",
+      "source": "ui"
+    },
+    {
+      "id": "au1",
+      "ts": "2026-08-02T13:18:23.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-pcl",
+      "projectId": "prj-pcl",
+      "before": null,
+      "after": {
+        "name": "Portal do Cliente 2.0",
+        "status": "active"
+      },
+      "summary": "criou o projeto Portal do Cliente 2.0",
+      "source": "ui"
+    },
+    {
+      "id": "au2",
+      "ts": "2026-07-08T13:21:29.000Z",
+      "userId": "u2",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-pag",
+      "projectId": "prj-pag",
+      "before": null,
+      "after": {
+        "name": "Plataforma de Pagamentos",
+        "status": "active"
+      },
+      "summary": "criou o projeto Plataforma de Pagamentos",
+      "source": "ui"
+    },
+    {
+      "id": "au4",
+      "ts": "2026-06-18T18:34:05.000Z",
+      "userId": "u13",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-nuv",
+      "projectId": "prj-nuv",
+      "before": null,
+      "after": {
+        "name": "Migração para Nuvem",
+        "status": "active"
+      },
+      "summary": "criou o projeto Migração para Nuvem",
+      "source": "ui"
+    },
+    {
+      "id": "au7",
+      "ts": "2026-05-29T11:22:29.000Z",
+      "userId": "u4",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-fat",
+      "projectId": "prj-fat",
+      "before": null,
+      "after": {
+        "name": "Automação de Faturamento",
+        "status": "paused"
+      },
+      "summary": "criou o projeto Automação de Faturamento",
+      "source": "ui"
+    },
+    {
+      "id": "au8",
+      "ts": "2026-04-09T17:47:54.000Z",
+      "userId": "u12",
+      "action": "create",
+      "entityType": "project",
+      "entityId": "prj-onb",
+      "projectId": "prj-onb",
+      "before": null,
+      "after": {
+        "name": "Onboarding Digital",
+        "status": "done"
+      },
+      "summary": "criou o projeto Onboarding Digital",
+      "source": "ui"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "nf1",
+      "ts": "2026-10-27T14:04:42.000Z",
+      "channel": "whatsapp",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u9",
+      "subject": "[PCL-101] Tarefa atribuída a você",
+      "body": "Olá Diego, a tarefa PCL-101 — Implementar listagem de faturas com filtros por período foi atribuída a você no projeto Portal do Cliente 2.0.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf2",
+      "ts": "2026-11-04T17:25:27.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u1",
+      "subject": "[PCL-106] Tarefa atribuída a você",
+      "body": "Olá Helena, a tarefa PCL-106 — Página de suporte com abertura de chamado foi atribuída a você no projeto Portal do Cliente 2.0.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf3",
+      "ts": "2026-11-01T11:22:27.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u1",
+      "subject": "[PCL-112] Tarefa atribuída a você",
+      "body": "Olá Helena, a tarefa PCL-112 — Bug: sessão expira sem aviso durante preenchimento foi atribuída a você no projeto Portal do Cliente 2.0.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf4",
+      "ts": "2026-10-28T13:13:09.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u14",
+      "subject": "[PAG-105] Tarefa atribuída a você",
+      "body": "Olá Larissa, a tarefa PAG-105 — Tokenização de cartão com gateway parceiro foi atribuída a você no projeto Plataforma de Pagamentos.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf5",
+      "ts": "2026-10-28T21:09:45.000Z",
+      "channel": "whatsapp",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u3",
+      "subject": "[APC-101] Tarefa atribuída a você",
+      "body": "Olá Marina, a tarefa APC-101 — Fila local de sincronização com retry exponencial foi atribuída a você no projeto Aplicativo de Campo.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf6",
+      "ts": "2026-11-05T16:48:20.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u15",
+      "subject": "[APC-106] Tarefa atribuída a você",
+      "body": "Olá Otávio, a tarefa APC-106 — Bug: app trava ao sincronizar 200+ fotos foi atribuída a você no projeto Aplicativo de Campo.",
+      "status": "failed",
+      "attempts": 3
+    },
+    {
+      "id": "nf7",
+      "ts": "2026-10-29T11:11:43.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u10",
+      "subject": "[APC-111] Tarefa atribuída a você",
+      "body": "Olá Eduarda, a tarefa APC-111 — Reduzir tamanho do bundle Android em 30% foi atribuída a você no projeto Aplicativo de Campo.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf8",
+      "ts": "2026-10-26T14:38:25.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u9",
+      "subject": "[NUV-107] Tarefa atribuída a você",
+      "body": "Olá Diego, a tarefa NUV-107 — Política de backups e retenção no S3 foi atribuída a você no projeto Migração para Nuvem.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf9",
+      "ts": "2026-11-05T14:57:42.000Z",
+      "channel": "whatsapp",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u3",
+      "subject": "[DLK-104] Tarefa atribuída a você",
+      "body": "Olá Marina, a tarefa DLK-104 — Catálogo de dados com dicionário de métricas foi atribuída a você no projeto Data Lake Corporativo.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf10",
+      "ts": "2026-11-05T20:36:09.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u3",
+      "subject": "[DLK-109] Tarefa atribuída a você",
+      "body": "Olá Marina, a tarefa DLK-109 — Orquestração dos pipelines com retentativa foi atribuída a você no projeto Data Lake Corporativo.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf11",
+      "ts": "2026-11-04T13:17:22.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u13",
+      "subject": "[OBS-106] Tarefa atribuída a você",
+      "body": "Olá João, a tarefa OBS-106 — SLO de disponibilidade do checkout foi atribuída a você no projeto Observabilidade & SRE.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf12",
+      "ts": "2026-10-31T20:27:05.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u2",
+      "subject": "[FAT-105] Tarefa atribuída a você",
+      "body": "Olá Ricardo, a tarefa FAT-105 — Validação fiscal por UF antes da emissão foi atribuída a você no projeto Automação de Faturamento.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf13",
+      "ts": "2026-11-03T14:41:21.000Z",
+      "channel": "whatsapp",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u8",
+      "subject": "[ONB-105] Tarefa atribuída a você",
+      "body": "Olá Camila, a tarefa ONB-105 — Métricas de conversão do funil de ativação foi atribuída a você no projeto Onboarding Digital.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf14",
+      "ts": "2026-11-05T11:49:10.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u12",
+      "subject": "[WEB-105] Tarefa atribuída a você",
+      "body": "Olá Isabela, a tarefa WEB-105 — Formulário de contato com proteção anti-spam foi atribuída a você no projeto Website Institucional.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf15",
+      "ts": "2026-10-26T17:08:12.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u17",
+      "subject": "[CMA-104] Tarefa atribuída a você",
+      "body": "Olá Thiago, a tarefa CMA-104 — Matriz de desperdícios por processo foi atribuída a você no projeto Diagnóstico Industrial Andrade.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf16",
+      "ts": "2026-11-03T17:44:50.000Z",
+      "channel": "email",
+      "templateId": "nt-assigned",
+      "eventType": "task.assigned.v1",
+      "toUserId": "u16",
+      "subject": "[ERP-102] Tarefa atribuída a você",
+      "body": "Olá Renata, a tarefa ERP-102 — Sincronização de estoque a cada 15 minutos foi atribuída a você no projeto Integração ERP Protheus.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf17",
+      "ts": "2026-11-03T18:03:48.000Z",
+      "channel": "sms",
+      "templateId": "nt-due",
+      "eventType": "task.due_soon.v1",
+      "toUserId": "u8",
+      "subject": "[PCL-104] Vence em breve",
+      "body": "A tarefa PCL-104 — Detalhe do contrato vence em 2 dia(s).",
+      "status": "failed",
+      "attempts": 3
+    },
+    {
+      "id": "nf18",
+      "ts": "2026-11-04T16:52:55.000Z",
+      "channel": "email",
+      "templateId": "nt-sprint-start",
+      "eventType": "sprint.started.v1",
+      "toUserId": "u2",
+      "subject": "Sprint Sprint 15 iniciada",
+      "body": "A Sprint 15 do projeto Portal do Cliente 2.0 começou. Meta: Contestação de faturas de ponta a ponta.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf19",
+      "ts": "2026-11-01T13:11:29.000Z",
+      "channel": "whatsapp",
+      "templateId": "nt-mention",
+      "eventType": "comment.mention.v1",
+      "toUserId": "u7",
+      "subject": "[PAG-107] Você foi mencionado",
+      "body": "Ana Souza mencionou você em um comentário na tarefa PAG-107.",
+      "status": "delivered",
+      "attempts": 1
+    },
+    {
+      "id": "nf20",
+      "ts": "2026-11-02T19:30:28.000Z",
+      "channel": "email",
+      "templateId": "nt-blocked",
+      "eventType": "task.blocked.v1",
+      "toUserId": "u9",
+      "subject": "[NUV-103] Tarefa bloqueada",
+      "body": "A tarefa NUV-103 está bloqueada por NUV-101.",
+      "status": "delivered",
+      "attempts": 1
+    }
+  ],
+  "taskCounters": {
+    "prj-pcl": 19,
+    "prj-pag": 19,
+    "prj-apc": 13,
+    "prj-nuv": 11,
+    "prj-dlk": 9,
+    "prj-obs": 8,
+    "prj-fat": 5,
+    "prj-onb": 6,
+    "prj-web": 6,
+    "prj-cma": 7,
+    "prj-erp": 6
+  }
+}

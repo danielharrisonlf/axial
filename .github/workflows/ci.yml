@@ -50,3 +50,10 @@ jobs:
       - run: pnpm test
       - run: pnpm test:integration
       - run: pnpm test:e2e
+      - run: pnpm --filter @axial/web exec playwright install --with-deps chromium
+      - run: pnpm test:web:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: web-acceptance-evidence
+          path: output/validation/web

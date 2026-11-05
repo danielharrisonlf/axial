@@ -10,7 +10,9 @@
       "!**/node_modules",
       "!**/coverage",
       "!**/pnpm-lock.yaml",
-      "!**/output"
+      "!**/output",
+      "!apps/web/src/styles/prototype.css",
+      "!apps/web/src/data/demo-seed.json"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 110 },

@@ -1,0 +1,122 @@
+import { prioritySchema, taskStatusSchema } from "@axial/contracts";
+import { z } from "zod";
+
+const id = z.string().min(1);
+const optionalRef = id.nullable();
+const roleId = z.enum(["admin", "pm", "lead", "dev", "viewer"]);
+const project = z.looseObject({
+  id,
+  orgId: id,
+  key: id,
+  name: id,
+  desc: z.string(),
+  teamIds: z.array(id),
+  leadId: id,
+  priority: prioritySchema,
+  status: z.enum(["active", "paused", "done"]),
+  startDate: z.string(),
+  targetDate: z.string().nullable(),
+  favorite: z.boolean(),
+  archived: z.boolean(),
+  createdAt: z.string(),
+  color: z.string(),
+});
+const task = z.looseObject({
+  id,
+  ref: id,
+  projectId: id,
+  epicId: optionalRef,
+  parentId: optionalRef,
+  type: z.enum(["task", "bug", "subtask"]),
+  title: id,
+  desc: z.string(),
+  status: taskStatusSchema,
+  priority: prioritySchema,
+  assigneeId: optionalRef,
+  teamId: optionalRef,
+  sprintId: optionalRef,
+  labels: z.array(z.string()),
+  acceptance: z.array(z.object({ text: z.string(), done: z.boolean() })),
+  blockedBy: z.array(id),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  dueDate: z.string().nullable(),
+  createdBy: id,
+});
+export const workspaceDataSchema = z.looseObject({
+  meta: z.object({ seedVersion: z.literal(7), seededAt: z.string() }),
+  settings: z.object({
+    theme: z.enum(["light", "dark", "system"]),
+    activeApp: z.string(),
+    currentUserId: id,
+    currentProjectId: id,
+    navCollapsed: z.boolean(),
+  }),
+  orgs: z.array(z.object({ id, name: id, slug: id, desc: z.string(), demo: z.boolean() })),
+  roles: z.array(z.object({ id: roleId, name: id, desc: z.string() })),
+  users: z.array(
+    z.looseObject({
+      id,
+      name: id,
+      email: z.string(),
+      initials: z.string(),
+      color: z.string(),
+      title: z.string(),
+      roleId,
+      orgId: id,
+      teamIds: z.array(id),
+      active: z.boolean(),
+    }),
+  ),
+  teams: z.array(z.object({ id, orgId: id, name: id, desc: z.string(), leadId: id, memberIds: z.array(id) })),
+  projects: z.array(project),
+  tasks: z.array(task),
+  epics: z.array(
+    z.object({ id, projectId: id, name: id, desc: z.string(), status: z.string(), ownerId: id }),
+  ),
+  sprints: z.array(
+    z.object({
+      id,
+      projectId: id,
+      name: id,
+      goal: z.string(),
+      status: z.enum(["planned", "active", "done"]),
+      startDate: z.string(),
+      endDate: z.string(),
+    }),
+  ),
+  milestones: z.array(
+    z.object({ id, projectId: id, name: id, date: z.string(), status: z.enum(["open", "done"]) }),
+  ),
+  comments: z.array(z.object({ id, taskId: id, userId: id, text: z.string(), createdAt: z.string() })),
+  audit: z.array(
+    z.object({
+      id,
+      ts: z.string(),
+      userId: id,
+      action: z.string(),
+      entityType: z.string(),
+      entityId: optionalRef,
+      projectId: optionalRef,
+      before: z.unknown(),
+      after: z.unknown(),
+      summary: z.string(),
+      source: z.string(),
+    }),
+  ),
+  notifications: z.array(
+    z.looseObject({
+      id,
+      ts: z.string(),
+      channel: z.string(),
+      templateId: id,
+      eventType: z.string(),
+      toUserId: id,
+      subject: z.string(),
+      body: z.string(),
+      status: z.string(),
+      attempts: z.number(),
+    }),
+  ),
+  taskCounters: z.record(z.string(), z.number().int().nonnegative()),
+});

@@ -9,7 +9,7 @@ Fonte primária: apresentação `ProjectFlow (2).pdf`, 11 páginas, fornecida pe
 | Páginas 5-6 | Sprints e cronogramas | Planejamento/início/encerramento, marcos e timeline |
 | Página 6 | Equipes, papéis e permissões em ms-identity | Apenas referências e autorização das claims assinadas; sem banco de identidade |
 | Páginas 5-6 | Indicadores e acompanhamento | Endpoint de resumo dos dados de projetos; sem Insights ou central de auditoria |
-| Página 7 | Workspace React e Insights Vue/microfrontend | Fronteira futura; nenhum frontend nesta entrega |
+| Página 7 | Workspace React e Insights Vue/microfrontend | Workspace de projetos em React/Vite fiel ao protótipo; Insights Vue permanece futuro |
 | Página 8 | Cinco serviços com dados próprios | Apenas schema projects; não lê identity/audit/notifications |
 | Páginas 8-10 | NestJS, TypeScript, PostgreSQL, Redis e BullMQ | Stack implementada e verificável localmente |
 | Página 9 | Alteração e outbox na mesma transação | Mutação e eventos atômicos no PostgreSQL |

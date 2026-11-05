@@ -2,9 +2,11 @@
 
 Data: 05/11/2026. Escopo: monorepo Axial e serviço de projetos, conforme apresentação definitiva fornecida pelo usuário. Repositório: [danielharrisonlf/axial](https://github.com/danielharrisonlf/axial), privado.
 
+Este relatório registra a entrega inicial do backend. Na etapa seguinte, a API foi movida para apps/api e a interface React/Vite foi criada em apps/web; veja o [relatório dessa etapa](relatorio-web.md). Os limites de frontend citados abaixo se referem ao escopo inicial.
+
 ## Resultado
 
-Foi criado um monorepo independente do protótipo, com apenas um serviço executável: `apps/ms-projects`. Não houve alteração do código do protótipo, da landing page ou dos repositórios usados como referência.
+Foi criado um monorepo independente do protótipo, com apenas um serviço executável: `apps/api`. Não houve alteração do código do protótipo, da landing page ou dos repositórios usados como referência.
 
 A API possui **39 operações documentadas** (incluindo duas de saúde), persistência real no PostgreSQL e publicação BullMQ em três filas. A implementação cobre planejamento, execução e projeções dos dados de projetos; consumidores e aplicações futuras permanecem separados.
 

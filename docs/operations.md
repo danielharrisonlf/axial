@@ -36,7 +36,7 @@ O relay confirma enfileiramento em três destinos; não confirma entrega de e-ma
 ## Imagem
 
 ```powershell
-docker build -f apps/ms-projects/Dockerfile -t axial-ms-projects:local .
+docker build -f apps/api/Dockerfile -t axial-ms-projects:local .
 ```
 
 A imagem usa Node 24 Alpine, build em estágio separado, lockfile congelado e execução como usuário não root. Configure DATABASE_URL/REDIS_URL com endereços acessíveis dentro do contêiner. Monte a chave pública somente para leitura ou use JWKS; nunca inclua a chave privada na imagem. O Dockerfile copia dependências de build também para o estágio final; uma imagem mais enxuta é uma otimização futura, sem efeito no contrato de execução.

@@ -2,11 +2,13 @@ node_modules/
 dist/
 .turbo/
 coverage/
+playwright-report/
+test-results/
 .env
 .env.*
 !.env.example
 keys/
-apps/ms-projects/src/generated/
+apps/api/src/generated/
 tmp/
 output/
 *.log
