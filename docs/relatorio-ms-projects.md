@@ -55,6 +55,7 @@ A API possui **39 operações documentadas** (incluindo duas de saúde), persist
 | Integração PostgreSQL/Redis | 3 testes aprovados |
 | E2E HTTP com PostgreSQL | 13 testes aprovados |
 | Total automatizado | **28 testes aprovados, nenhum ignorado** |
+| GitHub Actions em Ubuntu/Linux | **Aprovado** no commit de implementação 6d2ee6a; [execução CI 41969258030](https://github.com/danielharrisonlf/axial/actions/runs/41969258030) |
 | Auditoria de dependências de produção | Nenhuma vulnerabilidade conhecida reportada pelo pnpm audit no momento da execução |
 | Build Docker Linux do candidato final | Aprovado |
 | Runtime em produção no contêiner | Liveness/readiness 200; sem token 401; leitura autenticada 200; Swagger 404 |
@@ -66,6 +67,8 @@ A API possui **39 operações documentadas** (incluindo duas de saúde), persist
 Os testes de banco usaram exclusivamente `axial_test`, e as filas de teste usaram o banco lógico Redis 15. O contêiner de aceitação foi parado e removido após o smoke test; dados e serviços de desenvolvimento foram preservados.
 
 Imagem validada: `sha256:845885257c28c704d1cc2841d99dbfc21d8b289f2517bee3aa458ff1657517b9`.
+
+A execução remota confirmou instalação por lockfile, geração Prisma, migration em banco vazio, lint, typecheck, build e todas as suítes. O código aceito está no commit `6d2ee6a00ca9be72d9e0499c54a1fd59178457f3`; a atualização posterior deste relatório altera apenas documentação e preserva esse candidato.
 
 ## Falhas encontradas e corrigidas
 
