@@ -33,6 +33,10 @@ Imagem API validada após reorganização: sha256:f60422eec8e2f82398287753d522f1
 
 A primeira execução remota passou por instalação, migrations, lint, tipos, build e testes de unidade/API, mas foi interrompida na instalação do Chromium: ubuntu-latest usava Ubuntu 26.04, não suportado pelo Playwright 1.58.2 fixado no lockfile. O workflow foi ajustado para ubuntu-24.04, preservando as versões e o código já validados localmente. A evidência da tentativa está na [execução inicial](https://github.com/danielharrisonlf/axial/actions/runs/42014848003).
 
+## Validação remota final
+
+O [CI completo](https://github.com/danielharrisonlf/axial/actions/runs/42060049722) foi aprovado no commit `a4d8ab94af3a049a9203ee72d0c152b3ddad2b10`, com Ubuntu 24.04 e Node 24. A execução confirmou migrations, lint, tipos, build, 25 testes de unidade, 3 de integração, 13 E2E HTTP e 8 cenários Chromium: **49 testes aprovados**. A instalação do navegador e a inicialização da aplicação em ambiente limpo também passaram.
+
 ## Limites explícitos
 
 A interface nesta entrega é uma **demonstração local interativa**, com os mesmos 11 projetos e 109 tarefas fictícias do protótipo. Suas mutações ainda não usam a API; não há fallback silencioso que esconda falhas de integração. A conexão real dependerá da sessão de identidade e do mapeamento dos contratos documentados em frontend.md.
