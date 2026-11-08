@@ -86,6 +86,13 @@ try {
     });
     return { status: r.status, body: await r.json() };
   }
+  for (const migration of ["001_initial", "002_password_activation"]) {
+    await db.query("DELETE FROM identity.schema_migrations WHERE id=$1", [migration]);
+    assert.equal((await request("health/ready", null, null, "GET")).status, 503);
+    assert.equal((await request("health/live", null, null, "GET")).status, 200);
+    await db.query("INSERT INTO identity.schema_migrations(id) VALUES ($1)", [migration]);
+    assert.equal((await request("health/ready", null, null, "GET")).status, 200);
+  }
   const login = await request("auth/login", {
     email: "admin@example.test",
     password: "a-secure-test-password",

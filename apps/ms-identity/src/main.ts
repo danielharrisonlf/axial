@@ -16,6 +16,7 @@ import {
   Patch,
   Post,
   Req,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
@@ -227,7 +228,15 @@ class IdentityController {
     return { status: "ok" };
   }
   @Get("health/ready") async ready() {
-    await db.query("SELECT 1 FROM identity.schema_migrations LIMIT 1");
+    const required = ["001_initial", "002_password_activation"];
+    try {
+      const result = await db.query("SELECT id FROM identity.schema_migrations WHERE id = ANY($1::text[])", [
+        required,
+      ]);
+      if (result.rowCount !== required.length) throw new ServiceUnavailableException();
+    } catch {
+      throw new ServiceUnavailableException("Database not ready");
+    }
     return { status: "ok" };
   }
   @Post("auth/login") login(@Body() body: unknown, @Req() req: Request) {
