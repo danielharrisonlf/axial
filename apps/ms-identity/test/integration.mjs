@@ -11,10 +11,13 @@ const url = process.env.IDENTITY_TEST_DATABASE_URL;
 if (!url || !new URL(url).pathname.endsWith("_test"))
   throw new Error("IDENTITY_TEST_DATABASE_URL must name a _test database");
 const admin = new pg.Pool({ connectionString: url });
+const poolErrors = [];
+admin.on("error", (error) => poolErrors.push(error));
 const databaseName = `axial_identity_${randomUUID().replaceAll("-", "")}_test`;
 const testUrl = new URL(url);
 testUrl.pathname = `/${databaseName}`;
 const db = new pg.Pool({ connectionString: testUrl.toString() });
+db.on("error", (error) => poolErrors.push(error));
 const dir = mkdtempSync(join(tmpdir(), "identity-test-"));
 const { privateKey, publicKey } = generateKeyPairSync("rsa", {
   modulusLength: 2048,
@@ -34,7 +37,20 @@ const env = {
   IDENTITY_BOOTSTRAP_ORGANIZATION: "Test organization",
 };
 let server;
+let serverClosed;
 let created = false;
+let failure;
+const cleanupErrors = [];
+async function waitForConnections(name) {
+  for (let i = 0; i < 100; i++) {
+    const result = await admin.query("SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname=$1", [
+      name,
+    ]);
+    if (result.rows[0].count === 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`Connections remain open for test database ${name}`);
+}
 try {
   await admin.query(`CREATE DATABASE "${databaseName}"`);
   created = true;
@@ -44,6 +60,13 @@ try {
   }
   const organization = (await db.query("SELECT id FROM identity.organizations LIMIT 1")).rows[0].id;
   server = spawn(process.execPath, ["--import", "tsx", "src/main.ts"], { env, stdio: "inherit" });
+  serverClosed = new Promise((resolve) => {
+    server.once("error", (error) => {
+      poolErrors.push(error);
+      resolve();
+    });
+    server.once("close", resolve);
+  });
   let ready = false;
   for (let i = 0; i < 100; i++) {
     try {
@@ -313,13 +336,30 @@ try {
   assert.equal((await request("health/ready", null, null, "GET")).status, 200);
   assert.ok(Number((await db.query("SELECT count(*) FROM identity.outbox_events")).rows[0].count) >= 4);
   console.log("Integration passed: migration, bootstrap, login, role revocation and outbox");
+} catch (error) {
+  failure = error;
 } finally {
-  if (server) {
-    server.kill();
-    await new Promise((resolve) => server.once("exit", resolve));
-  }
-  await db.end();
-  if (created) await admin.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`);
-  await admin.end();
-  rmSync(dir, { recursive: true, force: true });
+  const cleanup = async (operation) => {
+    try {
+      await operation();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  };
+  await cleanup(async () => {
+    if (server) {
+      if (server.exitCode === null && server.signalCode === null) server.kill();
+      await serverClosed;
+    }
+  });
+  await cleanup(() => db.end());
+  if (created)
+    await cleanup(async () => {
+      await waitForConnections(databaseName);
+      await admin.query(`DROP DATABASE "${databaseName}"`);
+    });
+  await cleanup(() => admin.end());
+  await cleanup(() => rmSync(dir, { recursive: true, force: true }));
 }
+const errors = [...(failure ? [failure] : []), ...cleanupErrors, ...poolErrors];
+if (errors.length) throw new AggregateError(errors, "Integration test or cleanup failed");

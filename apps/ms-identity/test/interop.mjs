@@ -25,11 +25,15 @@ if (!redis || !["redis:", "rediss:"].includes(new URL(redis).protocol))
 const identityDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const projectsDir = resolve(identityDir, "../api");
 const admin = new pg.Pool({ connectionString: source });
+const poolErrors = [];
+admin.on("error", (error) => poolErrors.push(error));
 const suffix = randomUUID().replaceAll("-", "");
 const names = [`axial_interop_identity_${suffix}_test`, `axial_interop_projects_${suffix}_test`];
 const created = [];
 const tempDir = mkdtempSync(join(tmpdir(), "axial-interop-"));
 const servers = [];
+let failure;
+const cleanupErrors = [];
 const dbUrl = (name) => {
   const u = new URL(source);
   u.pathname = `/${name}`;
@@ -68,6 +72,26 @@ async function ready(url, server) {
     await new Promise((resolveWait) => setTimeout(resolveWait, 100));
   }
   throw new Error(`Service not ready: ${url}`);
+}
+async function waitForConnections(name) {
+  for (let i = 0; i < 100; i++) {
+    const result = await admin.query("SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname=$1", [
+      name,
+    ]);
+    if (result.rows[0].count === 0) return;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
+  }
+  throw new Error(`Connections remain open for test database ${name}`);
+}
+function trackServer(server) {
+  const closed = new Promise((resolveClose) => {
+    server.once("error", (error) => {
+      poolErrors.push(error);
+      resolveClose();
+    });
+    server.once("close", resolveClose);
+  });
+  servers.push({ server, closed });
 }
 async function request(base, path, { method = "GET", body, token } = {}) {
   const response = await fetch(`${base}/${path}`, {
@@ -112,6 +136,7 @@ try {
   for (const file of ["src/migrate.ts", "src/bootstrap.ts"]) run(identityDir, ["--import", "tsx", file], env);
   run(projectsDir, ["node_modules/prisma/build/index.js", "migrate", "deploy"], env);
   const identityDb = new pg.Pool({ connectionString: dbUrl(names[0]) });
+  identityDb.on("error", (error) => poolErrors.push(error));
   let organization;
   try {
     organization = (await identityDb.query("SELECT id FROM identity.organizations LIMIT 1")).rows[0].id;
@@ -123,13 +148,13 @@ try {
     env,
     stdio: "inherit",
   });
-  servers.push(identityServer);
+  trackServer(identityServer);
   const projectsServer = spawn(process.execPath, ["--import", "tsx", "src/main.ts"], {
     cwd: projectsDir,
     env,
     stdio: "inherit",
   });
-  servers.push(projectsServer);
+  trackServer(projectsServer);
   const identity = `http://127.0.0.1:${identityPort}/api/v1`;
   const projects = `http://127.0.0.1:${projectsPort}/api/v1`;
   await Promise.all([ready(identity, identityServer), ready(projects, projectsServer)]);
@@ -183,15 +208,28 @@ try {
   console.log(
     "Interop passed: signed login, project access, organization isolation, tampering and temporary token rejection",
   );
+} catch (error) {
+  failure = error;
 } finally {
-  for (const server of servers) {
-    if (server.exitCode === null && server.signalCode === null) {
-      const exited = new Promise((resolveExit) => server.once("exit", resolveExit));
-      server.kill();
-      await exited;
+  const cleanup = async (operation) => {
+    try {
+      await operation();
+    } catch (error) {
+      cleanupErrors.push(error);
     }
-  }
-  for (const name of created) await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);
-  await admin.end();
-  rmSync(tempDir, { recursive: true, force: true });
+  };
+  for (const { server, closed } of servers)
+    await cleanup(async () => {
+      if (server.exitCode === null && server.signalCode === null) server.kill();
+      await closed;
+    });
+  for (const name of created)
+    await cleanup(async () => {
+      await waitForConnections(name);
+      await admin.query(`DROP DATABASE "${name}"`);
+    });
+  await cleanup(() => admin.end());
+  await cleanup(() => rmSync(tempDir, { recursive: true, force: true }));
 }
+const errors = [...(failure ? [failure] : []), ...cleanupErrors, ...poolErrors];
+if (errors.length) throw new AggregateError(errors, "Interop test or cleanup failed");
