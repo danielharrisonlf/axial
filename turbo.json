@@ -13,7 +13,14 @@
     "JWT_JWKS_URL",
     "RELAY_ENABLED",
     "RELAY_POLL_MS",
-    "CORS_ORIGINS"
+    "CORS_ORIGINS",
+    "IDENTITY_DATABASE_URL",
+    "IDENTITY_TEST_DATABASE_URL",
+    "IDENTITY_PRIVATE_KEY_PATH",
+    "IDENTITY_PUBLIC_KEY_PATH",
+    "IDENTITY_ISSUER",
+    "IDENTITY_AUDIENCE",
+    "IDENTITY_PORT"
   ],
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },

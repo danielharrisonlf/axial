@@ -2,7 +2,7 @@
 
 ## Organização do monorepo
 
-`apps/api` contém o serviço NestJS ms-projects, e `apps/web` contém o Workspace React/Vite. A pasta da API foi renomeada de apps/ms-projects para apps/api a pedido do usuário, preservando o pacote @axial/ms-projects e o schema projects. `packages/contracts` não depende de NestJS nem Prisma: compartilha validação Zod, tipos de autenticação, catálogo e envelope de eventos.
+`apps/api` contém o serviço NestJS ms-projects, `apps/ms-identity` contém o serviço de identidade no schema próprio `identity`, e `apps/web` contém o Workspace React/Vite. A pasta da API foi renomeada de apps/ms-projects para apps/api a pedido do usuário, preservando o pacote @axial/ms-projects e o schema projects. `packages/contracts` não depende de NestJS nem Prisma: compartilha validação Zod, tipos de autenticação, catálogo e envelope de eventos.
 
 O frontend preserva a composição e o sistema visual do protótipo em componentes JSX. Seu repositório de demonstração é local, tipado, validado e isolado da persistência do protótipo. Não representa uma sessão autenticada da API e não aplica fallback de falhas HTTP. As incompatibilidades entre IDs fictícios, modelos visuais e contratos reais estão documentadas em frontend.md.
 
@@ -20,7 +20,7 @@ Cada comando de agregado bloqueia a linha do projeto na transação, revalida ac
 
 ## Identidade externa
 
-O serviço verifica JWT RS256 com chave pública configurada ou JWKS HTTPS. Emissor, audiência, subject, issued-at e expiração são obrigatórios. Organização, papel, projetos/equipes e referências atribuíveis vêm da identidade assinada. Headers ou campos de corpo não podem trocar organização ou elevar acesso.
+O ms-projects verifica JWT RS256 com chave pública configurada ou JWKS HTTPS. Emissor, audiência, subject, issued-at e expiração são obrigatórios. O ms-identity emite tokens com cinco minutos de validade e referências derivadas de seus próprios dados; associações de projetos são explícitas e não são validadas por consulta ao schema de projetos. Headers ou campos de corpo não podem trocar organização ou elevar acesso. As condições e limites do provisionamento estão em [ms-identity](../apps/ms-identity/README.md).
 
 As claims de referências atribuíveis são um contrato inicial com a identidade, não uma consulta a tabelas externas. São um snapshot de autorização e podem ficar desatualizadas até o token expirar. O futuro ms-identity deverá emitir tokens curtos e claims corretas; revogação imediata/introspecção não está implementada neste serviço.
 

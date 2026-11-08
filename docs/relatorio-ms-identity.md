@@ -1,0 +1,11 @@
+# Relatório — ms-identity
+
+O serviço `@axial/ms-identity` implementa identidade, equipes e permissões no schema PostgreSQL `identity`, sem acessar dados do schema `projects`. O PDF atribui a organização de equipes, papéis e permissões a esse serviço; os detalhes de autenticação e provisionamento foram decisões de implementação.
+
+Inclui bootstrap explícito, senha com scrypt, login, troca obrigatória de credencial inicial, bloqueio de tentativas, administração de organizações, membros, equipes e associações explícitas de projetos. Tokens RS256 expiram em cinco minutos e usam o contrato de claims aceito pelo ms-projects. Atualizações de membros são serializadas para preservar um administrador ativo. Eventos de identidade são gravados na mesma transação, mas ainda não são publicados por um relay.
+
+O teste de integração próprio utiliza um banco descartável com nome terminado em `_test`; a conta de teste precisa de CREATEDB. O teste `pnpm test:identity:interop` cria bancos descartáveis, inicia os dois serviços e valida token real, isolamento entre organizações e rejeição de tokens temporários e adulterados. Configure `IDENTITY_TEST_DATABASE_URL` para um banco `_test` e `TEST_REDIS_URL` para Redis de testes.
+
+Validação local: lint, typecheck, build e testes unitários do monorepo passaram; também passaram a integração do ms-identity, a prova de interoperabilidade e os 3 testes de integração e 13 testes HTTP existentes do ms-projects. Uma revisão independente verificou as correções de autorização, controle de tentativas e concorrência. A execução remota é acompanhada no workflow de CI do repositório.
+
+Limites relevantes: a pessoa administradora conhece a senha inicial e pode ativar a conta antes do titular; um convite por canal independente e verificado ainda é necessário. O ms-projects não introspecta os tokens, portanto alterações de acesso podem levar até cinco minutos para vigorar nele. O tamanho do cabeçalho limita o número de referências carregadas no token. Os limites locais de autenticação exigem proteção compartilhada no ingresso para múltiplas réplicas. O frontend continua usando a demonstração local. Veja [operação e limitações do serviço](../apps/ms-identity/README.md).

@@ -9,7 +9,7 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=@axial/ms-projects --filter=@axial/web",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "biome check .",
@@ -19,9 +19,13 @@
     "test:unit": "turbo run test:unit",
     "test:integration": "pnpm --filter @axial/ms-projects test:integration",
     "test:e2e": "pnpm --filter @axial/ms-projects test:e2e",
+    "test:identity:integration": "pnpm --filter @axial/ms-identity test:integration",
+    "test:identity:interop": "pnpm --filter @axial/ms-identity test:interop",
     "test:web:e2e": "pnpm --filter @axial/web test:e2e",
     "dev:web": "pnpm --filter @axial/web dev",
     "dev:api": "pnpm --filter @axial/ms-projects dev",
+    "dev:identity": "pnpm --filter @axial/ms-identity dev",
+    "db:identity:migrate": "pnpm --filter @axial/ms-identity db:migrate",
     "db:generate": "pnpm --filter @axial/ms-projects db:generate",
     "db:migrate": "pnpm --filter @axial/ms-projects db:migrate",
     "db:seed": "pnpm --filter @axial/ms-projects db:seed",

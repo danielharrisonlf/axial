@@ -2,12 +2,13 @@
 
 Plataforma interna de gestão de projetos, com API NestJS e Workspace React/Vite. O backend **ms-projects** usa PostgreSQL, contratos Zod e outbox transacional para Redis/BullMQ.
 
-O fluxo definitivo é o da apresentação ProjectFlow fornecida em 05/11/2026: planejar, organizar acessos, executar, sincronizar, notificar e acompanhar. A interface de projetos reproduz o protótipo fornecido, com a marca **Axial**. O único microsserviço implementado até aqui é ms-projects.
+O fluxo definitivo é o da apresentação ProjectFlow fornecida em 05/11/2026: planejar, organizar acessos, executar, sincronizar, notificar e acompanhar. A interface de projetos reproduz o protótipo fornecido, com a marca **Axial**. Os serviços implementados são ms-projects e ms-identity.
 
 ## Estrutura
 
 ```text
 apps/
+  ms-identity/              # serviço NestJS de identidade, equipes e permissões
   api/                      # serviço NestJS @axial/ms-projects
     prisma/                 # schema projects, migration e seed local
     src/
@@ -115,5 +116,7 @@ Os testes de integração/HTTP recusam bancos cujo nome não termine em `_test`.
 - [Relatório de implementação e validação](docs/relatorio-ms-projects.md)
 - [Frontend React e referência visual](docs/frontend.md)
 - [Relatório da entrega React e api/web](docs/relatorio-web.md)
+- [Configuração, segurança e limites do ms-identity](apps/ms-identity/README.md)
+- [Relatório do ms-identity](docs/relatorio-ms-identity.md)
 
-Identidade, gateway, MCP, Insights Vue e consumidores de auditoria, notificações e tempo real são as próximas integrações. Publicar jobs nessas filas não significa que mensagens, auditoria ou WebSocket já tenham sido entregues.
+Gateway, MCP, Insights Vue e consumidores de auditoria, notificações e tempo real são integrações futuras. O frontend ainda usa dados de demonstração local. Publicar jobs nessas filas não significa que mensagens, auditoria ou WebSocket já tenham sido entregues.
