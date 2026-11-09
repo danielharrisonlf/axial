@@ -2,7 +2,7 @@
 
 ## Organização do monorepo
 
-`apps/api` contém o serviço NestJS ms-projects, `apps/ms-identity` contém o serviço de identidade no schema próprio `identity`, e `apps/web` contém o Workspace React/Vite. A pasta da API foi renomeada de apps/ms-projects para apps/api a pedido do usuário, preservando o pacote @axial/ms-projects e o schema projects. `packages/contracts` não depende de NestJS nem Prisma: compartilha validação Zod, tipos de autenticação, catálogo e envelope de eventos.
+`apps/api` contém o serviço NestJS ms-projects, `apps/ms-identity` contém o serviço de identidade no schema próprio `identity`, `apps/ms-realtime` fornece invalidações por WebSocket, `apps/ms-notifications` processa notificações no schema próprio `notifications`, e `apps/web` contém o Workspace React/Vite. A pasta da API foi renomeada de apps/ms-projects para apps/api a pedido do usuário, preservando o pacote @axial/ms-projects e o schema projects. `packages/contracts` não depende de NestJS nem Prisma: compartilha validação Zod, tipos de autenticação, catálogo e envelope de eventos.
 
 O frontend preserva a composição e o sistema visual do protótipo em componentes JSX. Seu repositório de demonstração é local, tipado, validado e isolado da persistência do protótipo. Não representa uma sessão autenticada da API e não aplica fallback de falhas HTTP. As incompatibilidades entre IDs fictícios, modelos visuais e contratos reais estão documentadas em frontend.md.
 

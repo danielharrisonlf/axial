@@ -2,13 +2,15 @@
 
 Plataforma interna de gestão de projetos, com API NestJS e Workspace React/Vite. O backend **ms-projects** usa PostgreSQL, contratos Zod e outbox transacional para Redis/BullMQ.
 
-O fluxo definitivo é o da apresentação ProjectFlow fornecida em 05/11/2026: planejar, organizar acessos, executar, sincronizar, notificar e acompanhar. A interface de projetos reproduz o protótipo fornecido, com a marca **Axial**. Os serviços implementados são ms-projects e ms-identity.
+O fluxo definitivo é o da apresentação ProjectFlow fornecida em 05/11/2026: planejar, organizar acessos, executar, sincronizar, notificar e acompanhar. A interface de projetos reproduz o protótipo fornecido, com a marca **Axial**. O monorepo inclui ms-projects, ms-identity, ms-realtime e ms-notifications.
 
 ## Estrutura
 
 ```text
 apps/
   ms-identity/              # serviço NestJS de identidade, equipes e permissões
+  ms-realtime/              # invalidações autenticadas por WebSocket
+  ms-notifications/         # preferências e processamento de notificações
   api/                      # serviço NestJS @axial/ms-projects
     prisma/                 # schema projects, migration e seed local
     src/
@@ -118,5 +120,8 @@ Os testes de integração/HTTP recusam bancos cujo nome não termine em `_test`.
 - [Relatório da entrega React e api/web](docs/relatorio-web.md)
 - [Configuração, segurança e limites do ms-identity](apps/ms-identity/README.md)
 - [Relatório do ms-identity](docs/relatorio-ms-identity.md)
+- [Configuração e protocolo do ms-realtime](apps/ms-realtime/README.md)
+- [Configuração e limites do ms-notifications](apps/ms-notifications/README.md)
+- [Relatório de realtime e notificações](docs/relatorio-realtime-notifications.md)
 
-Gateway, MCP, Insights Vue e consumidores de auditoria, notificações e tempo real são integrações futuras. O frontend ainda usa dados de demonstração local. Publicar jobs nessas filas não significa que mensagens, auditoria ou WebSocket já tenham sido entregues.
+Gateway, MCP, Insights Vue e o consumidor de auditoria são integrações futuras. O frontend ainda usa dados de demonstração local. As notificações dependem de um gateway externo configurado; aceite pelo gateway não comprova entrega ao destinatário. O WebSocket envia invalidações e exige nova leitura pela API após reconexão.
