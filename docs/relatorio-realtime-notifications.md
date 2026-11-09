@@ -12,6 +12,8 @@ Data: 09/11/2026. Foram implementadas as etapas de sincronização e processamen
 
 Passaram localmente lint, typecheck, build, testes unitários do monorepo, 5 testes de integração do realtime e as suítes de integração e HTTP do notifications. Também passaram os testes de integração e HTTP do ms-projects e os testes de integração e interoperabilidade do ms-identity. A aceitação independente confirmou um fluxo real de criação de tarefa pela API, gravação no outbox, publicação BullMQ e recebimento da invalidação WebSocket. Nessa prova, o SQL da migration foi aplicado diretamente no banco descartável após a CLI Prisma ficar pendente; a CLI passou em duas execuções anteriores.
 
+O [CI remoto](https://github.com/danielharrisonlf/axial/actions/runs/42560702740) passou no commit `bcff43f`, incluindo a interface. As imagens Linux dos dois serviços também tiveram build local aprovado; imports, presença da migration e execução como usuário não root foram conferidos. A inicialização completa das imagens com PostgreSQL, Redis e JWT não foi testada.
+
 A revisão independente verificou JWT, isolamento, exposição mínima, idempotência e retry. Os problemas encontrados durante a revisão foram corrigidos ou documentados como limites abaixo. O CI do repositório executa as suítes dos serviços em PostgreSQL e Redis de teste.
 
 ## Limites e operação
