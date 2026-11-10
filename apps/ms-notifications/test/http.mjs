@@ -63,6 +63,7 @@ async function start(redisUrl) {
       NOTIFICATIONS_PORT: String(port),
       NOTIFICATIONS_PROVIDER_URL: "",
       NOTIFICATIONS_PROVIDER_TOKEN: "",
+      NOTIFICATIONS_TRUST_EXTERNAL_VERIFICATION: "",
     },
     stdio: "ignore",
   });
@@ -137,6 +138,67 @@ try {
     (await request(base, "notification-preferences", "GET", a)).body[0].destination,
     "owner@example.test",
   );
+  await pool.query(
+    "UPDATE notifications.preferences SET verified_at=now() WHERE organization_id=$1 AND user_id=$2 AND channel='email'",
+    [org, user],
+  );
+  assert.equal(
+    (
+      await request(base, "notification-preferences/email", "PATCH", a, {
+        enabled: true,
+        destination: "owner@example.test",
+      })
+    ).status,
+    200,
+  );
+  assert.ok(
+    (
+      await pool.query(
+        "SELECT verified_at FROM notifications.preferences WHERE organization_id=$1 AND user_id=$2 AND channel='email'",
+        [org, user],
+      )
+    ).rows[0].verified_at,
+  );
+  assert.equal(
+    (
+      await request(base, "notification-preferences/email", "PATCH", a, {
+        enabled: true,
+        destination: "changed@example.test",
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await pool.query(
+        "SELECT verified_at FROM notifications.preferences WHERE organization_id=$1 AND user_id=$2 AND channel='email'",
+        [org, user],
+      )
+    ).rows[0].verified_at,
+    null,
+  );
+  await pool.query(
+    "UPDATE notifications.preferences SET verified_at=now() WHERE organization_id=$1 AND user_id=$2 AND channel='email'",
+    [org, user],
+  );
+  assert.equal(
+    (
+      await request(base, "notification-preferences/email", "PATCH", a, {
+        enabled: false,
+        destination: "changed@example.test",
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await pool.query(
+        "SELECT verified_at FROM notifications.preferences WHERE organization_id=$1 AND user_id=$2 AND channel='email'",
+        [org, user],
+      )
+    ).rows[0].verified_at,
+    null,
+  );
   const eventId = randomUUID(),
     deliveryId = randomUUID();
   await pool.query("INSERT INTO notifications.events(id,organization_id,payload) VALUES($1,$2,$3)", [
@@ -155,6 +217,8 @@ try {
   assert.equal((await request(base, `notifications/${deliveryId}/retry`, "POST", c)).status, 404);
   assert.equal((await request(base, `notifications/${deliveryId}/retry`, "POST", a)).status, 201);
   await pool.query("UPDATE notifications.deliveries SET status='accepted' WHERE id=$1", [deliveryId]);
+  assert.equal((await request(base, `notifications/${deliveryId}/retry`, "POST", a)).status, 409);
+  await pool.query("UPDATE notifications.deliveries SET status='unknown' WHERE id=$1", [deliveryId]);
   assert.equal((await request(base, `notifications/${deliveryId}/retry`, "POST", a)).status, 409);
   const deadPort = await freePort();
   const offline = await start(`redis://127.0.0.1:${deadPort}/14`);

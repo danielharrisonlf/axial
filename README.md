@@ -123,5 +123,6 @@ Os testes de integração/HTTP recusam bancos cujo nome não termine em `_test`.
 - [Configuração e protocolo do ms-realtime](apps/ms-realtime/README.md)
 - [Configuração e limites do ms-notifications](apps/ms-notifications/README.md)
 - [Relatório de realtime e notificações](docs/relatorio-realtime-notifications.md)
+- [Provedores de notificações e limites](docs/relatorio-provedores-notificacoes.md)
 
-Gateway, MCP, Insights Vue e o consumidor de auditoria são integrações futuras. O frontend ainda usa dados de demonstração local. As notificações dependem de um gateway externo configurado; aceite pelo gateway não comprova entrega ao destinatário. O WebSocket envia invalidações e exige nova leitura pela API após reconexão.
+MCP, Insights Vue e o consumidor de auditoria são integrações futuras. O frontend ainda usa dados de demonstração local. Notificações suportam Resend, SMSGo e WhatsApp Cloud API, mas novos destinos dependem de verificação de posse ainda não implementada; aceite do provedor não comprova entrega. O WebSocket envia invalidações e exige nova leitura pela API após reconexão.

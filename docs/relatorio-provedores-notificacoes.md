@@ -1,0 +1,13 @@
+# Relatório — provedores de notificações
+
+Foram adicionados adaptadores HTTP diretos para Resend (email), SMSGo (SMS) e WhatsApp Cloud API da Meta, mantendo o gateway HTTPS anterior como alternativa explicitamente configurada. Os adaptadores usam timeout, bloqueiam redirecionamentos e não expõem credenciais ou conteúdo das respostas em erros. Os textos enviados são genéricos e não incluem conteúdo privado dos projetos. O WhatsApp usa um template previamente aprovado, sem parâmetros.
+
+Configuração por canal e migração: [README do serviço](../apps/ms-notifications/README.md). Credenciais, domínio autorizado na Resend, conta e número da Meta, e template aprovado devem ser fornecidos no ambiente; não há credenciais ou templates cadastrados nesta entrega. A integração não executou envios reais nem comprovou entrega.
+
+Validação local: lint, typecheck, build e testes unitários do monorepo passaram; os 29 testes do serviço incluem os adaptadores e o roteamento para cada provedor com chamadas simuladas. A integração com PostgreSQL e Redis aplicou a migration 002 e verificou isolamento, contato não verificado, alteração de contato, canais sem configuração e tratamento de resultado incerto. Uma revisão independente conferiu os contratos oficiais e as proteções de concorrência. Nenhum provedor externo foi chamado nos testes.
+
+O serviço não verifica a posse de emails ou números. A preferência exige `verified_at` por contato, e a alteração do destino ou a desativação apaga essa verificação. Um processo externo confiável para preencher a marca ainda precisa ser implementado; até então, novos contatos não são elegíveis para envio. Uma chave global de configuração é um bloqueio adicional, não comprovação de posse. A janela entre a última verificação e a chamada externa não é atômica.
+
+Requisições aceitas são marcadas `accepted`, sem afirmar entrega. Se ocorrer erro ou o lease expirar, a entrega fica `unknown` e não é reenviada automaticamente, pois o provedor pode já ter aceitado a chamada. Por prudência, isso também inclui falhas de autenticação anteriores ao envio; é necessário reconciliar o resultado operacionalmente. Resend recebe uma chave de idempotência válida por até 24 horas; SMSGo usa `reference` para correlação, sem garantia equivalente aqui. Não há callback de status implementado.
+
+Referências: [Resend — envio de email](https://resend.com/docs/api-reference/emails/send-email), [Resend — idempotência](https://resend.com/docs/dashboard/emails/idempotency-keys), [SMSGo — envio de SMS](https://doc.smsgo.com.br/enviar-um-sms-39041498e0), [Meta — WhatsApp Cloud API](https://www.postman.com/meta/whatsapp-business-platform/documentation/wlk6lh4/whatsapp-cloud-api).

@@ -66,7 +66,7 @@ class ControllerImpl {
   }
   @Get("health/ready") async ready() {
     try {
-      const result = await db.query("SELECT id FROM notifications.schema_migrations WHERE id='001_initial'");
+      const result = await db.query("SELECT id FROM notifications.schema_migrations WHERE id='002_unknown'");
       if (!result.rowCount || !(await consumer.ready())) throw new Error();
       return { status: "ok" };
     } catch {
@@ -97,7 +97,7 @@ class ControllerImpl {
     else parse(z.string().regex(/^\+[1-9]\d{7,14}$/), input.destination);
     return (
       await db.query(
-        `INSERT INTO notifications.preferences(organization_id,user_id,channel,enabled,destination) VALUES($1,$2,$3,$4,$5) ON CONFLICT(organization_id,user_id,channel) DO UPDATE SET enabled=EXCLUDED.enabled,destination=EXCLUDED.destination,updated_at=now() RETURNING channel,enabled,destination,updated_at`,
+        `INSERT INTO notifications.preferences(organization_id,user_id,channel,enabled,destination) VALUES($1,$2,$3,$4,$5) ON CONFLICT(organization_id,user_id,channel) DO UPDATE SET enabled=EXCLUDED.enabled,destination=EXCLUDED.destination,verified_at=CASE WHEN NOT EXCLUDED.enabled OR notifications.preferences.destination IS DISTINCT FROM EXCLUDED.destination THEN NULL ELSE notifications.preferences.verified_at END,updated_at=now() RETURNING channel,enabled,destination,updated_at`,
         [actor.organizationId, actor.sub, kind, input.enabled, input.destination],
       )
     ).rows[0];
