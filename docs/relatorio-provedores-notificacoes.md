@@ -19,4 +19,3 @@ Semantica não estava disponível; decisões e evidências foram registradas no 
 Foi inspecionado o checkout local `encibra/ms-notificacao-backend` na branch `dev`, commit `6f2d04f`. O serviço usa NestJS e SQS, SMTP para email e WhatsApp Cloud API com templates e escolha de número remetente. Ele também expõe um GET para verificar a inscrição do webhook da Meta e um POST que registra falhas. O Axial usa BullMQ, Resend e SMSGo, conforme as escolhas deste projeto.
 
 O fluxo de webhook é uma referência para futura reconciliação de estados. Antes de recebê-lo no Axial, é preciso validar a assinatura dos POSTs com o corpo bruto, correlacionar o ID da Meta com `provider_id`, persistir transições `sent`/`delivered`/`read`/`failed` de forma idempotente e limitar os dados de log. O código de referência não faz essas validações nem atualiza o estado das entregas. O Axial continua reportando `accepted` como aceite da API, sem alegar entrega final.
-
