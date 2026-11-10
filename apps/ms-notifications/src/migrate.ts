@@ -7,7 +7,7 @@ try {
   await c.query("SELECT pg_advisory_xact_lock(hashtext('axial-notifications-migrate'))");
   await c.query("CREATE SCHEMA IF NOT EXISTS notifications");
   await c.query("CREATE TABLE IF NOT EXISTS notifications.schema_migrations(id text PRIMARY KEY)");
-  for (const id of ["001_initial", "002_unknown"]) {
+  for (const id of ["001_initial", "002_unknown", "003_verification"]) {
     const existing = await c.query("SELECT 1 FROM notifications.schema_migrations WHERE id=$1", [id]);
     if (!existing.rowCount) {
       await c.query(await readFile(new URL(`../migrations/${id}.sql`, import.meta.url), "utf8"));

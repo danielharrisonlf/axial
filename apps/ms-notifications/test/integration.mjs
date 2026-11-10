@@ -4,6 +4,15 @@ import { randomUUID } from "node:crypto";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
 
+for (const key of Object.keys(process.env)) {
+  if (
+    /^(RESEND_|SMSGO_|META_|NOTIFICATIONS_PROVIDER_|NOTIFICATIONS_TRUST_|NOTIFICATIONS_VERIFY_|NOTIFICATIONS_VERIFICATION_)/.test(
+      key,
+    )
+  )
+    delete process.env[key];
+}
+
 const dbUrl = process.env.TEST_DATABASE_URL,
   redisUrl = process.env.TEST_REDIS_URL;
 if (

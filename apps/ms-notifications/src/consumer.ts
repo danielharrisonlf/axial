@@ -173,8 +173,6 @@ export async function dispatchOne(provider: Provider): Promise<boolean> {
   }
   return true;
 }
-/** Trust is an operator assertion that the external system verifies every destination.
- * This service itself does not verify control of email addresses or phone numbers. */
 export function configuredProvider(): Provider | undefined {
   const groups = [
     ["RESEND_API_KEY", "RESEND_FROM"],
@@ -203,6 +201,7 @@ export function configuredProvider(): Provider | undefined {
   ) {
     throw new Error("Invalid SMSGO_SMS_TYPE_ID; expected a positive integer");
   }
+  // Legacy switch remains an explicit dispatch opt-in; it never marks a destination verified.
   if (process.env.NOTIFICATIONS_TRUST_EXTERNAL_VERIFICATION !== "true") return undefined;
   const endpoint = process.env.NOTIFICATIONS_PROVIDER_URL;
   const token = process.env.NOTIFICATIONS_PROVIDER_TOKEN;

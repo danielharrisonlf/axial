@@ -22,6 +22,7 @@ import { importSPKI, jwtVerify } from "jose";
 import { z } from "zod";
 import { startConsumer } from "./consumer.js";
 import { db } from "./db.js";
+import { beginVerification, confirmVerification, VerificationUnavailableError } from "./verification.js";
 
 const keyPath = process.env.NOTIFICATIONS_PUBLIC_KEY_PATH;
 const issuer = process.env.NOTIFICATIONS_JWT_ISSUER;
@@ -66,7 +67,9 @@ class ControllerImpl {
   }
   @Get("health/ready") async ready() {
     try {
-      const result = await db.query("SELECT id FROM notifications.schema_migrations WHERE id='002_unknown'");
+      const result = await db.query(
+        "SELECT id FROM notifications.schema_migrations WHERE id='003_verification'",
+      );
       if (!result.rowCount || !(await consumer.ready())) throw new Error();
       return { status: "ok" };
     } catch {
@@ -77,7 +80,7 @@ class ControllerImpl {
     const actor = await this.service.actor(req);
     return (
       await db.query(
-        "SELECT channel,enabled,destination,updated_at FROM notifications.preferences WHERE organization_id=$1 AND user_id=$2 ORDER BY channel",
+        "SELECT channel,enabled,destination,verified_at IS NOT NULL AS verified,updated_at FROM notifications.preferences WHERE organization_id=$1 AND user_id=$2 ORDER BY channel",
         [actor.organizationId, actor.sub],
       )
     ).rows;
@@ -97,10 +100,39 @@ class ControllerImpl {
     else parse(z.string().regex(/^\+[1-9]\d{7,14}$/), input.destination);
     return (
       await db.query(
-        `INSERT INTO notifications.preferences(organization_id,user_id,channel,enabled,destination) VALUES($1,$2,$3,$4,$5) ON CONFLICT(organization_id,user_id,channel) DO UPDATE SET enabled=EXCLUDED.enabled,destination=EXCLUDED.destination,verified_at=CASE WHEN NOT EXCLUDED.enabled OR notifications.preferences.destination IS DISTINCT FROM EXCLUDED.destination THEN NULL ELSE notifications.preferences.verified_at END,updated_at=now() RETURNING channel,enabled,destination,updated_at`,
+        `INSERT INTO notifications.preferences(organization_id,user_id,channel,enabled,destination) VALUES($1,$2,$3,$4,$5) ON CONFLICT(organization_id,user_id,channel) DO UPDATE SET enabled=EXCLUDED.enabled,destination=EXCLUDED.destination,verified_at=CASE WHEN NOT EXCLUDED.enabled OR notifications.preferences.destination IS DISTINCT FROM EXCLUDED.destination THEN NULL ELSE notifications.preferences.verified_at END,updated_at=now() RETURNING channel,enabled,destination,verified_at IS NOT NULL AS verified,updated_at`,
         [actor.organizationId, actor.sub, kind, input.enabled, input.destination],
       )
     ).rows[0];
+  }
+  @Post("notification-preferences/:channel/verification") async begin(
+    @Req() req: Request,
+    @Param("channel") raw: string,
+  ) {
+    const actor = await this.service.actor(req);
+    try {
+      await beginVerification(actor, parse(channel, raw));
+    } catch (error) {
+      if (error instanceof VerificationUnavailableError)
+        throw new HttpException("Verification unavailable", 503);
+      throw error;
+    }
+    return { requested: true };
+  }
+  @Post("notification-preferences/:channel/verification/confirm") async confirm(
+    @Req() req: Request,
+    @Param("channel") raw: string,
+    @Body() body: unknown,
+  ) {
+    const actor = await this.service.actor(req);
+    const input = parse(z.strictObject({ code: z.string().regex(/^\d{6}$/) }), body);
+    try {
+      return { verified: await confirmVerification(actor, parse(channel, raw), input.code) };
+    } catch (error) {
+      if (error instanceof VerificationUnavailableError)
+        throw new HttpException("Verification unavailable", 503);
+      throw error;
+    }
   }
   @Get("notifications") async list(@Req() req: Request) {
     const actor = await this.service.actor(req);

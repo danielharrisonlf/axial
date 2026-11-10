@@ -125,4 +125,4 @@ Os testes de integração/HTTP recusam bancos cujo nome não termine em `_test`.
 - [Relatório de realtime e notificações](docs/relatorio-realtime-notifications.md)
 - [Provedores de notificações e limites](docs/relatorio-provedores-notificacoes.md)
 
-MCP, Insights Vue e o consumidor de auditoria são integrações futuras. O frontend ainda usa dados de demonstração local. Notificações suportam Resend, SMSGo e WhatsApp Cloud API, mas novos destinos dependem de verificação de posse ainda não implementada; aceite do provedor não comprova entrega. O WebSocket envia invalidações e exige nova leitura pela API após reconexão.
+MCP, Insights Vue e o consumidor de auditoria são integrações futuras. O frontend ainda usa dados de demonstração local. Notificações suportam Resend, SMSGo e WhatsApp Cloud API, com confirmação de posse por código; credenciais e templates devem ser configurados. Aceite do provedor não comprova entrega. O WebSocket envia invalidações e exige nova leitura pela API após reconexão.

@@ -50,11 +50,20 @@ async function freePort() {
   return port;
 }
 const servers = [];
+const safeEnv = { ...process.env };
+for (const key of Object.keys(safeEnv)) {
+  if (
+    /^(RESEND_|SMSGO_|META_|NOTIFICATIONS_PROVIDER_|NOTIFICATIONS_TRUST_|NOTIFICATIONS_VERIFY_|NOTIFICATIONS_VERIFICATION_)/.test(
+      key,
+    )
+  )
+    delete safeEnv[key];
+}
 async function start(redisUrl) {
   const port = await freePort();
   const processChild = spawn(process.execPath, ["dist/main.js"], {
     env: {
-      ...process.env,
+      ...safeEnv,
       NOTIFICATIONS_DATABASE_URL: database,
       NOTIFICATIONS_REDIS_URL: redisUrl,
       NOTIFICATIONS_PUBLIC_KEY_PATH: join(dir, "public.pem"),
@@ -113,6 +122,8 @@ try {
   const a = await token(user, org),
     b = await token(user2, org),
     c = await token(user, org2);
+  assert.equal((await request(base, "notification-preferences/email/verification", "POST")).status, 401);
+  assert.equal((await request(base, "notification-preferences/email/verification", "POST", a)).status, 503);
   assert.equal(
     (
       await request(base, "notification-preferences/email", "PATCH", a, {

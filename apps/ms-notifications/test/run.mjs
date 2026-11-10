@@ -9,6 +9,15 @@ const name = `axial_notifications_${randomUUID().replaceAll("-", "")}_test`;
 const testUrl = new URL(url);
 testUrl.pathname = `/${name}`;
 const admin = new pg.Pool({ connectionString: url });
+const safeEnv = { ...process.env };
+for (const key of Object.keys(safeEnv)) {
+  if (
+    /^(RESEND_|SMSGO_|META_|NOTIFICATIONS_PROVIDER_|NOTIFICATIONS_TRUST_|NOTIFICATIONS_VERIFY_|NOTIFICATIONS_VERIFICATION_)/.test(
+      key,
+    )
+  )
+    delete safeEnv[key];
+}
 let created = false;
 async function cleanup() {
   try {
@@ -33,9 +42,9 @@ let failure;
 try {
   await admin.query(`CREATE DATABASE "${name}"`);
   created = true;
-  for (const file of ["test/integration.mjs", "test/http.mjs"]) {
+  for (const file of ["test/integration.mjs", "test/http.mjs", "test/verification.mjs"]) {
     const result = spawnSync(process.execPath, [file], {
-      env: { ...process.env, TEST_DATABASE_URL: testUrl.toString() },
+      env: { ...safeEnv, TEST_DATABASE_URL: testUrl.toString() },
       stdio: "inherit",
     });
     if (result.status !== 0) throw new Error(`${file} failed`);
