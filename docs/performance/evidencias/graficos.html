@@ -1,0 +1,45 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Evidências de desempenho — Axial</title>
+<style>
+body{font-family:"IBM Plex Sans",system-ui,sans-serif;margin:32px;color:#1C2127;background:#F2F4F7}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 10px}.sub{color:#55606E;margin-bottom:20px}
+.card{background:#fff;border:1px solid #D8DEE6;border-radius:10px;padding:18px 20px;margin-bottom:16px}
+.row{display:grid;grid-template-columns:210px 1fr;gap:12px;align-items:center;padding:5px 0;font-size:13px}
+.label{color:#55606E}.track{display:flex;align-items:center;gap:8px}.track+.track{margin-top:3px}
+.bar{height:14px;border-radius:4px;min-width:2px}.track b{font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.legend{display:flex;gap:16px;font-size:12px;color:#55606E;margin-top:10px}.dot{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #E5E8EE}th{color:#8B93A1;font-size:10.5px;text-transform:uppercase}
+</style></head><body>
+<h1>Evidências de desempenho — ProjectFlow / Axial</h1><div class="sub">Coletado em 11/11/2026, 13:50:26 · Windows · Node v24.21.0</div>
+<div class="card"><h2>Vazão por endpoint — antes × depois</h2>
+  <div class="row"><span class="label">Health (gateway)</span>
+    <div class="track"><div class="bar" style="width:40%;background:#B9C2CE"></div><b>3565</b></div>
+    <div class="track"><div class="bar" style="width:100%;background:#2B5FD9"></div><b>8883</b></div>
+  </div>
+  <div class="row"><span class="label">Projetos (gateway)</span>
+    <div class="track"><div class="bar" style="width:7%;background:#B9C2CE"></div><b>617</b></div>
+    <div class="track"><div class="bar" style="width:20%;background:#2B5FD9"></div><b>1755</b></div>
+  </div>
+  <div class="row"><span class="label">Tarefas (API)</span>
+    <div class="track"><div class="bar" style="width:6%;background:#B9C2CE"></div><b>525</b></div>
+    <div class="track"><div class="bar" style="width:13%;background:#2B5FD9"></div><b>1139</b></div>
+  </div>
+  <div class="row"><span class="label">Auditoria (gateway)</span>
+    <div class="track"><div class="bar" style="width:7%;background:#B9C2CE"></div><b>596</b></div>
+    <div class="track"><div class="bar" style="width:23%;background:#2B5FD9"></div><b>2016</b></div>
+  </div>
+  <div class="row"><span class="label">Notificações (gateway)</span>
+    <div class="track"><div class="bar" style="width:9%;background:#B9C2CE"></div><b>823</b></div>
+    <div class="track"><div class="bar" style="width:27%;background:#2B5FD9"></div><b>2442</b></div>
+  </div>
+<div class="legend"><span><i class="dot" style="background:#B9C2CE"></i>antes</span><span><i class="dot" style="background:#2B5FD9"></i>depois</span></div></div>
+<div class="card"><h2>Gateway: efeito do pool keep-alive (A/B)</h2><div class="row"><span class="label">Projetos sem keep-alive</span><div class="track"><div class="bar" style="width:60%;background:#BE3030"></div><b>1309 req/s · p50 1922 ms</b></div></div><div class="row"><span class="label">Projetos com keep-alive</span><div class="track"><div class="bar" style="width:80%;background:#1D7A4C"></div><b>1755 req/s · p50 27 ms</b></div></div><div class="row"><span class="label">Auditoria sem keep-alive</span><div class="track"><div class="bar" style="width:64%;background:#BE3030"></div><b>1402 req/s · p50 1969 ms</b></div></div><div class="row"><span class="label">Auditoria com keep-alive</span><div class="track"><div class="bar" style="width:92%;background:#1D7A4C"></div><b>2016 req/s · p50 10 ms</b></div></div></div>
+<div class="card"><h2>Lighthouse — score de performance (0–100)</h2><div class="row"><span class="label">Desktop</span><div class="track"><div class="bar" style="width:99%;background:#B9C2CE"></div><b>99 · LCP 0.6 s</b></div><div class="track"><div class="bar" style="width:100%;background:#1D7A4C"></div><b>100 · LCP 0.3 s</b></div></div><div class="row"><span class="label">Mobile</span><div class="track"><div class="bar" style="width:92%;background:#B9C2CE"></div><b>92 · LCP 1.6 s</b></div><div class="track"><div class="bar" style="width:100%;background:#1D7A4C"></div><b>100 · LCP 0.9 s</b></div></div>
+<div class="legend"><span><i class="dot" style="background:#B9C2CE"></i>antes</span><span><i class="dot" style="background:#1D7A4C"></i>depois</span></div></div>
+<div class="card"><h2>Bundle principal</h2>
+<table><thead><tr><th>Métrica</th><th>Antes</th><th>Depois</th></tr></thead><tbody>
+<tr><td>JavaScript principal</td><td>500,2 KB</td><td>236,2 KB</td></tr>
+<tr><td>JavaScript principal (gzip)</td><td>133,9 KB</td><td>71,8 KB</td></tr>
+<tr><td>Peso total (Lighthouse)</td><td>1.159 KiB</td><td>287 KiB</td></tr>
+<tr><td>Fontes</td><td>Google Fonts (bloqueante)</td><td>self-hosted + optional</td></tr>
+</tbody></table></div>
+</body></html>

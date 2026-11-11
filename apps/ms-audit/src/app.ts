@@ -16,6 +16,7 @@ import {
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
+import compression from "compression";
 import type { Request } from "express";
 import { importSPKI, jwtVerify } from "jose";
 import { z } from "zod";
@@ -186,6 +187,7 @@ export async function createApp(): Promise<NestExpressApplication> {
     logger: process.env.NODE_ENV === "test" ? false : undefined,
   });
   app.setGlobalPrefix("api/v1");
+  app.use(compression({ threshold: 1024 }));
   app.enableShutdownHooks();
   try {
     await app.init();

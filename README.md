@@ -117,6 +117,16 @@ pnpm test:web:e2e
 
 Os testes de integração/HTTP recusam bancos cujo nome não termine em `_test`. Executam contra PostgreSQL e Redis reais, sem depender dos serviços futuros. O workflow CI repete os checks com serviços isolados.
 
+## Desempenho
+
+A camada de análise de desempenho (Lighthouse, DevTools/Web Vitals, carga com autocannon e evidências) roda com:
+
+```powershell
+pnpm perf
+```
+
+O comando sobe a infraestrutura, aplica migrations/seed, compila, inicia os serviços, mede APIs e front-end e grava os resultados em `docs/performance/resultados.json`. Comandos parciais: `pnpm perf:stack`, `pnpm perf:load`, `pnpm perf:web`, `pnpm perf:lighthouse`, `pnpm perf:report` e `pnpm perf:stop`. Detalhes, comparação antes/depois e gargalos em [relatório de desempenho](docs/performance/relatorio-desempenho.md).
+
 ## Documentação
 
 - [Arquitetura e decisões](docs/architecture.md)
@@ -126,6 +136,7 @@ Os testes de integração/HTTP recusam bancos cujo nome não termine em `_test`.
 - [OpenAPI versionado](docs/api/openapi.json)
 - [Relatório de implementação e validação](docs/relatorio-ms-projects.md)
 - [Frontend React e referência visual](docs/frontend.md)
+- [Análise de desempenho e evidências](docs/performance/relatorio-desempenho.md)
 - [Relatório da entrega React e api/web](docs/relatorio-web.md)
 - [Configuração, segurança e limites do ms-identity](apps/ms-identity/README.md)
 - [Relatório do ms-identity](docs/relatorio-ms-identity.md)

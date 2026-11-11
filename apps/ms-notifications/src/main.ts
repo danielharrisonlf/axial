@@ -17,6 +17,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import compression from "compression";
 import type { Request } from "express";
 import { importSPKI, jwtVerify } from "jose";
 import { z } from "zod";
@@ -218,6 +219,7 @@ class ControllerImpl {
 class AppModule {}
 const consumer = startConsumer();
 const app = await NestFactory.create(AppModule, { bodyParser: true });
+app.use(compression({ threshold: 1024 }));
 app.setGlobalPrefix("api/v1");
 const port = Number(process.env.NOTIFICATIONS_PORT ?? 3003);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid NOTIFICATIONS_PORT");

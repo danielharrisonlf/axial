@@ -1,0 +1,568 @@
+{
+  "collectedAt": "2026-11-11T16:50:26.919Z",
+  "environment": {
+    "node": "v24.21.0",
+    "platform": "win32",
+    "browser": "Chromium (Playwright)"
+  },
+  "loadBefore": {
+    "health-gateway": {
+      "throughput": 3565,
+      "p50": 24,
+      "p99": 81,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "health-api": {
+      "throughput": 3443,
+      "p50": 25,
+      "p99": 107,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "projects-api": {
+      "throughput": 850,
+      "p50": 55,
+      "p99": 100,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "projects-gateway": {
+      "throughput": 617,
+      "p50": 2475,
+      "p99": 4727,
+      "errors": 10,
+      "non2xx": 0
+    },
+    "tasks-api": {
+      "throughput": 525,
+      "p50": 93,
+      "p99": 145,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "audit-gateway": {
+      "throughput": 596,
+      "p50": 2470,
+      "p99": 4764,
+      "errors": 8,
+      "non2xx": 0
+    },
+    "notifications-gateway": {
+      "throughput": 823,
+      "p50": 2478,
+      "p99": 4854,
+      "errors": 47,
+      "non2xx": 0
+    }
+  },
+  "loadAfter": {
+    "health-gateway": {
+      "throughput": 8883,
+      "p50": 10,
+      "p99": 26,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "health-api": {
+      "throughput": 11121,
+      "p50": 8,
+      "p99": 24,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "projects-api": {
+      "throughput": 1853,
+      "p50": 25,
+      "p99": 40,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "projects-gateway": {
+      "throughput": 1755,
+      "p50": 27,
+      "p99": 45,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "tasks-api": {
+      "throughput": 1139,
+      "p50": 42,
+      "p99": 57,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "audit-gateway": {
+      "throughput": 2016,
+      "p50": 10,
+      "p99": 179,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "notifications-gateway": {
+      "throughput": 2442,
+      "p50": 6,
+      "p99": 289,
+      "errors": 0,
+      "non2xx": 0
+    }
+  },
+  "gatewayAb": {
+    "projects-gateway-nokeepalive": {
+      "throughput": 1309,
+      "p50": 1922,
+      "p99": 3906,
+      "errors": 35,
+      "non2xx": 0
+    },
+    "audit-gateway-nokeepalive": {
+      "throughput": 1402,
+      "p50": 1969,
+      "p99": 3960,
+      "errors": 63,
+      "non2xx": 0
+    }
+  },
+  "lighthouseBefore": {
+    "desktop": {
+      "performance": 0.99,
+      "accessibility": 0.95,
+      "bestPractices": 1,
+      "seo": 0.91,
+      "fcp": "0.6 s",
+      "lcp": "0.6 s",
+      "tbt": "0 ms",
+      "cls": "0",
+      "speedIndex": "1.0 s",
+      "totalBytes": "Total size was 1,159 KiB"
+    },
+    "mobile": {
+      "performance": 0.92,
+      "accessibility": 0.95,
+      "bestPractices": 1,
+      "seo": 0.91,
+      "fcp": "1.6 s",
+      "lcp": "1.6 s",
+      "tbt": "250 ms",
+      "cls": "0",
+      "speedIndex": "4.0 s",
+      "totalBytes": "Total size was 1,159 KiB"
+    }
+  },
+  "lighthouseAfter": {
+    "desktop": {
+      "performance": 1,
+      "accessibility": 0.95,
+      "bestPractices": 1,
+      "seo": 0.91,
+      "fcp": "0.3 s",
+      "lcp": "0.3 s",
+      "tbt": "0 ms",
+      "cls": "0",
+      "speedIndex": "0.5 s",
+      "totalBytes": "Total size was 287 KiB"
+    },
+    "mobile": {
+      "performance": 1,
+      "accessibility": null,
+      "bestPractices": null,
+      "seo": null,
+      "fcp": "0.9 s",
+      "lcp": "0.9 s",
+      "tbt": "60 ms",
+      "cls": "0",
+      "speedIndex": "1.0 s",
+      "totalBytes": "Total size was 287 KiB"
+    }
+  },
+  "lighthouseMobileRuns": [
+    {
+      "performance": 0.93,
+      "accessibility": 0.95,
+      "bestPractices": 1,
+      "seo": 0.91,
+      "fcp": "1.0 s",
+      "lcp": "3.1 s",
+      "tbt": "140 ms",
+      "cls": "0",
+      "speedIndex": "1.0 s",
+      "totalBytes": "Total size was 287 KiB"
+    },
+    {
+      "performance": 1,
+      "accessibility": 0.95,
+      "bestPractices": 1,
+      "seo": 0.91,
+      "fcp": "0.9 s",
+      "lcp": "0.9 s",
+      "tbt": "70 ms",
+      "cls": "0",
+      "speedIndex": "0.9 s",
+      "totalBytes": "Total size was 287 KiB"
+    },
+    {
+      "performance": 1,
+      "accessibility": null,
+      "bestPractices": null,
+      "seo": null,
+      "fcp": "0.9 s",
+      "lcp": "0.9 s",
+      "tbt": "40 ms",
+      "cls": "0",
+      "speedIndex": "2.3 s",
+      "totalBytes": "Total size was 287 KiB"
+    },
+    {
+      "performance": 1,
+      "accessibility": null,
+      "bestPractices": null,
+      "seo": null,
+      "fcp": "0.9 s",
+      "lcp": "0.9 s",
+      "tbt": "60 ms",
+      "cls": "0",
+      "speedIndex": "1.0 s",
+      "totalBytes": "Total size was 287 KiB"
+    },
+    {
+      "performance": 1,
+      "accessibility": null,
+      "bestPractices": null,
+      "seo": null,
+      "fcp": "0.9 s",
+      "lcp": "0.9 s",
+      "tbt": "50 ms",
+      "cls": "0",
+      "speedIndex": "0.9 s",
+      "totalBytes": "Total size was 287 KiB"
+    }
+  ],
+  "vitalsAfter": {
+    "desktopDashboard": {
+      "profile": "desktop",
+      "route": "dashboard",
+      "vitals": {
+        "lcp": 768,
+        "cls": 0,
+        "longTasks": 0,
+        "longTaskTime": 0,
+        "domContentLoaded": 33.90000003576279,
+        "load": 34.60000002384186,
+        "responseEnd": 6.300000011920929,
+        "firstPaint": 768,
+        "firstContentfulPaint": 768,
+        "transferBytes": 263397,
+        "resourceCount": 20,
+        "jsTransferBytes": 158150
+      },
+      "cdp": {
+        "jsHeapUsed": 4037028,
+        "nodes": 1311,
+        "documents": 5,
+        "listeners": 185,
+        "layoutCount": 3,
+        "recalcStyleCount": 3,
+        "taskDuration": 0.117222,
+        "scriptDuration": 0.04709
+      }
+    },
+    "desktopProjects": {
+      "profile": "desktop",
+      "route": "projects",
+      "vitals": {
+        "lcp": 708,
+        "cls": 0,
+        "longTasks": 0,
+        "longTaskTime": 0,
+        "domContentLoaded": 15.300000011920929,
+        "load": 15.300000011920929,
+        "responseEnd": 2.400000035762787,
+        "firstPaint": 32,
+        "firstContentfulPaint": 412,
+        "transferBytes": 282175,
+        "resourceCount": 22,
+        "jsTransferBytes": 161920
+      },
+      "cdp": {
+        "jsHeapUsed": 4197524,
+        "nodes": 1202,
+        "documents": 5,
+        "listeners": 214,
+        "layoutCount": 5,
+        "recalcStyleCount": 8,
+        "taskDuration": 0.109987,
+        "scriptDuration": 0.047313
+      }
+    },
+    "mobileDashboard": {
+      "profile": "mobile",
+      "route": "dashboard",
+      "vitals": {
+        "lcp": 416,
+        "cls": 0,
+        "longTasks": 0,
+        "longTaskTime": 0,
+        "domContentLoaded": 15.400000035762787,
+        "load": 15.400000035762787,
+        "responseEnd": 2.5,
+        "firstPaint": 16,
+        "firstContentfulPaint": 416,
+        "transferBytes": 263397,
+        "resourceCount": 20,
+        "jsTransferBytes": 158150
+      },
+      "cdp": {
+        "jsHeapUsed": 4034852,
+        "nodes": 1311,
+        "documents": 5,
+        "listeners": 185,
+        "layoutCount": 3,
+        "recalcStyleCount": 6,
+        "taskDuration": 0.103218,
+        "scriptDuration": 0.039463
+      }
+    },
+    "mobileProjects": {
+      "profile": "mobile",
+      "route": "projects",
+      "vitals": {
+        "lcp": 700,
+        "cls": 0,
+        "longTasks": 0,
+        "longTaskTime": 0,
+        "domContentLoaded": 15.599999964237213,
+        "load": 15.599999964237213,
+        "responseEnd": 2.699999988079071,
+        "firstPaint": 24,
+        "firstContentfulPaint": 400,
+        "transferBytes": 282175,
+        "resourceCount": 22,
+        "jsTransferBytes": 161920
+      },
+      "cdp": {
+        "jsHeapUsed": 4187760,
+        "nodes": 1202,
+        "documents": 5,
+        "listeners": 214,
+        "layoutCount": 5,
+        "recalcStyleCount": 7,
+        "taskDuration": 0.094597,
+        "scriptDuration": 0.03639
+      }
+    }
+  },
+  "payloads": {
+    "auditPage50": {
+      "rawBytes": 6399,
+      "gzipBytes": 1325,
+      "reduction": "79%"
+    },
+    "tasksPage20": {
+      "rawBytes": 1705,
+      "gzipBytes": 605,
+      "reduction": "65%"
+    }
+  },
+  "login": {
+    "sampleMs": [61, 62, 64, 64, 66, 69, 140, 177, 316, 374],
+    "p50": 69,
+    "min": 61,
+    "max": 374,
+    "rateLimit": {
+      "attempts": 30,
+      "success": 10,
+      "throttled": 20
+    }
+  },
+  "load": {
+    "health-gateway": {
+      "throughput": 3617,
+      "p50": 23,
+      "p99": 71,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "health-api": {
+      "throughput": 3022,
+      "p50": 24,
+      "p99": 251,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "projects-api": {
+      "throughput": 498,
+      "p50": 63,
+      "p99": 460,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "projects-gateway": {
+      "throughput": 624,
+      "p50": 57,
+      "p99": 418,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "tasks-api": {
+      "throughput": 374,
+      "p50": 101,
+      "p99": 956,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "audit-gateway": {
+      "throughput": 1185,
+      "p50": 23,
+      "p99": 49,
+      "errors": 0,
+      "non2xx": 0
+    },
+    "notifications-gateway": {
+      "throughput": 1839,
+      "p50": 14,
+      "p99": 37,
+      "errors": 0,
+      "non2xx": 0
+    }
+  },
+  "lighthouse": {
+    "desktop": {
+      "performance": 1,
+      "accessibility": 0.95,
+      "bestPractices": 1,
+      "seo": 0.91,
+      "fcp": "0.3 s",
+      "lcp": "0.7 s",
+      "tbt": "0 ms",
+      "cls": "0",
+      "speedIndex": "0.5 s",
+      "totalBytes": "Total size was 287 KiB"
+    },
+    "mobile": {
+      "performance": 1,
+      "accessibility": 0.95,
+      "bestPractices": 1,
+      "seo": 0.91,
+      "fcp": "0.9 s",
+      "lcp": "0.9 s",
+      "tbt": "50 ms",
+      "cls": "0",
+      "speedIndex": "0.9 s",
+      "totalBytes": "Total size was 287 KiB"
+    }
+  },
+  "vitals": {
+    "desktop-dashboard": {
+      "profile": "desktop",
+      "route": "dashboard",
+      "vitals": {
+        "lcp": 2288,
+        "cls": 0,
+        "longTasks": 2,
+        "longTaskTime": 164,
+        "domContentLoaded": 39.89999997615814,
+        "load": 41.39999997615814,
+        "responseEnd": 12.100000023841858,
+        "firstPaint": 2288,
+        "firstContentfulPaint": 2288,
+        "transferBytes": 263397,
+        "resourceCount": 20,
+        "jsTransferBytes": 158150
+      },
+      "cdp": {
+        "jsHeapUsed": 4028404,
+        "nodes": 1311,
+        "documents": 5,
+        "listeners": 185,
+        "layoutCount": 3,
+        "recalcStyleCount": 3,
+        "taskDuration": 0.271618,
+        "scriptDuration": 0.102768
+      }
+    },
+    "desktop-projects": {
+      "profile": "desktop",
+      "route": "projects",
+      "vitals": {
+        "lcp": 812,
+        "cls": 0,
+        "longTasks": 0,
+        "longTaskTime": 0,
+        "domContentLoaded": 23,
+        "load": 23.600000023841858,
+        "responseEnd": 5.100000023841858,
+        "firstPaint": 28,
+        "firstContentfulPaint": 448,
+        "transferBytes": 282175,
+        "resourceCount": 22,
+        "jsTransferBytes": 161920
+      },
+      "cdp": {
+        "jsHeapUsed": 4185564,
+        "nodes": 1202,
+        "documents": 5,
+        "listeners": 214,
+        "layoutCount": 5,
+        "recalcStyleCount": 7,
+        "taskDuration": 0.449119,
+        "scriptDuration": 0.057119
+      }
+    },
+    "mobile-dashboard": {
+      "profile": "mobile",
+      "route": "dashboard",
+      "vitals": {
+        "lcp": 460,
+        "cls": 0,
+        "longTasks": 0,
+        "longTaskTime": 0,
+        "domContentLoaded": 30.100000023841858,
+        "load": 31,
+        "responseEnd": 5.400000035762787,
+        "firstPaint": 36,
+        "firstContentfulPaint": 460,
+        "transferBytes": 263397,
+        "resourceCount": 20,
+        "jsTransferBytes": 158150
+      },
+      "cdp": {
+        "jsHeapUsed": 4010116,
+        "nodes": 1311,
+        "documents": 5,
+        "listeners": 185,
+        "layoutCount": 4,
+        "recalcStyleCount": 7,
+        "taskDuration": 0.116706,
+        "scriptDuration": 0.04172
+      }
+    },
+    "mobile-projects": {
+      "profile": "mobile",
+      "route": "projects",
+      "vitals": {
+        "lcp": 752,
+        "cls": 0,
+        "longTasks": 0,
+        "longTaskTime": 0,
+        "domContentLoaded": 40,
+        "load": 41,
+        "responseEnd": 5.399999976158142,
+        "firstPaint": 56,
+        "firstContentfulPaint": 436,
+        "transferBytes": 282175,
+        "resourceCount": 22,
+        "jsTransferBytes": 161920
+      },
+      "cdp": {
+        "jsHeapUsed": 4190592,
+        "nodes": 1202,
+        "documents": 5,
+        "listeners": 214,
+        "layoutCount": 6,
+        "recalcStyleCount": 9,
+        "taskDuration": 0.133815,
+        "scriptDuration": 0.044623
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@ import { ConsoleLogger, type INestApplication } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import compression from "compression";
 import helmet from "helmet";
 import { AppModule } from "./app.module.js";
 import { readConfig } from "./common/config.js";
@@ -27,6 +28,7 @@ export async function createApp(): Promise<INestApplication> {
     logger: config.NODE_ENV === "test" ? false : new ConsoleLogger({ json: true }),
   });
   app.use(helmet());
+  app.use(compression({ threshold: 1024 }));
   app.useBodyParser("json", { limit: "256kb" });
   app.setGlobalPrefix("api/v1");
   app.enableCors({ origin: config.CORS_ORIGINS, credentials: false });

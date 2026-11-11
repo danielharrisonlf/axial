@@ -10,6 +10,8 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invali
 await app.listen(port, "0.0.0.0");
 
 const server = app.getHttpServer();
+server.keepAliveTimeout = 65_000;
+server.headersTimeout = 66_000;
 server.on(
   "upgrade",
   (request: import("node:http").IncomingMessage, socket: import("node:net").Socket, head: Buffer) => {

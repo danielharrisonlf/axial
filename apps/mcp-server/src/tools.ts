@@ -9,10 +9,7 @@ const priority = z.enum(["low", "medium", "high", "urgent"]);
 
 @Injectable()
 export class ProjectsApi {
-  private readonly baseUrl: string;
-  constructor(baseUrl = readConfig().PROJECTS_API_URL) {
-    this.baseUrl = baseUrl;
-  }
+  private readonly baseUrl: string = readConfig().PROJECTS_API_URL;
 
   async request(ctx: McpContext, path: string, init: RequestInit = {}): Promise<unknown> {
     const token = (ctx.authInfo?.extra as { token?: unknown } | undefined)?.token;

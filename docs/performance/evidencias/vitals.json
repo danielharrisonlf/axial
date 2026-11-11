@@ -1,0 +1,114 @@
+{
+  "desktop-dashboard": {
+    "profile": "desktop",
+    "route": "dashboard",
+    "vitals": {
+      "lcp": 2288,
+      "cls": 0,
+      "longTasks": 2,
+      "longTaskTime": 164,
+      "domContentLoaded": 39.89999997615814,
+      "load": 41.39999997615814,
+      "responseEnd": 12.100000023841858,
+      "firstPaint": 2288,
+      "firstContentfulPaint": 2288,
+      "transferBytes": 263397,
+      "resourceCount": 20,
+      "jsTransferBytes": 158150
+    },
+    "cdp": {
+      "jsHeapUsed": 4028404,
+      "nodes": 1311,
+      "documents": 5,
+      "listeners": 185,
+      "layoutCount": 3,
+      "recalcStyleCount": 3,
+      "taskDuration": 0.271618,
+      "scriptDuration": 0.102768
+    }
+  },
+  "desktop-projects": {
+    "profile": "desktop",
+    "route": "projects",
+    "vitals": {
+      "lcp": 812,
+      "cls": 0,
+      "longTasks": 0,
+      "longTaskTime": 0,
+      "domContentLoaded": 23,
+      "load": 23.600000023841858,
+      "responseEnd": 5.100000023841858,
+      "firstPaint": 28,
+      "firstContentfulPaint": 448,
+      "transferBytes": 282175,
+      "resourceCount": 22,
+      "jsTransferBytes": 161920
+    },
+    "cdp": {
+      "jsHeapUsed": 4185564,
+      "nodes": 1202,
+      "documents": 5,
+      "listeners": 214,
+      "layoutCount": 5,
+      "recalcStyleCount": 7,
+      "taskDuration": 0.449119,
+      "scriptDuration": 0.057119
+    }
+  },
+  "mobile-dashboard": {
+    "profile": "mobile",
+    "route": "dashboard",
+    "vitals": {
+      "lcp": 460,
+      "cls": 0,
+      "longTasks": 0,
+      "longTaskTime": 0,
+      "domContentLoaded": 30.100000023841858,
+      "load": 31,
+      "responseEnd": 5.400000035762787,
+      "firstPaint": 36,
+      "firstContentfulPaint": 460,
+      "transferBytes": 263397,
+      "resourceCount": 20,
+      "jsTransferBytes": 158150
+    },
+    "cdp": {
+      "jsHeapUsed": 4010116,
+      "nodes": 1311,
+      "documents": 5,
+      "listeners": 185,
+      "layoutCount": 4,
+      "recalcStyleCount": 7,
+      "taskDuration": 0.116706,
+      "scriptDuration": 0.04172
+    }
+  },
+  "mobile-projects": {
+    "profile": "mobile",
+    "route": "projects",
+    "vitals": {
+      "lcp": 752,
+      "cls": 0,
+      "longTasks": 0,
+      "longTaskTime": 0,
+      "domContentLoaded": 40,
+      "load": 41,
+      "responseEnd": 5.399999976158142,
+      "firstPaint": 56,
+      "firstContentfulPaint": 436,
+      "transferBytes": 282175,
+      "resourceCount": 22,
+      "jsTransferBytes": 161920
+    },
+    "cdp": {
+      "jsHeapUsed": 4190592,
+      "nodes": 1202,
+      "documents": 5,
+      "listeners": 214,
+      "layoutCount": 6,
+      "recalcStyleCount": 9,
+      "taskDuration": 0.133815,
+      "scriptDuration": 0.044623
+    }
+  }
+}

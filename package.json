@@ -45,10 +45,19 @@
     "db:audit:migrate": "pnpm --filter @axial/ms-audit db:migrate",
     "test:gateway:integration": "pnpm --filter @axial/gateway test:integration",
     "test:mcp:integration": "pnpm --filter @axial/mcp-server test:integration",
-    "test:audit:integration": "pnpm --filter @axial/ms-audit test:integration"
+    "test:audit:integration": "pnpm --filter @axial/ms-audit test:integration",
+    "perf": "node scripts/performance/run.mjs all",
+    "perf:stack": "node scripts/performance/run.mjs stack",
+    "perf:stop": "node scripts/performance/run.mjs stop",
+    "perf:load": "node scripts/performance/run.mjs load",
+    "perf:web": "node scripts/performance/run.mjs web",
+    "perf:lighthouse": "node scripts/performance/run.mjs lighthouse",
+    "perf:report": "node scripts/performance/run.mjs report"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "autocannon": "9.0.0",
+    "lighthouse": "13.6.0",
     "turbo": "2.11.3",
     "typescript": "catalog:"
   }

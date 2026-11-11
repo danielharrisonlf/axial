@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { ProjectModal, TaskModal } from "./components/Forms";
 import { Icon } from "./components/Icon";
 import { TaskDrawer, TaskTable } from "./components/Tasks";
@@ -16,13 +16,24 @@ import {
 import type { Project } from "./data/types";
 import { useWorkspace } from "./data/workspace";
 import { navigate, rel } from "./lib/format";
-import { Access } from "./pages/Access";
 import { Dashboard } from "./pages/Dashboard";
-import { Insights } from "./pages/Insights";
-import { Notifications } from "./pages/Notifications";
-import { ProjectDetail, Projects } from "./pages/Projects";
-import { Backlog, Board, Sprints, Timeline } from "./pages/Work";
 import "./app.css";
+
+// Route-level code splitting: the initial bundle ships the shell, while each
+// page is fetched on demand.
+const Insights = lazy(() => import("./pages/Insights").then((module) => ({ default: module.Insights })));
+const Access = lazy(() => import("./pages/Access").then((module) => ({ default: module.Access })));
+const Notifications = lazy(() =>
+  import("./pages/Notifications").then((module) => ({ default: module.Notifications })),
+);
+const Projects = lazy(() => import("./pages/Projects").then((module) => ({ default: module.Projects })));
+const ProjectDetail = lazy(() =>
+  import("./pages/Projects").then((module) => ({ default: module.ProjectDetail })),
+);
+const Board = lazy(() => import("./pages/Work").then((module) => ({ default: module.Board })));
+const Backlog = lazy(() => import("./pages/Work").then((module) => ({ default: module.Backlog })));
+const Sprints = lazy(() => import("./pages/Work").then((module) => ({ default: module.Sprints })));
+const Timeline = lazy(() => import("./pages/Work").then((module) => ({ default: module.Timeline })));
 
 type ModalState =
   | { kind: "project"; existing?: Project }
@@ -511,7 +522,15 @@ export default function App() {
               className={`page${route === "board" || route === "timeline" ? " wide" : ""}`}
               key={`${route}/${id || ""}`}
             >
-              {page}
+              <Suspense
+                fallback={
+                  <div className="empty" role="status">
+                    <b>Carregando…</b>
+                  </div>
+                }
+              >
+                {page}
+              </Suspense>
             </div>
           </main>
         </div>

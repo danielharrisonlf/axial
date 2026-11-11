@@ -1,6 +1,10 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
     "ignoreUnknown": true,
     "includes": [
@@ -13,27 +17,53 @@
       "!**/output",
       "!**/.mf",
       "!apps/web/src/styles/prototype.css",
-      "!apps/web/src/data/demo-seed.json"
+      "!apps/web/src/data/demo-seed.json",
+      "!docs/performance/evidencias",
+      "!docs/performance/resultados.json"
     ]
   },
-  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 110 },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 110
+  },
   "javascript": {
-    "parser": { "unsafeParameterDecoratorsEnabled": true },
-    "formatter": { "quoteStyle": "double", "semicolons": "always" }
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
   },
   "linter": {
     "enabled": true,
-    "rules": { "preset": "recommended", "suspicious": { "noExplicitAny": "error" } }
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "error"
+      }
+    }
   },
   "overrides": [
     {
       "includes": ["apps/insights/src/**/*.vue"],
       "linter": {
         "rules": {
-          "correctness": { "noUnusedVariables": "off", "noUnusedImports": "off" }
+          "correctness": {
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off"
+          }
         }
       }
     }
   ],
-  "assist": { "actions": { "source": { "organizeImports": "on" } } }
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
 }
