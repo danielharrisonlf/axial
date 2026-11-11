@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { config as loadEnv } from "dotenv";
 import { z } from "zod";
+import { createAuth } from "./auth.js";
 import { pool } from "./db.js";
-import { hashPassword } from "./password.js";
+
+loadEnv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet: true });
 
 const input = z
   .object({
@@ -11,35 +15,43 @@ const input = z
   })
   .parse(process.env);
 const db = pool();
+const auth = createAuth(db);
 try {
-  const passwordHash = await hashPassword(input.IDENTITY_BOOTSTRAP_PASSWORD);
-  const c = await db.connect();
+  const existing = await db.query("SELECT 1 FROM identity.organizations LIMIT 1");
+  if (existing.rowCount) throw new Error("Bootstrap denied: identity already contains an organization");
+  const created = await auth.api.signUpEmail({
+    body: {
+      email: input.IDENTITY_BOOTSTRAP_EMAIL.toLowerCase(),
+      password: input.IDENTITY_BOOTSTRAP_PASSWORD,
+      name: input.IDENTITY_BOOTSTRAP_EMAIL.split("@")[0] ?? input.IDENTITY_BOOTSTRAP_EMAIL,
+    },
+  });
+  const organizationId = randomUUID();
+  const client = await db.connect();
   try {
-    await c.query("BEGIN");
-    await c.query("SELECT pg_advisory_xact_lock(hashtext('axial-identity-bootstrap'))");
-    const existing = await c.query("SELECT 1 FROM identity.organizations LIMIT 1");
-    if (existing.rowCount) throw new Error("Bootstrap denied: identity already contains an organization");
-    const user = randomUUID(),
-      org = randomUUID();
-    await c.query(
-      "INSERT INTO identity.users(id,email,password_hash,must_change_password) VALUES($1,$2,$3,false)",
-      [user, input.IDENTITY_BOOTSTRAP_EMAIL.toLowerCase(), passwordHash],
-    );
-    await c.query("INSERT INTO identity.organizations(id,name) VALUES($1,$2)", [
-      org,
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('axial-identity-bootstrap'))");
+    const raced = await client.query("SELECT 1 FROM identity.organizations LIMIT 1");
+    if (raced.rowCount) throw new Error("Bootstrap denied: identity already contains an organization");
+    await client.query("INSERT INTO identity.organizations(id,name) VALUES($1,$2)", [
+      organizationId,
       input.IDENTITY_BOOTSTRAP_ORGANIZATION,
     ]);
-    await c.query("INSERT INTO identity.members(organization_id,user_id,role) VALUES($1,$2,'ADMIN')", [
-      org,
-      user,
-    ]);
-    await c.query("COMMIT");
-    console.log(`Bootstrap complete; organization ID: ${org}`);
+    await client.query(
+      "INSERT INTO identity.members(organization_id,user_id,role) VALUES($1,$2,'ADMIN')",
+      [organizationId, created.user.id],
+    );
+    await client.query(
+      `UPDATE identity."user" SET "mustChangePassword"=false WHERE id=$1`,
+      [created.user.id],
+    );
+    await client.query("COMMIT");
+    console.log(`Bootstrap complete; organization ID: ${organizationId}`);
   } catch (error) {
-    await c.query("ROLLBACK");
+    await client.query("ROLLBACK");
     throw error;
   } finally {
-    c.release();
+    client.release();
   }
 } finally {
   await db.end();

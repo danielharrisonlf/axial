@@ -1,12 +1,13 @@
 import "reflect-metadata";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import {
   BadRequestException,
   Body,
   Controller,
   ForbiddenException,
   Get,
+  HttpCode,
   HttpException,
   Inject,
   Injectable,
@@ -20,18 +21,30 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import { config as loadEnv } from "dotenv";
+import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
+import { hashPassword, verifyPassword } from "better-auth/crypto";
 import type { Request } from "express";
-import { importPKCS8, importSPKI, jwtVerify, SignJWT } from "jose";
 import { z } from "zod";
+import { BETTER_AUTH_BASE_PATH, createAuth } from "./auth.js";
 import { pool } from "./db.js";
-import { hashPassword, verifyPassword } from "./password.js";
+import {
+  isPasswordChangeToken,
+  loadKeys,
+  signAccessToken,
+  signPasswordChangeToken,
+  verifyAccessToken,
+} from "./tokens.js";
+
+loadEnv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet: true });
 
 const roles = z.enum(["ADMIN", "PROJECT_MANAGER", "TEAM_LEAD", "CONTRIBUTOR", "VIEWER"]);
 const uuid = z.uuid();
 const email = z
   .email()
   .max(254)
-  .transform((v) => v.toLowerCase());
+  .transform((value) => value.toLowerCase());
 const password = z.string().min(14).max(128);
 const name = z.string().trim().min(1).max(120);
 const strict = <T extends z.ZodRawShape>(shape: T) => z.strictObject(shape);
@@ -43,29 +56,39 @@ function parse<T>(schema: z.ZodType<T>, data: unknown): T {
 function pathUuid(id: string): string {
   return parse(uuid, id);
 }
+function betterAuthStatus(error: unknown): string | undefined {
+  return (error as { status?: string } | null)?.status;
+}
+function isDuplicateEmail(error: unknown): boolean {
+  const status = betterAuthStatus(error);
+  const message = (error as { body?: { message?: string }; message?: string } | null)?.body?.message ?? "";
+  return (
+    status === "CONFLICT" ||
+    status === "UNPROCESSABLE_ENTITY" ||
+    /already exists|user already/i.test(message)
+  );
+}
+
 const db = pool();
-const issuer = process.env.IDENTITY_ISSUER ?? "http://localhost:3000/identity";
-const audience = process.env.IDENTITY_AUDIENCE ?? "axial-projects";
-const privatePath = process.env.IDENTITY_PRIVATE_KEY_PATH;
-const publicPath = process.env.IDENTITY_PUBLIC_KEY_PATH;
-if (!privatePath || !publicPath)
-  throw new Error("IDENTITY_PRIVATE_KEY_PATH and IDENTITY_PUBLIC_KEY_PATH are required");
-const privateKey = await importPKCS8(await readFile(privatePath, "utf8"), "RS256");
-const publicKey = await importSPKI(await readFile(publicPath, "utf8"), "RS256");
-const probe = await new SignJWT({})
-  .setProtectedHeader({ alg: "RS256" })
-  .setIssuedAt()
-  .setExpirationTime("1m")
-  .sign(privateKey);
-await jwtVerify(probe, publicKey, { algorithms: ["RS256"] });
-const dummyHash = await hashPassword(randomUUID());
-type Actor = { userId: string; organizationId: string };
+const auth = createAuth(db);
+const { privateKey, publicKey } = await loadKeys();
+type Role = z.infer<typeof roles>;
+interface Actor {
+  userId: string;
+  organizationId: string;
+  role: Role;
+  source: "api" | "ui" | "mcp" | "automation";
+}
+interface Membership {
+  role: Role;
+  must_change_password: boolean;
+}
 
 @Injectable()
 class IdentityService {
-  // Per-process safeguards supplement account lockout; multi-replica deployments need shared ingress limits.
   private readonly attempts = new Map<string, { count: number; until: number }>();
   private authenticationInFlight = 0;
+
   async limitAuthentication<T>(ip: string, action: string, work: () => Promise<T>): Promise<T> {
     const now = Date.now();
     for (const [key, value] of this.attempts) if (value.until <= now) this.attempts.delete(key);
@@ -75,7 +98,6 @@ class IdentityService {
       throw new HttpException("Too many attempts", 429);
     if (limit) limit.count++;
     else this.attempts.set(key, { count: 1, until: now + 60000 });
-    // Reserve pool capacity for other requests and reject instead of queuing expensive work.
     if (this.authenticationInFlight >= 4) throw new HttpException("Too many attempts", 429);
     this.authenticationInFlight++;
     try {
@@ -84,140 +106,229 @@ class IdentityService {
       this.authenticationInFlight--;
     }
   }
-  async actor(req: Request, admin = false, passwordChange = false): Promise<Actor> {
-    const auth = req.headers.authorization;
-    if (!auth || !/^Bearer \S+$/i.test(auth)) throw new UnauthorizedException();
+
+  private async membership(userId: string, organizationId: string): Promise<Membership | undefined> {
+    const result = await db.query<Membership>(
+      `SELECT m.role, u."mustChangePassword" AS must_change_password
+         FROM identity.members m
+         JOIN identity."user" u ON u.id = m.user_id
+         JOIN identity.organizations o ON o.id = m.organization_id
+        WHERE m.user_id=$1 AND m.organization_id=$2 AND m.active AND o.active`,
+      [userId, organizationId],
+    );
+    return result.rows[0];
+  }
+
+  private async claims(
+    userId: string,
+    organizationId: string,
+    role: Role,
+  ): Promise<Parameters<typeof signAccessToken>[1]> {
+    const [teams, projects, users, assignableTeams] = await Promise.all([
+      db.query<{ id: string }>(
+        "SELECT tm.team_id AS id FROM identity.team_members tm JOIN identity.teams t ON t.organization_id=tm.organization_id AND t.id=tm.team_id WHERE tm.organization_id=$1 AND tm.user_id=$2 AND t.active ORDER BY tm.team_id",
+        [organizationId, userId],
+      ),
+      db.query<{ id: string }>(
+        "SELECT project_id AS id FROM identity.project_assignments WHERE organization_id=$1 AND user_id=$2 ORDER BY project_id",
+        [organizationId, userId],
+      ),
+      db.query<{ id: string }>(
+        "SELECT m.user_id AS id FROM identity.members m JOIN identity.\"user\" u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.active ORDER BY m.user_id",
+        [organizationId],
+      ),
+      db.query<{ id: string }>(
+        "SELECT id FROM identity.teams WHERE organization_id=$1 AND active ORDER BY id",
+        [organizationId],
+      ),
+    ]);
+    const ids = (rows: { id: string }[]) => rows.map((row) => row.id);
+    return {
+      userId,
+      organizationId,
+      role,
+      teamIds: ids(teams.rows),
+      projectIds: ids(projects.rows),
+      assignableUserIds: ids(users.rows),
+      assignableTeamIds: ids(assignableTeams.rows),
+      source: "api",
+    };
+  }
+
+  private async jwtActor(
+    token: string,
+    options: { admin?: boolean; passwordChange?: boolean },
+  ): Promise<Actor> {
+    let claims: Awaited<ReturnType<typeof verifyAccessToken>>;
     try {
-      const result = await jwtVerify(auth.slice(7), publicKey, {
-        algorithms: ["RS256"],
-        issuer,
-        audience: passwordChange ? [audience, `${audience}-password-change`] : audience,
-        requiredClaims: ["sub", "iat", "exp"],
+      claims = await verifyAccessToken(publicKey, token, {
+        passwordChange: options.passwordChange,
       });
-      const claims = parse(strict({ sub: uuid, organizationId: uuid }).passthrough(), result.payload);
-      const current = await db.query(
-        "SELECT m.role,u.must_change_password FROM identity.members m JOIN identity.users u ON u.id=m.user_id JOIN identity.organizations o ON o.id=m.organization_id WHERE m.user_id=$1 AND m.organization_id=$2 AND m.active AND u.active AND o.active",
-        [claims.sub, claims.organizationId],
-      );
-      if (!current.rowCount) throw new UnauthorizedException();
-      const temporary = result.payload.aud === `${audience}-password-change`;
-      if (
-        temporary &&
-        (result.payload.purpose !== "password_change" || !current.rows[0].must_change_password)
-      )
-        throw new UnauthorizedException();
-      if (!temporary && current.rows[0].must_change_password) throw new UnauthorizedException();
-      if (admin && current.rows[0].role !== "ADMIN") throw new ForbiddenException();
-      return { userId: claims.sub, organizationId: claims.organizationId };
-    } catch (error) {
-      if (error instanceof ForbiddenException) throw error;
+    } catch {
       throw new UnauthorizedException();
     }
+    const temporary = isPasswordChangeToken(claims);
+    if (options.passwordChange ? !temporary : temporary) throw new UnauthorizedException();
+    const membership = await this.membership(claims.sub, claims.organizationId);
+    if (!membership) throw new UnauthorizedException();
+    if (temporary !== membership.must_change_password) throw new UnauthorizedException();
+    if (options.admin && membership.role !== "ADMIN") throw new ForbiddenException();
+    return {
+      userId: claims.sub,
+      organizationId: claims.organizationId,
+      role: membership.role,
+      source: "api",
+    };
   }
-  async login(
-    data: unknown,
-  ): Promise<{ accessToken: string; expiresIn: number; requiresPasswordChange: boolean }> {
-    const input = parse(strict({ email, password: z.string().max(128), organizationId: uuid }), data);
-    const client = await db.connect();
-    let verifyLocked = false;
-    try {
-      await client.query("BEGIN");
-      const found = await client.query(
-        "SELECT id,password_hash,active,locked_until,must_change_password FROM identity.users WHERE email=$1 FOR UPDATE",
-        [input.email],
-      );
-      const user = found.rows[0] as
-        | {
-            id: string;
-            password_hash: string;
-            active: boolean;
-            locked_until: Date | null;
-            must_change_password: boolean;
-          }
-        | undefined;
-      const locked = user?.locked_until && user.locked_until.getTime() > Date.now();
-      verifyLocked = Boolean(locked);
-      const valid = !locked && (await verifyPassword(input.password, user?.password_hash ?? dummyHash));
-      if (!user || !valid || !user.active || locked) {
-        if (user && !locked)
-          await client.query(
-            "UPDATE identity.users SET failed_attempts=failed_attempts+1, locked_until=CASE WHEN failed_attempts+1 >= 5 THEN now()+interval '15 minutes' ELSE NULL END WHERE id=$1",
-            [user.id],
-          );
-        await client.query("COMMIT");
-        throw new UnauthorizedException("Invalid credentials");
-      }
-      const membership = await client.query(
-        "SELECT m.role FROM identity.members m JOIN identity.organizations o ON o.id=m.organization_id WHERE m.user_id=$1 AND m.organization_id=$2 AND m.active AND o.active",
-        [user.id, input.organizationId],
-      );
-      if (!membership.rowCount) {
-        await client.query("COMMIT");
-        throw new UnauthorizedException("Invalid credentials");
-      }
-      await client.query("UPDATE identity.users SET failed_attempts=0,locked_until=NULL WHERE id=$1", [
-        user.id,
-      ]);
-      if (user.must_change_password) {
-        const accessToken = await new SignJWT({
-          organizationId: input.organizationId,
-          purpose: "password_change",
-        })
-          .setProtectedHeader({ alg: "RS256", typ: "JWT" })
-          .setSubject(user.id)
-          .setIssuer(issuer)
-          .setAudience(`${audience}-password-change`)
-          .setIssuedAt()
-          .setExpirationTime("5m")
-          .sign(privateKey);
-        await client.query("COMMIT");
-        return { accessToken, expiresIn: 300, requiresPasswordChange: true };
-      }
-      const teams = await client.query(
-        "SELECT tm.team_id AS id FROM identity.team_members tm JOIN identity.teams t ON t.organization_id=tm.organization_id AND t.id=tm.team_id WHERE tm.organization_id=$1 AND tm.user_id=$2 AND t.active ORDER BY tm.team_id",
-        [input.organizationId, user.id],
-      );
-      const projects = await client.query(
-        "SELECT project_id AS id FROM identity.project_assignments WHERE organization_id=$1 AND user_id=$2 ORDER BY project_id",
-        [input.organizationId, user.id],
-      );
-      const users = await client.query(
-        "SELECT m.user_id AS id FROM identity.members m JOIN identity.users u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.active AND u.active ORDER BY m.user_id",
-        [input.organizationId],
-      );
-      const assignableTeams = await client.query(
-        "SELECT id FROM identity.teams WHERE organization_id=$1 AND active ORDER BY id",
-        [input.organizationId],
-      );
-      const ids = (rows: { id: string }[]) => rows.map((row) => row.id);
-      const token = await new SignJWT({
-        organizationId: input.organizationId,
-        role: membership.rows[0].role,
-        teamIds: ids(teams.rows),
-        projectIds: ids(projects.rows),
-        assignableUserIds: ids(users.rows),
-        assignableTeamIds: ids(assignableTeams.rows),
-        source: "api",
-      })
-        .setProtectedHeader({ alg: "RS256", typ: "JWT" })
-        .setSubject(user.id)
-        .setIssuer(issuer)
-        .setAudience(audience)
-        .setIssuedAt()
-        .setExpirationTime("5m")
-        .sign(privateKey);
-      if (Buffer.byteLength(`Bearer ${token}`) > 7000)
-        throw new HttpException("Authorization snapshot exceeds the supported header size", 422);
-      await client.query("COMMIT");
-      return { accessToken: token, expiresIn: 300, requiresPasswordChange: false };
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-      // Equalize locked and unknown accounts without holding a database connection or row lock.
-      if (verifyLocked) await verifyPassword(input.password, dummyHash);
+
+  private async sessionActor(req: Request, admin = false): Promise<Actor> {
+    const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+    if (!session) throw new UnauthorizedException();
+    const header = req.headers["x-organization-id"];
+    const requested = Array.isArray(header) ? header[0] : header;
+    let organizationId: string | undefined;
+    if (requested) {
+      organizationId = pathUuid(requested);
+      const membership = await this.membership(session.user.id, organizationId);
+      if (!membership) throw new UnauthorizedException();
+      if (membership.must_change_password) throw new UnauthorizedException();
+      if (admin && membership.role !== "ADMIN") throw new ForbiddenException();
+      return { userId: session.user.id, organizationId, role: membership.role, source: "api" };
     }
+    const memberships = await db.query<{ organization_id: string; role: Role }>(
+      `SELECT m.organization_id, m.role FROM identity.members m
+         JOIN identity."user" u ON u.id=m.user_id
+         JOIN identity.organizations o ON o.id=m.organization_id
+        WHERE m.user_id=$1 AND m.active AND o.active AND NOT u."mustChangePassword"`,
+      [session.user.id],
+    );
+    if (memberships.rowCount !== 1) throw new UnauthorizedException();
+    const only = memberships.rows[0];
+    if (!only) throw new UnauthorizedException();
+    if (admin && only.role !== "ADMIN") throw new ForbiddenException();
+    return {
+      userId: session.user.id,
+      organizationId: only.organization_id,
+      role: only.role,
+      source: "api",
+    };
+  }
+
+  async actor(req: Request, options: { admin?: boolean; passwordChange?: boolean } = {}): Promise<Actor> {
+    const authorization = req.headers.authorization;
+    if (authorization && /^Bearer \S+$/i.test(authorization)) {
+      const token = authorization.slice(7);
+      if (token.split(".").length === 3) return this.jwtActor(token, options);
+    }
+    if (options.passwordChange) throw new UnauthorizedException();
+    return this.sessionActor(req, options.admin);
+  }
+
+  async login(req: Request, data: unknown): Promise<{
+    accessToken: string;
+    expiresIn: number;
+    requiresPasswordChange: boolean;
+    sessionToken?: string;
+  }> {
+    const input = parse(strict({ email, password: z.string().max(128), organizationId: uuid }), data);
+    let signedIn: Awaited<ReturnType<typeof auth.api.signInEmail>>;
+    try {
+      signedIn = await auth.api.signInEmail({
+        body: { email: input.email, password: input.password },
+        headers: fromNodeHeaders(req.headers),
+      });
+    } catch {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+    const user = signedIn.user as typeof signedIn.user & { mustChangePassword?: boolean };
+    const membership = await this.membership(user.id, input.organizationId);
+    if (!membership) throw new UnauthorizedException("Invalid credentials");
+    if (membership.must_change_password) {
+      const accessToken = await signPasswordChangeToken(privateKey, user.id, input.organizationId);
+      return {
+        accessToken,
+        expiresIn: 300,
+        requiresPasswordChange: true,
+        sessionToken: signedIn.token,
+      };
+    }
+    const claims = await this.claims(user.id, input.organizationId, membership.role);
+    const accessToken = await signAccessToken(privateKey, claims);
+    if (Buffer.byteLength(`Bearer ${accessToken}`) > 7000)
+      throw new HttpException("Authorization snapshot exceeds the supported header size", 422);
+    return {
+      accessToken,
+      expiresIn: 300,
+      requiresPasswordChange: false,
+      sessionToken: signedIn.token,
+    };
+  }
+
+  async exchangeSession(req: Request): Promise<{ accessToken: string; expiresIn: number }> {
+    const actor = await this.sessionActor(req);
+    const claims = await this.claims(actor.userId, actor.organizationId, actor.role);
+    const accessToken = await signAccessToken(privateKey, claims);
+    if (Buffer.byteLength(`Bearer ${accessToken}`) > 7000)
+      throw new HttpException("Authorization snapshot exceeds the supported header size", 422);
+    return { accessToken, expiresIn: 300 };
+  }
+
+  async logout(req: Request): Promise<{ signedOut: boolean }> {
+    try {
+      await auth.api.signOut({ headers: fromNodeHeaders(req.headers) });
+    } catch {
+      // An already-expired or absent session is still a completed logout.
+    }
+    return { signedOut: true };
+  }
+
+  async changePassword(req: Request, data: unknown): Promise<{ changed: boolean }> {
+    const actor = await this.actor(req, { passwordChange: true });
+    const input = parse(strict({ currentPassword: z.string().max(128), newPassword: password }), data);
+    if (input.currentPassword === input.newPassword)
+      throw new BadRequestException("New password must differ");
+    const current = await db.query<{ password: string | null }>(
+      `SELECT password FROM identity.account WHERE "userId"=$1 AND "providerId"='credential'`,
+      [actor.userId],
+    );
+    const encoded = current.rows[0]?.password;
+    if (!encoded || !(await verifyPassword({ hash: encoded, password: input.currentPassword })))
+      throw new UnauthorizedException("Invalid credentials");
+    const hash = await hashPassword(input.newPassword);
+    await db.query(
+      `UPDATE identity.account SET password=$2, "updatedAt"=now() WHERE "userId"=$1 AND "providerId"='credential'`,
+      [actor.userId, hash],
+    );
+    await db.query(`UPDATE identity."user" SET "mustChangePassword"=false, "updatedAt"=now() WHERE id=$1`, [
+      actor.userId,
+    ]);
+    await db.query(`DELETE FROM identity.session WHERE "userId"=$1`, [actor.userId]);
+    return { changed: true };
+  }
+
+  async resetPassword(actor: Actor, rawId: string, data: unknown): Promise<{ changed: boolean }> {
+    const userId = pathUuid(rawId);
+    const input = parse(strict({ newPassword: password }), data);
+    const member = await db.query(
+      "SELECT 1 FROM identity.members WHERE organization_id=$1 AND user_id=$2",
+      [actor.organizationId, userId],
+    );
+    if (!member.rowCount) throw new NotFoundException();
+    const hash = await hashPassword(input.newPassword);
+    const updated = await db.query(
+      `UPDATE identity.account SET password=$2, "updatedAt"=now() WHERE "userId"=$1 AND "providerId"='credential'`,
+      [userId, hash],
+    );
+    if (!updated.rowCount)
+      await db.query(
+        `INSERT INTO identity.account(id,"providerId","accountId","userId",password) VALUES($1,'credential',$2,$2,$3)`,
+        [randomUUID(), userId, hash],
+      );
+    await db.query(`UPDATE identity."user" SET "mustChangePassword"=true, "updatedAt"=now() WHERE id=$1`, [
+      userId,
+    ]);
+    await db.query(`DELETE FROM identity.session WHERE "userId"=$1`, [userId]);
+    return { changed: true };
   }
 }
 
@@ -228,19 +339,28 @@ class IdentityController {
     return { status: "ok" };
   }
   @Get("health/ready") async ready() {
-    const required = ["001_initial", "002_password_activation"];
+    const required = ["001_initial", "002_password_activation", "003_betterauth"];
     try {
       const result = await db.query("SELECT id FROM identity.schema_migrations WHERE id = ANY($1::text[])", [
         required,
       ]);
       if (result.rowCount !== required.length) throw new ServiceUnavailableException();
+      await db.query("SELECT 1 FROM identity.\"user\" LIMIT 1");
     } catch {
       throw new ServiceUnavailableException("Database not ready");
     }
     return { status: "ok" };
   }
-  @Post("auth/login") login(@Body() body: unknown, @Req() req: Request) {
-    return this.service.limitAuthentication(req.ip ?? "unknown", "login", () => this.service.login(body));
+  @Post("auth/login") login(@Req() req: Request, @Body() body: unknown) {
+    return this.service.limitAuthentication(req.ip ?? "unknown", "login", () =>
+      this.service.login(req, body),
+    );
+  }
+  @Post("auth/session") exchangeSession(@Req() req: Request) {
+    return this.service.exchangeSession(req);
+  }
+  @Post("auth/logout") @HttpCode(200) logout(@Req() req: Request) {
+    return this.service.logout(req);
   }
   @Get("me") async me(@Req() req: Request) {
     return this.service.actor(req);
@@ -252,7 +372,7 @@ class IdentityController {
     ).rows[0];
   }
   @Patch("organization") async updateOrganization(@Req() req: Request, @Body() body: unknown) {
-    const a = await this.service.actor(req, true);
+    const a = await this.service.actor(req, { admin: true });
     const input = parse(strict({ name }), body);
     return (
       await db.query("UPDATE identity.organizations SET name=$2 WHERE id=$1 RETURNING id,name,active", [
@@ -262,7 +382,7 @@ class IdentityController {
     ).rows[0];
   }
   @Post("organizations") async createOrganization(@Req() req: Request, @Body() body: unknown) {
-    const a = await this.service.actor(req, true);
+    const a = await this.service.actor(req, { admin: true });
     const input = parse(strict({ name }), body);
     const id = randomUUID();
     const c = await db.connect();
@@ -275,133 +395,104 @@ class IdentityController {
       ]);
       await c.query("COMMIT");
       return { id, name: input.name };
-    } catch (e) {
-      await c.query("ROLLBACK");
-      throw e;
-    } finally {
-      c.release();
-    }
-  }
-  @Post("auth/password") async changePassword(@Req() req: Request, @Body() body: unknown) {
-    return this.service.limitAuthentication(req.ip ?? "unknown", "password", () =>
-      this.changePasswordLimited(req, body),
-    );
-  }
-  private async changePasswordLimited(req: Request, body: unknown) {
-    const a = await this.service.actor(req, false, true);
-    const input = parse(strict({ currentPassword: z.string().max(128), newPassword: password }), body);
-    const c = await db.connect();
-    let verifyLocked = false;
-    try {
-      await c.query("BEGIN");
-      const r = await c.query(
-        "SELECT password_hash,locked_until FROM identity.users WHERE id=$1 AND active FOR UPDATE",
-        [a.userId],
-      );
-      const user = r.rows[0] as { password_hash: string; locked_until: Date | null } | undefined;
-      const locked = user?.locked_until && user.locked_until.getTime() > Date.now();
-      verifyLocked = Boolean(locked);
-      const valid = user && !locked && (await verifyPassword(input.currentPassword, user.password_hash));
-      if (!user || !valid || locked) {
-        if (user && !locked)
-          await c.query(
-            "UPDATE identity.users SET failed_attempts=failed_attempts+1,locked_until=CASE WHEN failed_attempts+1 >= 5 THEN now()+interval '15 minutes' ELSE NULL END WHERE id=$1",
-            [a.userId],
-          );
-        await c.query("COMMIT");
-        throw new UnauthorizedException("Invalid credentials");
-      }
-      if (input.currentPassword === input.newPassword)
-        throw new BadRequestException("New password must differ");
-      const hash = await hashPassword(input.newPassword);
-      await c.query(
-        "UPDATE identity.users SET password_hash=$2,must_change_password=false,failed_attempts=0,locked_until=NULL WHERE id=$1",
-        [a.userId, hash],
-      );
-      await c.query("COMMIT");
-      return { changed: true };
     } catch (error) {
       await c.query("ROLLBACK");
       throw error;
     } finally {
       c.release();
-      if (verifyLocked) await verifyPassword(input.currentPassword, dummyHash);
     }
   }
+  @Post("auth/password") changePassword(@Req() req: Request, @Body() body: unknown) {
+    return this.service.limitAuthentication(req.ip ?? "unknown", "password", () =>
+      this.service.changePassword(req, body),
+    );
+  }
   @Get("members") async members(@Req() req: Request) {
-    const a = await this.service.actor(req, true);
+    const a = await this.service.actor(req, { admin: true });
     return (
       await db.query(
-        "SELECT u.id,u.email,m.role,m.active FROM identity.members m JOIN identity.users u ON u.id=m.user_id WHERE m.organization_id=$1 ORDER BY u.email",
+        'SELECT u.id,u.email,m.role,m.active FROM identity.members m JOIN identity."user" u ON u.id=m.user_id WHERE m.organization_id=$1 ORDER BY u.email',
         [a.organizationId],
       )
     ).rows;
   }
   @Post("members") async createMember(@Req() req: Request, @Body() body: unknown) {
-    const a = await this.service.actor(req, true);
-    const input = parse(strict({ email, password, role: roles }), body);
-    const hash = await hashPassword(input.password);
-    const id = randomUUID();
-    const c = await db.connect();
+    const actor = await this.service.actor(req, { admin: true });
+    const input = parse(strict({ email, password, role: roles, name: name.optional() }), body);
+    let created: Awaited<ReturnType<typeof auth.api.signUpEmail>>;
     try {
-      await c.query("BEGIN");
-      await c.query("INSERT INTO identity.users(id,email,password_hash) VALUES($1,$2,$3)", [
-        id,
-        input.email,
-        hash,
-      ]);
-      await c.query("INSERT INTO identity.members(organization_id,user_id,role) VALUES($1,$2,$3)", [
-        a.organizationId,
-        id,
+      created = await auth.api.signUpEmail({
+        body: {
+          email: input.email,
+          password: input.password,
+          name: input.name ?? input.email.split("@")[0] ?? input.email,
+        },
+        headers: fromNodeHeaders(req.headers),
+      });
+    } catch (error) {
+      if (isDuplicateEmail(error)) throw new HttpException("Email already exists", 409);
+      throw new BadRequestException("Invalid request");
+    }
+    try {
+      await db.query(
+        `UPDATE identity."user" SET "mustChangePassword"=true WHERE id=$1`,
+        [created.user.id],
+      );
+      await db.query("INSERT INTO identity.members(organization_id,user_id,role) VALUES($1,$2,$3)", [
+        actor.organizationId,
+        created.user.id,
         input.role,
       ]);
-      await c.query("COMMIT");
-      return { id, email: input.email, role: input.role };
-    } catch (e) {
-      await c.query("ROLLBACK");
-      if ((e as { code?: string }).code === "23505") throw new HttpException("Email already exists", 409);
-      throw e;
-    } finally {
-      c.release();
+      return { id: created.user.id, email: input.email, role: input.role };
+    } catch (error) {
+      await db.query(`DELETE FROM identity."user" WHERE id=$1`, [created.user.id]);
+      throw error;
     }
   }
   @Patch("members/:id") async updateMember(
     @Req() req: Request,
-    @Param("id") id: string,
+    @Param("id") rawId: string,
     @Body() body: unknown,
   ) {
-    const a = await this.service.actor(req, true);
-    id = pathUuid(id);
+    const actor = await this.service.actor(req, { admin: true });
+    const id = pathUuid(rawId);
     const input = parse(
       strict({ role: roles.optional(), active: z.boolean().optional() }).refine(
-        (v) => v.role !== undefined || v.active !== undefined,
+        (value) => value.role !== undefined || value.active !== undefined,
       ),
       body,
     );
-    if (id === a.userId && ((input.role !== undefined && input.role !== "ADMIN") || input.active === false))
+    if (
+      id === actor.userId &&
+      ((input.role !== undefined && input.role !== "ADMIN") || input.active === false)
+    )
       throw new ForbiddenException("Cannot revoke your own administrator access");
     const c = await db.connect();
     try {
       await c.query("BEGIN");
-      await c.query("SELECT id FROM identity.organizations WHERE id=$1 FOR UPDATE", [a.organizationId]);
+      await c.query("SELECT id FROM identity.organizations WHERE id=$1 FOR UPDATE", [
+        actor.organizationId,
+      ]);
       const current = await c.query(
-        "SELECT 1 FROM identity.members m JOIN identity.users u ON u.id=m.user_id JOIN identity.organizations o ON o.id=m.organization_id WHERE m.organization_id=$1 AND m.user_id=$2 AND m.role='ADMIN' AND m.active AND u.active AND NOT u.must_change_password AND o.active",
-        [a.organizationId, a.userId],
+        "SELECT 1 FROM identity.members m JOIN identity.\"user\" u ON u.id=m.user_id JOIN identity.organizations o ON o.id=m.organization_id WHERE m.organization_id=$1 AND m.user_id=$2 AND m.role='ADMIN' AND m.active AND NOT u.\"mustChangePassword\" AND o.active",
+        [actor.organizationId, actor.userId],
       );
       if (!current.rowCount) throw new ForbiddenException();
-      const r = await c.query(
+      const result = await c.query(
         "UPDATE identity.members SET role=COALESCE($3,role),active=COALESCE($4,active) WHERE organization_id=$1 AND user_id=$2 RETURNING user_id AS id,role,active",
-        [a.organizationId, id, input.role ?? null, input.active ?? null],
+        [actor.organizationId, id, input.role ?? null, input.active ?? null],
       );
-      if (!r.rowCount) throw new NotFoundException();
+      if (!result.rowCount) throw new NotFoundException();
       const remaining = await c.query(
-        "SELECT 1 FROM identity.members m JOIN identity.users u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.role='ADMIN' AND m.active AND u.active AND NOT u.must_change_password LIMIT 1",
-        [a.organizationId],
+        "SELECT 1 FROM identity.members m JOIN identity.\"user\" u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.role='ADMIN' AND m.active AND NOT u.\"mustChangePassword\" LIMIT 1",
+        [actor.organizationId],
       );
       if (!remaining.rowCount)
         throw new HttpException("Organization must retain an active administrator", 409);
+      if (input.active === false)
+        await c.query('DELETE FROM identity.session WHERE "userId"=$1', [id]);
       await c.query("COMMIT");
-      return r.rows[0];
+      return result.rows[0];
     } catch (error) {
       await c.query("ROLLBACK");
       throw error;
@@ -409,8 +500,17 @@ class IdentityController {
       c.release();
     }
   }
+  @Post("members/:id/password") resetPassword(
+    @Req() req: Request,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    return this.service.actor(req, { admin: true }).then((actor) =>
+      this.service.resetPassword(actor, id, body),
+    );
+  }
   @Get("teams") async teams(@Req() req: Request) {
-    const a = await this.service.actor(req, true);
+    const a = await this.service.actor(req, { admin: true });
     return (
       await db.query("SELECT id,name,active FROM identity.teams WHERE organization_id=$1 ORDER BY name", [
         a.organizationId,
@@ -418,7 +518,7 @@ class IdentityController {
     ).rows;
   }
   @Post("teams") async createTeam(@Req() req: Request, @Body() body: unknown) {
-    const a = await this.service.actor(req, true);
+    const a = await this.service.actor(req, { admin: true });
     const input = parse(strict({ name }), body);
     const id = randomUUID();
     await db.query("INSERT INTO identity.teams(organization_id,id,name) VALUES($1,$2,$3)", [
@@ -428,37 +528,41 @@ class IdentityController {
     ]);
     return { id, name: input.name };
   }
-  @Patch("teams/:id") async updateTeam(@Req() req: Request, @Param("id") id: string, @Body() body: unknown) {
-    const a = await this.service.actor(req, true);
+  @Patch("teams/:id") async updateTeam(
+    @Req() req: Request,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const a = await this.service.actor(req, { admin: true });
     const input = parse(
       strict({ name: name.optional(), active: z.boolean().optional() }).refine(
-        (v) => v.name !== undefined || v.active !== undefined,
+        (value) => value.name !== undefined || value.active !== undefined,
       ),
       body,
     );
-    const r = await db.query(
+    const result = await db.query(
       "UPDATE identity.teams SET name=COALESCE($3,name),active=COALESCE($4,active) WHERE organization_id=$1 AND id=$2 RETURNING id,name,active",
       [a.organizationId, pathUuid(id), input.name ?? null, input.active ?? null],
     );
-    if (!r.rowCount) throw new NotFoundException();
-    return r.rows[0];
+    if (!result.rowCount) throw new NotFoundException();
+    return result.rows[0];
   }
   @Post("teams/:id/members/:userId") async teamMember(
     @Req() req: Request,
-    @Param("id") id: string,
-    @Param("userId") userId: string,
+    @Param("id") rawId: string,
+    @Param("userId") rawUserId: string,
     @Body() body: unknown,
   ) {
-    const a = await this.service.actor(req, true);
+    const a = await this.service.actor(req, { admin: true });
     const input = parse(strict({ enabled: z.boolean() }), body);
-    id = pathUuid(id);
-    userId = pathUuid(userId);
+    const id = pathUuid(rawId);
+    const userId = pathUuid(rawUserId);
     if (input.enabled) {
-      const r = await db.query(
-        "INSERT INTO identity.team_members(organization_id,team_id,user_id) SELECT $1,t.id,m.user_id FROM identity.teams t JOIN identity.members m ON m.organization_id=t.organization_id JOIN identity.users u ON u.id=m.user_id WHERE t.organization_id=$1 AND t.id=$2 AND t.active AND m.user_id=$3 AND m.active AND u.active ON CONFLICT DO NOTHING RETURNING user_id",
+      const result = await db.query(
+        "INSERT INTO identity.team_members(organization_id,team_id,user_id) SELECT $1,t.id,m.user_id FROM identity.teams t JOIN identity.members m ON m.organization_id=t.organization_id WHERE t.organization_id=$1 AND t.id=$2 AND t.active AND m.user_id=$3 AND m.active ON CONFLICT DO NOTHING RETURNING user_id",
         [a.organizationId, id, userId],
       );
-      if (!r.rowCount) {
+      if (!result.rowCount) {
         const existing = await db.query(
           "SELECT 1 FROM identity.team_members WHERE organization_id=$1 AND team_id=$2 AND user_id=$3",
           [a.organizationId, id, userId],
@@ -474,20 +578,20 @@ class IdentityController {
   }
   @Post("members/:id/projects/:projectId") async project(
     @Req() req: Request,
-    @Param("id") id: string,
-    @Param("projectId") projectId: string,
+    @Param("id") rawId: string,
+    @Param("projectId") rawProjectId: string,
     @Body() body: unknown,
   ) {
-    const a = await this.service.actor(req, true);
+    const a = await this.service.actor(req, { admin: true });
     const input = parse(strict({ enabled: z.boolean() }), body);
-    id = pathUuid(id);
-    projectId = pathUuid(projectId);
+    const id = pathUuid(rawId);
+    const projectId = pathUuid(rawProjectId);
     if (input.enabled) {
-      const r = await db.query(
+      const result = await db.query(
         "INSERT INTO identity.project_assignments(organization_id,user_id,project_id) SELECT organization_id,user_id,$3 FROM identity.members WHERE organization_id=$1 AND user_id=$2 AND active ON CONFLICT DO NOTHING RETURNING user_id",
         [a.organizationId, id, projectId],
       );
-      if (!r.rowCount) {
+      if (!result.rowCount) {
         const existing = await db.query(
           "SELECT 1 FROM identity.project_assignments WHERE organization_id=$1 AND user_id=$2 AND project_id=$3",
           [a.organizationId, id, projectId],
@@ -502,11 +606,56 @@ class IdentityController {
     return { enabled: input.enabled };
   }
 }
+
 @Module({ controllers: [IdentityController], providers: [IdentityService] })
 class AppModule {}
-const app = await NestFactory.create(AppModule, { bodyParser: true });
+
+const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
+const origins = (process.env.IDENTITY_TRUSTED_ORIGINS ?? "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+app.enableCors({ origin: origins, credentials: true });
 app.setGlobalPrefix("api/v1");
 app.enableShutdownHooks();
+
+const handler = toNodeHandler(auth);
+app.use(
+  (
+    req: Request,
+    res: import("express").Response,
+    next: (error?: unknown) => void,
+  ) => {
+    const path = (req.url ?? "").split("?")[0] ?? "";
+    if (!path.startsWith(BETTER_AUTH_BASE_PATH)) {
+      next();
+      return;
+    }
+    // Public self-signup would create credentials without organization membership.
+    // Accounts are provisioned by an administrator or the bootstrap command.
+    if (path.startsWith(`${BETTER_AUTH_BASE_PATH}/sign-up`)) {
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end('{"error":"Not found"}');
+      return;
+    }
+    Promise.resolve(handler(req, res)).catch(() => {
+      if (!res.headersSent) {
+        res.writeHead(500, { "content-type": "application/json" });
+        res.end('{"error":"Authentication unavailable"}');
+      }
+    });
+  },
+);
+app.useBodyParser("json", { limit: "256kb" });
+
 const port = Number(process.env.IDENTITY_PORT ?? "3002");
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid IDENTITY_PORT");
 await app.listen(port);
+
+for (const signal of ["SIGTERM", "SIGINT"] as const)
+  process.once(signal, () => {
+    void app
+      .close()
+      .then(() => db.end())
+      .finally(() => process.exit());
+  });

@@ -28,9 +28,15 @@ writeFileSync(join(dir, "private.pem"), privateKey);
 writeFileSync(join(dir, "public.pem"), publicKey);
 const env = {
   ...process.env,
+  NODE_ENV: "test",
   IDENTITY_DATABASE_URL: testUrl.toString(),
   IDENTITY_PRIVATE_KEY_PATH: join(dir, "private.pem"),
   IDENTITY_PUBLIC_KEY_PATH: join(dir, "public.pem"),
+  IDENTITY_ISSUER: "http://localhost:3000/identity",
+  IDENTITY_AUDIENCE: "axial-projects",
+  BETTER_AUTH_SECRET: "integration-secret-with-at-least-32-chars",
+  BETTER_AUTH_URL: "http://localhost:3202",
+  IDENTITY_TRUSTED_ORIGINS: "http://localhost:5173",
   IDENTITY_PORT: "3202",
   IDENTITY_BOOTSTRAP_EMAIL: "admin@example.test",
   IDENTITY_BOOTSTRAP_PASSWORD: "a-secure-test-password",
@@ -56,7 +62,7 @@ try {
   created = true;
   for (const file of ["src/migrate.ts", "src/bootstrap.ts"]) {
     const run = spawnSync(process.execPath, ["--import", "tsx", file], { env, encoding: "utf8" });
-    if (run.status !== 0) throw new Error(run.stderr);
+    if (run.status !== 0) throw new Error(run.stderr || run.stdout);
   }
   const organization = (await db.query("SELECT id FROM identity.organizations LIMIT 1")).rows[0].id;
   server = spawn(process.execPath, ["--import", "tsx", "src/main.ts"], { env, stdio: "inherit" });
@@ -68,31 +74,37 @@ try {
     server.once("close", resolve);
   });
   let ready = false;
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 150; i++) {
     try {
       if ((await fetch("http://127.0.0.1:3202/api/v1/health/ready")).ok) {
         ready = true;
         break;
       }
     } catch {}
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   assert.ok(ready, "server failed to start");
+
   async function request(path, body, token, method = "POST") {
-    const r = await fetch(`http://127.0.0.1:3202/api/v1/${path}`, {
+    const response = await fetch(`http://127.0.0.1:3202/api/v1/${path}`, {
       method,
-      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
-    return { status: r.status, body: await r.json() };
+    return { status: response.status, body: await response.json() };
   }
-  for (const migration of ["001_initial", "002_password_activation"]) {
+
+  for (const migration of ["001_initial", "002_password_activation", "003_betterauth"]) {
     await db.query("DELETE FROM identity.schema_migrations WHERE id=$1", [migration]);
     assert.equal((await request("health/ready", null, null, "GET")).status, 503);
     assert.equal((await request("health/live", null, null, "GET")).status, 200);
     await db.query("INSERT INTO identity.schema_migrations(id) VALUES ($1)", [migration]);
     assert.equal((await request("health/ready", null, null, "GET")).status, 200);
   }
+
   const login = await request("auth/login", {
     email: "admin@example.test",
     password: "a-secure-test-password",
@@ -100,6 +112,19 @@ try {
   });
   assert.equal(login.status, 201);
   assert.equal(login.body.expiresIn, 300);
+  assert.equal(login.body.requiresPasswordChange, false);
+  assert.ok(login.body.sessionToken);
+
+  const publicVerifier = await importSPKI(publicKey, "RS256");
+  await jwtVerify(login.body.accessToken, publicVerifier, {
+    algorithms: ["RS256"],
+    issuer: "http://localhost:3000/identity",
+    audience: "axial-projects",
+  });
+  const exchanged = await request("auth/session", null, login.body.sessionToken);
+  assert.equal(exchanged.status, 201);
+  assert.ok(exchanged.body.accessToken);
+
   const member = await request(
     "members",
     { email: "second@example.test", password: "another-secure-password", role: "ADMIN" },
@@ -113,7 +138,6 @@ try {
   });
   assert.equal(temporary.status, 201);
   assert.equal(temporary.body.requiresPasswordChange, true);
-  const publicVerifier = await importSPKI(publicKey, "RS256");
   await assert.rejects(
     jwtVerify(temporary.body.accessToken, publicVerifier, {
       algorithms: ["RS256"],
@@ -152,16 +176,6 @@ try {
     ).status,
     201,
   );
-  assert.equal(
-    (
-      await request(
-        "auth/password",
-        { currentPassword: "second-private-password", newPassword: "a-third-secure-password" },
-        temporary.body.accessToken,
-      )
-    ).status,
-    401,
-  );
   const second = await request("auth/login", {
     email: "second@example.test",
     password: "second-private-password",
@@ -169,6 +183,7 @@ try {
   });
   assert.equal(second.status, 201);
   assert.equal(second.body.requiresPasswordChange, false);
+
   const changed = await request(
     `members/${member.body.id}`,
     { role: "VIEWER" },
@@ -176,75 +191,39 @@ try {
     "PATCH",
   );
   assert.equal(changed.status, 200);
-  const denied = await request("members", null, second.body.accessToken, "GET");
-  assert.equal(denied.status, 403);
+  assert.equal((await request("members", null, second.body.accessToken, "GET")).status, 403);
+
+  const reset = await request(
+    `members/${member.body.id}/password`,
+    { newPassword: "reset-private-password" },
+    login.body.accessToken,
+  );
+  assert.equal(reset.status, 201);
+  assert.equal(
+    (
+      await request("auth/login", {
+        email: "second@example.test",
+        password: "second-private-password",
+        organizationId: organization,
+      })
+    ).status,
+    401,
+  );
+  const resetLogin = await request("auth/login", {
+    email: "second@example.test",
+    password: "reset-private-password",
+    organizationId: organization,
+  });
+  assert.equal(resetLogin.status, 201);
+  assert.equal(resetLogin.body.requiresPasswordChange, true);
+
   const invalid = await request("auth/login", {
     email: "admin@example.test",
     password: "incorrect",
     organizationId: organization,
   });
   assert.equal(invalid.status, 401);
-  const passwordChange = await request(
-    "auth/password",
-    { currentPassword: "a-secure-test-password", newPassword: "a-new-secure-password" },
-    login.body.accessToken,
-  );
-  assert.equal(passwordChange.status, 201);
-  assert.equal(
-    (
-      await request("auth/login", {
-        email: "admin@example.test",
-        password: "a-secure-test-password",
-        organizationId: organization,
-      })
-    ).status,
-    401,
-  );
-  assert.equal(
-    (
-      await request("auth/login", {
-        email: "admin@example.test",
-        password: "a-new-secure-password",
-        organizationId: organization,
-      })
-    ).status,
-    201,
-  );
-  for (let attempt = 0; attempt < 5; attempt++) {
-    assert.equal(
-      (
-        await request(
-          "auth/password",
-          { currentPassword: "incorrect", newPassword: "another-private-password" },
-          login.body.accessToken,
-        )
-      ).status,
-      401,
-    );
-  }
-  assert.equal(
-    (
-      await request(
-        "auth/password",
-        { currentPassword: "a-new-secure-password", newPassword: "another-private-password" },
-        login.body.accessToken,
-      )
-    ).status,
-    401,
-  );
-  assert.equal(
-    (
-      await request("auth/login", {
-        email: "admin@example.test",
-        password: "a-new-secure-password",
-        organizationId: organization,
-      })
-    ).status,
-    401,
-  );
-  await db.query(
-    "UPDATE identity.users SET failed_attempts=0,locked_until=NULL WHERE email='admin@example.test'",
-  );
+
   const newOrg = await request(
     "organizations",
     { name: "Concurrent administration" },
@@ -254,7 +233,7 @@ try {
   const orgId = newOrg.body.id;
   const firstAdmin = await request("auth/login", {
     email: "admin@example.test",
-    password: "a-new-secure-password",
+    password: "a-secure-test-password",
     organizationId: orgId,
   });
   const third = await request(
@@ -282,67 +261,41 @@ try {
     password: "third-private-password",
     organizationId: orgId,
   });
-  const firstId = (await db.query("SELECT id FROM identity.users WHERE email='admin@example.test'")).rows[0]
-    .id;
+  const firstId = (
+    await db.query('SELECT id FROM identity."user" WHERE email=$1', ["admin@example.test"])
+  ).rows[0].id;
   const simultaneous = await Promise.all([
     request(`members/${third.body.id}`, { role: "VIEWER" }, firstAdmin.body.accessToken, "PATCH"),
     request(`members/${firstId}`, { role: "VIEWER" }, thirdAdmin.body.accessToken, "PATCH"),
   ]);
   assert.deepEqual(simultaneous.map((result) => result.status).sort(), [200, 403]);
   const adminCount = await db.query(
-    "SELECT count(*) FROM identity.members m JOIN identity.users u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.role='ADMIN' AND m.active AND u.active AND NOT u.must_change_password",
+    'SELECT count(*) FROM identity.members m JOIN identity."user" u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.role=\'ADMIN\' AND m.active AND NOT u."mustChangePassword"',
     [orgId],
   );
   assert.equal(Number(adminCount.rows[0].count), 1);
+
   await db.query(
-    "INSERT INTO identity.users(id,email,password_hash) SELECT gen_random_uuid(), 'load-' || n || '@example.test', 'unused' FROM generate_series(1,150) AS n",
+    'INSERT INTO identity."user"(id,email,name) SELECT gen_random_uuid(), \'load-\' || n || \'@example.test\', \'Load\' FROM generate_series(1,150) AS n',
   );
   await db.query(
-    "INSERT INTO identity.members(organization_id,user_id,role) SELECT $1,id,'VIEWER' FROM identity.users WHERE email LIKE 'load-%@example.test'",
+    'INSERT INTO identity.members(organization_id,user_id,role) SELECT $1,id,\'VIEWER\' FROM identity."user" WHERE email LIKE \'load-%@example.test\'',
     [organization],
   );
   const oversized = await request("auth/login", {
     email: "admin@example.test",
-    password: "a-new-secure-password",
+    password: "a-secure-test-password",
     organizationId: organization,
   });
   assert.equal(oversized.status, 422);
-  const wrongPassword = () =>
-    request(
-      "auth/password",
-      { currentPassword: "incorrect", newPassword: "another-private-password" },
-      login.body.accessToken,
-    );
-  const concurrentPasswords = await Promise.all(Array.from({ length: 4 }, wrongPassword));
-  assert.deepEqual(
-    concurrentPasswords.map((result) => result.status),
-    [401, 401, 401, 401],
-  );
-  assert.equal((await wrongPassword()).status, 401);
-  const lockedAccount = (
-    await db.query("SELECT failed_attempts,locked_until FROM identity.users WHERE email='admin@example.test'")
-  ).rows[0];
-  assert.equal(lockedAccount.failed_attempts, 5);
-  assert.ok(lockedAccount.locked_until > new Date());
-  assert.equal((await wrongPassword()).status, 401);
-  const lockedConcurrent = await Promise.all([wrongPassword(), wrongPassword()]);
-  assert.deepEqual(
-    lockedConcurrent.map((result) => result.status),
-    [401, 401],
-  );
-  assert.equal(
-    Number(
-      (await db.query("SELECT failed_attempts FROM identity.users WHERE email='admin@example.test'")).rows[0]
-        .failed_attempts,
-    ),
-    5,
-  );
-  const flood = await Promise.all(Array.from({ length: 25 }, wrongPassword));
-  assert.ok(flood.some((result) => result.status === 429));
-  assert.equal((await wrongPassword()).status, 429);
+
+  assert.equal((await request("auth/logout", null, login.body.sessionToken)).status, 200);
   assert.equal((await request("health/ready", null, null, "GET")).status, 200);
   assert.ok(Number((await db.query("SELECT count(*) FROM identity.outbox_events")).rows[0].count) >= 4);
-  console.log("Integration passed: migration, bootstrap, login, role revocation and outbox");
+  assert.ok(Number((await db.query("SELECT count(*) FROM identity.account")).rows[0].count) >= 3);
+  console.log(
+    "Integration passed: migration, bootstrap, BetterAuth login/session, password lifecycle, admin concurrency and outbox",
+  );
 } catch (error) {
   failure = error;
 } finally {

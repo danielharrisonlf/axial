@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  auditListSchema,
+  auditSummarySchema,
   createCommentSchema,
   createEpicSchema,
   createMilestoneSchema,
@@ -147,5 +149,18 @@ describe("shared request contracts", () => {
       true,
     );
     expect(taskListSchema.safeParse({ status: "blocked" }).success).toBe(false);
+  });
+
+  it("validates audit filters and rejects unbounded or unknown input", () => {
+    expect(
+      auditListSchema.parse({ projectId: id, eventType: "task.completed", page: "2", pageSize: "50" }),
+    ).toMatchObject({ projectId: id, eventType: "task.completed", page: 2, pageSize: 50 });
+    expect(auditListSchema.safeParse({ actorId: "not-a-uuid" }).success).toBe(false);
+    expect(auditListSchema.safeParse({ from: "2026-11-05" }).success).toBe(false);
+    expect(auditListSchema.safeParse({ organizationId: id }).success).toBe(false);
+    expect(auditSummarySchema.parse({ from: validDate, to: validDate })).toEqual({
+      from: validDate,
+      to: validDate,
+    });
   });
 });

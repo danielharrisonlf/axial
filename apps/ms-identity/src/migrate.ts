@@ -1,5 +1,9 @@
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { config as loadEnv } from "dotenv";
 import { pool } from "./db.js";
+
+loadEnv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet: true });
 
 const db = pool();
 try {
@@ -9,7 +13,7 @@ try {
     await client.query("SELECT pg_advisory_xact_lock(hashtext('axial-identity-migrate'))");
     await client.query("CREATE SCHEMA IF NOT EXISTS identity");
     await client.query("CREATE TABLE IF NOT EXISTS identity.schema_migrations (id text PRIMARY KEY)");
-    for (const id of ["001_initial", "002_password_activation"]) {
+    for (const id of ["001_initial", "002_password_activation", "003_betterauth"]) {
       const exists = await client.query("SELECT 1 FROM identity.schema_migrations WHERE id=$1", [id]);
       if (!exists.rowCount) {
         const sql = await readFile(new URL(`../migrations/${id}.sql`, import.meta.url), "utf8");

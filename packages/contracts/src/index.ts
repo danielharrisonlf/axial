@@ -187,6 +187,27 @@ export type UpdateComment = z.infer<typeof updateCommentSchema>;
 export type CreateMilestone = z.infer<typeof createMilestoneSchema>;
 export type UpdateMilestone = z.infer<typeof updateMilestoneSchema>;
 
+export const auditListSchema = paginationSchema
+  .extend({
+    projectId: idSchema.optional(),
+    actorId: idSchema.optional(),
+    eventType: z.string().trim().min(1).max(100).optional(),
+    aggregateType: z.string().trim().min(1).max(60).optional(),
+    from: date.optional(),
+    to: date.optional(),
+    search: z.string().trim().max(160).optional(),
+  })
+  .strict();
+export type AuditList = z.infer<typeof auditListSchema>;
+export const auditSummarySchema = z
+  .object({
+    from: date.optional(),
+    to: date.optional(),
+    projectId: idSchema.optional(),
+  })
+  .strict();
+export type AuditSummary = z.infer<typeof auditSummarySchema>;
+
 export const EVENT_DESTINATIONS = ["axial-realtime", "axial-notifications", "axial-audit"] as const;
 export const eventTypes = [
   "project.created",
@@ -215,6 +236,26 @@ export const eventTypes = [
   "milestone.deleted",
 ] as const;
 export type DomainEventType = (typeof eventTypes)[number];
+
+export const domainEventEnvelopeSchema = z
+  .object({
+    id: idSchema,
+    type: z.enum(eventTypes),
+    version: z.literal(1),
+    occurredAt: date,
+    organizationId: idSchema,
+    projectId: idSchema.nullable(),
+    aggregate: z.object({
+      type: text(60),
+      id: idSchema,
+      version: z.number().int().positive(),
+    }),
+    actor: z.object({ id: idSchema, source: sourceSchema }),
+    correlationId: text(128),
+    data: z.object({ before: z.unknown(), after: z.unknown() }),
+  })
+  .strict();
+export type DomainEventEnvelopeInput = z.infer<typeof domainEventEnvelopeSchema>;
 
 export interface DomainEventEnvelope {
   id: string;
