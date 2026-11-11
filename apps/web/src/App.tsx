@@ -16,7 +16,7 @@ import {
 import type { Project } from "./data/types";
 import { useWorkspace } from "./data/workspace";
 import { navigate, rel } from "./lib/format";
-import { Audit } from "./pages/Audit";
+import { Access } from "./pages/Access";
 import { Dashboard } from "./pages/Dashboard";
 import { Insights } from "./pages/Insights";
 import { Notifications } from "./pages/Notifications";
@@ -52,9 +52,6 @@ const nav: { head: string; items: [string, string, string][] }[] = [
     head: "Inteligência e integrações",
     items: [
       ["insights", "Insights", "pulse"],
-      ["assistant", "Assistente de IA", "sparkle"],
-      ["mcp", "Agentes MCP", "plug"],
-      ["webhooks", "Webhooks", "webhook"],
       ["notifications", "Notificações", "bell"],
     ],
   },
@@ -62,7 +59,6 @@ const nav: { head: string; items: [string, string, string][] }[] = [
     head: "Gestão",
     items: [
       ["access", "Usuários e permissões", "shield"],
-      ["audit", "Auditoria", "scroll"],
       ["settings", "Configurações", "settings"],
     ],
   },
@@ -78,7 +74,7 @@ const enabled = new Set([
   "timeline",
   "notifications",
   "insights",
-  "audit",
+  "access",
   "settings",
 ]);
 const titles: Record<string, string> = {
@@ -92,7 +88,6 @@ const titles: Record<string, string> = {
   timeline: "Cronograma",
   notifications: "Notificações",
   insights: "Insights",
-  audit: "Auditoria",
   access: "Usuários e permissões",
   settings: "Configurações",
 };
@@ -217,8 +212,8 @@ export default function App() {
       <Notifications tab={id} />
     ) : route === "insights" ? (
       <Insights />
-    ) : route === "audit" ? (
-      <Audit />
+    ) : route === "access" ? (
+      <Access tab={id} />
     ) : route === "my-tasks" ? (
       <>
         <PageHead title="Minhas tarefas" sub={`Tudo o que está atribuído a ${me.name}.`}>

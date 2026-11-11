@@ -29,7 +29,9 @@
     {
       "includes": ["apps/insights/src/**/*.vue"],
       "linter": {
-        "rules": { "correctness": { "noUnusedVariables": "off" } }
+        "rules": {
+          "correctness": { "noUnusedVariables": "off", "noUnusedImports": "off" }
+        }
       }
     }
   ],

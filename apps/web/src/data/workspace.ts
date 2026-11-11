@@ -19,6 +19,7 @@ import type {
   Theme,
   Toast,
   ToastTone,
+  User,
   WorkspaceData,
 } from "./types";
 
@@ -40,9 +41,11 @@ const CAPS: Record<RoleId, string[]> = {
     "sprint.manage",
     "team.view",
     "team.manage",
+    "user.manage",
     "notif.view",
     "notif.manage",
     "audit.view",
+    "insights.view",
   ],
   pm: [
     "project.view",
@@ -61,6 +64,7 @@ const CAPS: Record<RoleId, string[]> = {
     "team.view",
     "notif.view",
     "audit.view",
+    "insights.view",
   ],
   lead: [
     "project.view",
@@ -74,6 +78,7 @@ const CAPS: Record<RoleId, string[]> = {
     "team.manage",
     "notif.view",
     "audit.view",
+    "insights.view",
   ],
   dev: [
     "project.view",
@@ -85,8 +90,50 @@ const CAPS: Record<RoleId, string[]> = {
     "team.view",
     "notif.view",
   ],
-  viewer: ["project.view", "task.view", "sprint.view", "team.view", "notif.view"],
+  viewer: ["project.view", "task.view", "sprint.view", "team.view", "notif.view", "insights.view"],
 };
+export const CAPABILITY_MATRIX: { group: string; items: { cap: string; label: string }[] }[] = [
+  {
+    group: "Projetos",
+    items: [
+      { cap: "project.view", label: "ver projetos" },
+      { cap: "project.create", label: "criar projetos" },
+      { cap: "project.edit", label: "editar projetos" },
+      { cap: "project.archive", label: "arquivar" },
+    ],
+  },
+  {
+    group: "Tarefas",
+    items: [
+      { cap: "task.view", label: "ver tarefas" },
+      { cap: "task.create", label: "criar" },
+      { cap: "task.edit", label: "editar" },
+      { cap: "task.move", label: "mover status" },
+      { cap: "task.assign", label: "atribuir" },
+      { cap: "task.delete", label: "excluir" },
+    ],
+  },
+  {
+    group: "Sprints e equipes",
+    items: [
+      { cap: "sprint.view", label: "ver sprints" },
+      { cap: "sprint.manage", label: "gerenciar sprints" },
+      { cap: "team.manage", label: "gerenciar a própria equipe" },
+      { cap: "user.manage", label: "gerenciar usuários" },
+    ],
+  },
+  {
+    group: "Análise",
+    items: [
+      { cap: "insights.view", label: "acessar Insights" },
+      { cap: "audit.view", label: "central de auditoria" },
+    ],
+  },
+];
+
+export function roleHasCapability(roleId: RoleId, cap: string): boolean {
+  return CAPS[roleId].includes(cap);
+}
 type StoragePort = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 export interface WorkspaceSnapshot {
   db: WorkspaceData;
@@ -781,6 +828,71 @@ export function createWorkspaceStore(
         channel === "email" ? "E-mail" : channel === "whatsapp" ? "WhatsApp" : "SMS",
         "ok",
       );
+    },
+    setUserRole(id: string, roleId: RoleId) {
+      if (!guard("user.manage")) return;
+      const saved = write((db) => {
+        const user = db.users.find((item) => item.id === id);
+        if (!user) throw new Error("Usuário não encontrado.");
+        if (user.id === db.settings.currentUserId) throw new Error("Não é possível alterar o próprio papel.");
+        const before = user.roleId;
+        user.roleId = roleId;
+        audit(
+          db,
+          "update",
+          "user",
+          id,
+          null,
+          `alterou o papel de ${user.name}`,
+          { role: before },
+          { role: roleId },
+        );
+      });
+      if (saved !== null)
+        notify("Papel atualizado", "As capacidades do colaborador foram recalculadas.", "ok");
+    },
+    inviteUser(input: {
+      name: string;
+      email: string;
+      title: string;
+      roleId: RoleId;
+      teamIds: string[];
+    }): User | null {
+      if (!guard("user.manage")) return null;
+      const created = write((db) => {
+        const name = input.name.trim();
+        const email = input.email.trim().toLowerCase();
+        if (name.split(" ").filter(Boolean).length < 2) throw new Error("Informe nome e sobrenome.");
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("E-mail inválido.");
+        if (db.users.some((user) => user.email.toLowerCase() === email))
+          throw new Error("Já existe um colaborador com este e-mail.");
+        if (input.teamIds.some((teamId) => !db.teams.some((team) => team.id === teamId)))
+          throw new Error("Equipe inválida.");
+        const user: User = {
+          id: uid("u"),
+          name,
+          email,
+          initials: name
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? "")
+            .join(""),
+          color: "#5B6472",
+          title: input.title.trim(),
+          roleId: input.roleId,
+          orgId: currentUser().orgId,
+          teamIds: input.teamIds,
+          active: true,
+          invited: true,
+        };
+        db.users.push(user);
+        audit(db, "create", "user", user.id, null, `convidou ${user.name} como ${user.roleId}`);
+        return user;
+      });
+      if (created)
+        notify("Convite registrado", `${created.name} receberá acesso quando confirmar o convite.`, "ok");
+      return created;
     },
   };
   if (recovery)

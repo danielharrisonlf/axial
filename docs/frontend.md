@@ -21,7 +21,21 @@ Tipografia, tokens de claro/escuro, sidebar de 240px, topbar de 50px, tabelas, f
 - Drawer de tarefa com propriedades, critérios de aceite, dependências, subtarefas, comentários e histórico local.
 - Tema, perfil de demonstração, busca global e navegação responsiva.
 
-Entradas de módulos futuros mantêm a composição da navegação, sem alegar que novos microsserviços foram implementados.
+A navegação segue o escopo do PDF ProjectFlow: Workspace operacional, Notificações, Insights e Usuários e permissões. O assistente de IA interno não foi implementado — agentes externos usam o servidor MCP com as permissões do usuário. Webhooks não fazem parte da arquitetura do PDF e não são exibidos.
+
+## Insights (Vue 3)
+
+`apps/insights` é um microfrontend Vue 3 exposto por Module Federation e montado pelo Workspace em `/#/insights`. Ele reproduz as três áreas do PDF:
+
+- **Dashboard executivo**: filtros por organização, projeto, equipe e período; indicadores de projetos ativos, concluídos e em risco, tarefas concluídas e atrasadas, cumprimento de prazos, evolução semanal das entregas, distribuição por status, situação dos projetos, prazos por equipe, resumo por equipe e atividades recentes.
+- **Análises de desempenho**: comparação de projetos com progresso, atrasos, bloqueios e prazo; indicadores por sprint; progresso por equipe; gargalos e carga; dependências críticas.
+- **Central de auditoria**: filtros por usuário, projeto, ação, origem, entidade e período, paginação e detalhe do registro com diff de valores anteriores → novos. Visível apenas para ADMIN, PROJECT_MANAGER e TEAM_LEAD, alinhado ao ms-audit.
+
+O remote recebe os projetos, tarefas, pessoas, equipes, sprints e a trilha de auditoria já escopados pelo Workspace; não faz chamadas HTTP próprias nesta etapa.
+
+## Usuários e permissões
+
+A página `/#/access` lista colaboradores com cargo, organização, equipes, papel e situação, permite trocar o papel (somente ADMIN) e convidar colaboradores, além de exibir a matriz de capacidades por papel. As ações reais são validadas no estado local e registradas na auditoria.
 
 ## Dados e persistência
 

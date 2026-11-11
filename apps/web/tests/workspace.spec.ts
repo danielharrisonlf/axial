@@ -346,24 +346,47 @@ test("archived projects remain scoped in lists and direct links after profile sw
   await expect(page.getByRole("button", { name: "Restaurar", exact: true })).toHaveCount(0);
 });
 
-test("audit trail is scoped to delivery leadership and links to its project", async ({ page }, info) => {
-  await page.goto("/#/audit");
-  await expect(page.getByRole("heading", { name: "Trilha de auditoria", exact: true })).toBeVisible();
+test("insights microfrontend exposes the PDF surfaces and gates the audit center", async ({ page }, info) => {
+  await page.goto("/#/insights");
+  await expect(page.getByRole("heading", { name: "ProjectFlow Insights", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Dashboard executivo", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByText("Projetos ativos", { exact: true })).toBeVisible();
+  await evidence(page, info, "insights-executive");
+
+  await page.getByRole("tab", { name: "Análises de desempenho", exact: true }).click();
+  await expect(page.getByText("Comparação de projetos", { exact: true })).toBeVisible();
+  await expect(page.getByText("Indicadores por sprint", { exact: true })).toBeVisible();
+  await evidence(page, info, "insights-performance");
+
+  await page.getByRole("tab", { name: "Central de auditoria", exact: true }).click();
+  await expect(page.getByText("Nenhum registro", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("table")).toBeVisible();
-  await evidence(page, info, "audit");
-  await page.getByRole("searchbox", { name: "Buscar na auditoria", exact: true }).fill("zzz-nada");
-  await expect(page.getByText("Nenhum evento", { exact: true })).toBeVisible();
+  await evidence(page, info, "insights-audit");
+
   await page.getByRole("button", { name: "Trocar perfil de demonstração", exact: true }).click();
   await page.getByRole("menuitem", { name: /Sérgio Tavares/ }).click();
-  await page.goto("/#/audit");
-  await expect(page.getByText("Acesso restrito", { exact: true })).toBeVisible();
-  await expect(page.getByRole("table")).toHaveCount(0);
+  await page.goto("/#/insights");
+  await expect(page.getByRole("heading", { name: "ProjectFlow Insights", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Central de auditoria", exact: true })).toHaveCount(0);
 });
 
-test("insights microfrontend mounts the Vue remote", async ({ page }, info) => {
-  await page.goto("/#/insights");
-  await expect(page.getByRole("heading", { name: "Insights de entrega", exact: true })).toBeVisible();
-  await expect(page.getByText("Distribuição por status", { exact: true })).toBeVisible();
-  await expect(page.getByText("Carga por pessoa", { exact: true })).toBeVisible();
-  await evidence(page, info, "insights");
+test("access management lists users, roles and the capability matrix", async ({ page }, info) => {
+  await page.goto("/#/access");
+  await expect(page.getByRole("heading", { name: "Usuários e permissões", exact: true })).toBeVisible();
+  await expect(page.getByRole("table").locator("tbody tr")).toHaveCount(18);
+  await evidence(page, info, "access-users");
+
+  await page.getByRole("tab", { name: "Papéis e permissões", exact: true }).click();
+  await expect(page.getByText("gerenciar usuários", { exact: true })).toBeVisible();
+  await expect(page.getByText("central de auditoria", { exact: true })).toBeVisible();
+  await evidence(page, info, "access-roles");
+
+  await page.getByRole("button", { name: "Trocar perfil de demonstração", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Sérgio Tavares/ }).click();
+  await page.goto("/#/access/users");
+  await expect(page.getByRole("button", { name: "Convidar colaborador", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: /Papel de/ })).toHaveCount(0);
 });

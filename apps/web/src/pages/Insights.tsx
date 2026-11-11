@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../components/Icon";
-import { PageHead } from "../components/ui";
 import { useWorkspace } from "../data/workspace";
 
 type Mount = typeof import("insights/mount").mount;
+const AUDIT_ROLES = new Set(["admin", "pm", "lead"]);
 
 /**
  * Host side of the Vue microfrontend. The remote is fetched only when the
  * Insights app opens, so the delivery bundle stays unaffected.
  */
 export function Insights() {
-  const { db, visibleProjects, visibleTasks } = useWorkspace();
+  const { db, me, can, visibleTasks, accessibleProjects } = useWorkspace();
   const host = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
@@ -20,16 +20,21 @@ export function Insights() {
     let unmount: (() => void) | undefined;
     let cancelled = false;
     setState("loading");
+    const projectIds = new Set(accessibleProjects.map((project) => project.id));
     void import("insights/mount")
       .then(({ mount }) => {
         if (cancelled || !host.current) return;
         const mounted = (mount as Mount)(host.current, {
-          projects: visibleProjects.map((project) => ({
+          projects: accessibleProjects.map((project) => ({
             id: project.id,
+            orgId: project.orgId,
             name: project.name,
             key: project.key,
             status: project.status,
             targetDate: project.targetDate,
+            leadId: project.leadId,
+            teamIds: project.teamIds,
+            archived: project.archived,
           })),
           tasks: visibleTasks.map((task) => ({
             id: task.id,
@@ -39,6 +44,9 @@ export function Insights() {
             priority: task.priority,
             assigneeId: task.assigneeId,
             teamId: task.teamId,
+            sprintId: task.sprintId,
+            parentId: task.parentId,
+            blockedBy: task.blockedBy,
             createdAt: task.createdAt,
             updatedAt: task.updatedAt,
             dueDate: task.dueDate,
@@ -46,9 +54,14 @@ export function Insights() {
           users: db.users.map((user) => ({
             id: user.id,
             name: user.name,
+            email: user.email,
+            initials: user.initials,
+            color: user.color,
             teamIds: user.teamIds,
+            roleId: user.roleId,
             active: user.active,
           })),
+          teams: db.teams.map((team) => ({ id: team.id, name: team.name, orgId: team.orgId })),
           sprints: db.sprints.map((sprint) => ({
             id: sprint.id,
             projectId: sprint.projectId,
@@ -57,6 +70,10 @@ export function Insights() {
             startDate: sprint.startDate,
             endDate: sprint.endDate,
           })),
+          orgs: db.orgs.map((org) => ({ id: org.id, name: org.name })),
+          audit: db.audit.filter((entry) => !entry.projectId || projectIds.has(entry.projectId)),
+          roleId: me.roleId,
+          canAudit: AUDIT_ROLES.has(me.roleId) && can("audit.view"),
           theme: db.settings.theme === "dark" ? "dark" : "light",
         });
         unmount = mounted;
@@ -69,11 +86,10 @@ export function Insights() {
       cancelled = true;
       unmount?.();
     };
-  }, [attempt, db.users, db.sprints, db.settings.theme, visibleProjects, visibleTasks]);
+  }, [attempt, can, db, me, accessibleProjects, visibleTasks]);
 
   return (
     <>
-      <PageHead title="Insights" sub="Analytics de entrega em um microfrontend Vue carregado sob demanda." />
       {state === "error" ? (
         <div className="empty">
           <div className="e-ic">

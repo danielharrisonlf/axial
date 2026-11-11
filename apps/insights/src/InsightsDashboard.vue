@@ -1,302 +1,170 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import type { InsightStatus, InsightsProps } from "./types";
+import { computed, ref } from "vue";
+import type { InsightsProps } from "./types";
+import AuditView from "./views/AuditView.vue";
+import ExecutiveView from "./views/ExecutiveView.vue";
+import PerformanceView from "./views/PerformanceView.vue";
 
-const props = withDefaults(defineProps<InsightsProps>(), {
-  theme: "light",
-});
+const props = withDefaults(defineProps<InsightsProps>(), { theme: "light" });
 
-const STATUS_ORDER: InsightStatus[] = ["backlog", "todo", "in_progress", "in_review", "done"];
-const STATUS_LABEL: Record<InsightStatus, string> = {
-  backlog: "Backlog",
-  todo: "A fazer",
-  in_progress: "Em andamento",
-  in_review: "Em revisão",
-  done: "Concluído",
-};
-const STATUS_COLOR: Record<InsightStatus, string> = {
-  backlog: "#8b93a1",
-  todo: "#5b6472",
-  in_progress: "#2b5fd9",
-  in_review: "#6d4fc4",
-  done: "#1d7a4c",
-};
+const tabs = computed(() => [
+  { id: "executive", label: "Dashboard executivo" },
+  { id: "performance", label: "Análises de desempenho" },
+  ...(props.canAudit ? [{ id: "audit", label: "Central de auditoria" }] : []),
+]);
+const tab = ref("executive");
 
-const DAY = 86_400_000;
-const now = Date.now();
+const orgId = ref("");
+const projectId = ref("");
+const teamId = ref("");
+const period = ref("90");
 
-const realTasks = computed(() => props.tasks.filter((task) => !(task as { parentId?: string }).parentId));
-
-const total = computed(() => realTasks.value.length);
-const done = computed(() => realTasks.value.filter((task) => task.status === "done").length);
-const late = computed(
-  () =>
-    realTasks.value.filter(
-      (task) =>
-        task.status !== "done" &&
-        task.dueDate &&
-        new Date(`${task.dueDate.slice(0, 10)}T23:59:59`).getTime() < now,
-    ).length,
+const filteredProjects = computed(() =>
+  props.projects.filter(
+    (project) =>
+      !project.archived &&
+      (!orgId.value || project.orgId === orgId.value) &&
+      (!projectId.value || project.id === projectId.value) &&
+      (!teamId.value || project.teamIds.includes(teamId.value)),
+  ),
 );
-const throughput = computed(
-  () =>
-    realTasks.value.filter(
-      (task) => task.status === "done" && now - new Date(task.updatedAt).getTime() <= 30 * DAY,
-    ).length,
+const projectIds = computed(() => new Set(filteredProjects.value.map((project) => project.id)));
+const filteredTasks = computed(() =>
+  props.tasks.filter(
+    (task) => projectIds.value.has(task.projectId) && (!teamId.value || task.teamId === teamId.value),
+  ),
 );
-const completionRate = computed(() => (total.value ? Math.round((done.value / total.value) * 100) : 0));
-const lateRate = computed(() => (total.value ? Math.round((late.value / total.value) * 100) : 0));
-const avgAge = computed(() => {
-  const open = realTasks.value.filter((task) => task.status !== "done");
-  if (!open.length) return 0;
-  return Math.round(
-    open.reduce((sum, task) => sum + Math.max(0, now - new Date(task.createdAt).getTime()), 0) /
-      open.length /
-      DAY,
+const audit = computed(() => {
+  const ids = new Set(props.projects.map((project) => project.id));
+  return props.audit.filter(
+    (entry) =>
+      (!entry.projectId || ids.has(entry.projectId)) &&
+      (!projectId.value || entry.projectId === projectId.value) &&
+      (!orgId.value ||
+        props.projects.find((project) => project.id === entry.projectId)?.orgId === orgId.value),
   );
 });
-
-const byStatus = computed(() =>
-  STATUS_ORDER.map((status) => ({
-    status,
-    label: STATUS_LABEL[status],
-    color: STATUS_COLOR[status],
-    count: realTasks.value.filter((task) => task.status === status).length,
-  })),
-);
-
-const maxStatus = computed(() => Math.max(1, ...byStatus.value.map((item) => item.count)));
-
-const workload = computed(() => {
-  const rows = props.users
-    .filter((user) => user.active !== false)
-    .map((user) => ({
-      id: user.id,
-      name: user.name,
-      open: realTasks.value.filter((task) => task.assigneeId === user.id && task.status !== "done").length,
-      late: realTasks.value.filter(
-        (task) =>
-          task.assigneeId === user.id &&
-          task.status !== "done" &&
-          task.dueDate &&
-          new Date(`${task.dueDate.slice(0, 10)}T23:59:59`).getTime() < now,
-      ).length,
-    }))
-    .filter((row) => row.open > 0)
-    .sort((a, b) => b.open - a.open)
-    .slice(0, 8);
-  return rows;
-});
-const maxWorkload = computed(() => Math.max(1, ...workload.value.map((row) => row.open)));
-
-const trend = computed(() => {
-  const weeks: { label: string; created: number; done: number }[] = [];
-  for (let index = 5; index >= 0; index--) {
-    const start = now - (index + 1) * 7 * DAY;
-    const end = now - index * 7 * DAY;
-    weeks.push({
-      label: new Date(end).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-      created: realTasks.value.filter((task) => {
-        const created = new Date(task.createdAt).getTime();
-        return created >= start && created < end;
-      }).length,
-      done: realTasks.value.filter((task) => {
-        const updated = new Date(task.updatedAt).getTime();
-        return task.status === "done" && updated >= start && updated < end;
-      }).length,
-    });
-  }
-  return weeks;
-});
-const maxTrend = computed(() => Math.max(1, ...trend.value.flatMap((week) => [week.created, week.done])));
-
-const risks = computed(() =>
-  realTasks.value
-    .filter(
-      (task) =>
-        task.status !== "done" &&
-        task.dueDate &&
-        new Date(`${task.dueDate.slice(0, 10)}T23:59:59`).getTime() < now,
-    )
-    .sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""))
-    .slice(0, 6)
-    .map((task) => ({
-      ...task,
-      project: props.projects.find((project) => project.id === task.projectId)?.name ?? "—",
-      daysLate: Math.floor((now - new Date(`${task.dueDate?.slice(0, 10)}T23:59:59`).getTime()) / DAY),
-    })),
-);
-
-const activeSprints = computed(() => props.sprints.filter((sprint) => sprint.status === "active"));
-
-const projectHealth = computed(() =>
-  props.projects.slice(0, 6).map((project) => {
-    const tasks = realTasks.value.filter((task) => task.projectId === project.id);
-    const projectDone = tasks.filter((task) => task.status === "done").length;
-    return {
-      ...project,
-      progress: tasks.length ? Math.round((projectDone / tasks.length) * 100) : 0,
-      open: tasks.length - projectDone,
-    };
-  }),
-);
-
-const kpis = computed(() => [
-  { label: "Vazão (30 dias)", value: throughput.value, context: "tarefas concluídas", tone: "good" },
-  {
-    label: "Conclusão",
-    value: `${completionRate.value}%`,
-    context: `${done.value} de ${total.value} tarefas`,
-    tone: completionRate.value >= 60 ? "good" : "",
-  },
-  {
-    label: "Atrasos",
-    value: late.value,
-    context: `${lateRate.value}% do trabalho aberto`,
-    tone: late.value ? "bad" : "good",
-  },
-  { label: "Idade média", value: `${avgAge.value}d`, context: "de tarefas em aberto" },
-]);
+const filtered = computed(() => orgId.value || projectId.value || teamId.value);
+const resetFilters = () => {
+  orgId.value = "";
+  projectId.value = "";
+  teamId.value = "";
+};
 </script>
 
 <template>
   <section class="insights" :data-theme="theme">
     <header class="ins-head">
       <div>
-        <h1>Insights de entrega</h1>
+        <h1>ProjectFlow Insights</h1>
         <p>
-          Leitura analítica dos projetos visíveis para o seu perfil. Microfrontend Vue carregado pelo
-          Workspace via Module Federation.
+          Dashboard executivo, análises de desempenho e central de auditoria em um microfrontend
+          Vue exibido dentro do Workspace.
         </p>
       </div>
-      <span class="ins-badge">{{ activeSprints.length }} sprint(s) ativo(s)</span>
+      <span class="ins-badge">Vue 3 · Module Federation</span>
     </header>
 
-    <div class="ins-kpis">
-      <article v-for="kpi in kpis" :key="kpi.label" class="ins-kpi">
-        <div class="ins-kpi-label">{{ kpi.label }}</div>
-        <div class="ins-kpi-value">{{ kpi.value }}</div>
-        <div class="ins-kpi-context" :class="kpi.tone">{{ kpi.context }}</div>
-      </article>
+    <div class="tabs" role="tablist" aria-label="Áreas do Insights">
+      <button
+        v-for="item in tabs"
+        :key="item.id"
+        type="button"
+        role="tab"
+        :aria-selected="tab === item.id"
+        class="tab"
+        :class="{ active: tab === item.id }"
+        @click="tab = item.id"
+      >
+        {{ item.label }}
+      </button>
     </div>
 
-    <div class="ins-grid">
-      <section class="ins-panel">
-        <h2>Distribuição por status</h2>
-        <div class="ins-bars-vertical">
-          <div v-for="row in byStatus" :key="row.status" class="ins-bar-col">
-            <span class="ins-bar-value">{{ row.count }}</span>
-            <div class="ins-bar-track">
-              <div
-                class="ins-bar-fill"
-                :style="{ height: `${(row.count / maxStatus) * 100}%`, background: row.color }"
-              />
-            </div>
-            <span class="ins-bar-label">{{ row.label }}</span>
-          </div>
-        </div>
-      </section>
+    <template v-if="tab !== 'audit'">
+      <div class="fbar">
+        <select v-model="orgId" class="select" aria-label="Organização">
+          <option value="">Todas as organizações</option>
+          <option v-for="org in orgs" :key="org.id" :value="org.id">{{ org.name }}</option>
+        </select>
+        <select v-model="projectId" class="select" aria-label="Projeto">
+          <option value="">Todos os projetos</option>
+          <option v-for="project in filteredProjects" :key="project.id" :value="project.id">
+            {{ project.name }}
+          </option>
+        </select>
+        <select v-model="teamId" class="select" aria-label="Equipe">
+          <option value="">Todas as equipes</option>
+          <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
+        </select>
+        <select v-model="period" class="select" aria-label="Período">
+          <option value="30">Últimos 30 dias</option>
+          <option value="60">Últimos 60 dias</option>
+          <option value="90">Últimos 90 dias</option>
+          <option value="180">Últimos 180 dias</option>
+        </select>
+        <button v-if="filtered" type="button" class="btn btn-ghost btn-sm" @click="resetFilters">
+          Limpar filtros
+        </button>
+      </div>
+    </template>
 
-      <section class="ins-panel">
-        <h2>Carga por pessoa</h2>
-        <p v-if="!workload.length" class="ins-muted">Nenhuma tarefa atribuída no momento.</p>
-        <div v-for="row in workload" :key="row.id" class="ins-hbar">
-          <span class="ins-hbar-label">{{ row.name }}</span>
-          <div class="ins-hbar-track">
-            <div class="ins-hbar-fill" :style="{ width: `${(row.open / maxWorkload) * 100}%` }" />
-          </div>
-          <span class="ins-hbar-value">{{ row.open }}<em v-if="row.late"> · {{ row.late }} atrasada(s)</em></span>
-        </div>
-      </section>
-
-      <section class="ins-panel ins-wide">
-        <h2>Criação vs. conclusão por semana</h2>
-        <div class="ins-trend">
-          <div v-for="week in trend" :key="week.label" class="ins-trend-col">
-            <div class="ins-trend-bars">
-              <div
-                class="ins-trend-bar created"
-                :style="{ height: `${(week.created / maxTrend) * 100}%` }"
-                :title="`${week.created} criadas`"
-              />
-              <div
-                class="ins-trend-bar done"
-                :style="{ height: `${(week.done / maxTrend) * 100}%` }"
-                :title="`${week.done} concluídas`"
-              />
-            </div>
-            <span class="ins-trend-label">{{ week.label }}</span>
-          </div>
-        </div>
-        <div class="ins-legend">
-          <span><i class="created" /> Criadas</span>
-          <span><i class="done" /> Concluídas</span>
-        </div>
-      </section>
-
-      <section class="ins-panel">
-        <h2>Saúde dos projetos</h2>
-        <p v-if="!projectHealth.length" class="ins-muted">Nenhum projeto visível.</p>
-        <div v-for="project in projectHealth" :key="project.id" class="ins-project">
-          <div class="ins-project-head">
-            <span class="ins-project-name">{{ project.name }}</span>
-            <span class="ins-project-meta">{{ project.progress }}%</span>
-          </div>
-          <div class="ins-project-track">
-            <div class="ins-project-fill" :style="{ width: `${project.progress}%` }" />
-          </div>
-          <span class="ins-muted">{{ project.open }} em aberto</span>
-        </div>
-      </section>
-
-      <section class="ins-panel">
-        <h2>Atenção imediata</h2>
-        <p v-if="!risks.length" class="ins-muted">Nenhuma tarefa atrasada. Boa cadência.</p>
-        <ul v-else class="ins-risks">
-          <li v-for="risk in risks" :key="risk.id">
-            <span class="ins-risk-title">{{ risk.title }}</span>
-            <span class="ins-risk-meta">{{ risk.project }} · {{ risk.daysLate }}d de atraso</span>
-          </li>
-        </ul>
-      </section>
-    </div>
+    <ExecutiveView
+      v-if="tab === 'executive'"
+      :projects="filteredProjects"
+      :tasks="filteredTasks"
+      :teams="teams"
+      :users="users"
+      :audit="audit"
+      :period="Number(period)"
+    />
+    <PerformanceView
+      v-else-if="tab === 'performance'"
+      :projects="filteredProjects"
+      :tasks="filteredTasks"
+      :teams="teams"
+      :users="users"
+      :sprints="sprints"
+    />
+    <AuditView v-else :audit="audit" :projects="projects" :users="users" />
   </section>
 </template>
 
-<style scoped>
+<style>
 .insights {
   --ins-surface: var(--surface, #fff);
+  --ins-surface-2: var(--surface-2, #f2f4f7);
   --ins-border: var(--border, #e5e8ee);
-  --ins-ink: var(--ink, #1b2230);
+  --ins-ink: var(--ink, #1c2127);
   --ins-ink-2: var(--ink-2, #5b6472);
   --ins-ink-3: var(--ink-3, #8b93a1);
   --ins-accent: var(--accent, #2b5fd9);
   --ins-ok: var(--ok, #1d7a4c);
+  --ins-warn: var(--warn, #9a5b00);
   --ins-danger: var(--danger, #be3030);
-  color: var(--ins-ink);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  color: var(--ins-ink);
   font-size: 13px;
 }
-.ins-head {
+.insights .ins-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
-.ins-head h1 {
+.insights .ins-head h1 {
   margin: 0;
   font-size: 21px;
   letter-spacing: -0.02em;
 }
-.ins-head p {
+.insights .ins-head p {
   margin: 4px 0 0;
   color: var(--ins-ink-2);
-  max-width: 640px;
+  max-width: 720px;
   line-height: 1.5;
 }
-.ins-badge {
+.insights .ins-badge {
   flex: none;
   border: 1px solid var(--ins-border);
   border-radius: 999px;
@@ -305,258 +173,185 @@ const kpis = computed(() => [
   color: var(--ins-ink-2);
   background: var(--ins-surface);
 }
-.ins-kpis {
+.insights .stat-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
-}
-.ins-kpi {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   border: 1px solid var(--ins-border);
-  border-radius: 12px;
-  padding: 13px 15px;
+  border-radius: 10px;
   background: var(--ins-surface);
 }
-.ins-kpi-label {
+.insights .stat {
+  padding: 12px 16px;
+  border-left: 1px solid var(--ins-border);
+  min-width: 0;
+}
+.insights .stat:first-child {
+  border-left: 0;
+}
+.insights .stat .lbl {
   font-size: 11.5px;
   color: var(--ins-ink-2);
 }
-.ins-kpi-value {
-  font-size: 24px;
+.insights .stat .val {
+  font-size: 20px;
   font-weight: 600;
-  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  margin-top: 3px;
+  margin-top: 2px;
+  letter-spacing: -0.01em;
 }
-.ins-kpi-context {
+.insights .stat .ctx {
   font-size: 11.5px;
   color: var(--ins-ink-3);
-  margin-top: 2px;
+  margin-top: 1px;
 }
-.ins-kpi-context.good {
+.insights .stat .ctx.bad {
+  color: var(--ins-danger);
+}
+.insights .stat .ctx.good {
   color: var(--ins-ok);
 }
-.ins-kpi-context.bad {
-  color: var(--ins-danger);
-}
-.ins-grid {
+.insights .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-.ins-wide {
-  grid-column: span 2;
-}
-.ins-panel {
-  border: 1px solid var(--ins-border);
-  border-radius: 12px;
-  background: var(--ins-surface);
-  padding: 15px 16px;
-  min-width: 0;
-}
-.ins-panel h2 {
-  margin: 0 0 12px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ins-ink);
-}
-.ins-bars-vertical {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  height: 158px;
-}
-.ins-bar-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  height: 100%;
-  justify-content: flex-end;
-  min-width: 0;
-}
-.ins-bar-value {
-  font-size: 11.5px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.ins-bar-track {
-  flex: 1;
-  width: 100%;
-  max-width: 42px;
-  display: flex;
-  align-items: flex-end;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--ins-border) 45%, transparent);
-}
-.ins-bar-fill {
-  width: 100%;
-  border-radius: 6px;
-  min-height: 2px;
-  transition: height 0.4s ease;
-}
-.ins-bar-label {
-  font-size: 10.5px;
-  color: var(--ins-ink-3);
-  text-align: center;
-  white-space: nowrap;
-}
-.ins-hbar {
-  display: grid;
-  grid-template-columns: 110px 1fr auto;
-  align-items: center;
-  gap: 9px;
-  padding: 4px 0;
-}
-.ins-hbar-label {
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ins-hbar-track {
-  height: 7px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--ins-border) 55%, transparent);
-  overflow: hidden;
-}
-.ins-hbar-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--ins-accent);
-}
-.ins-hbar-value {
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-  color: var(--ins-ink-2);
-  white-space: nowrap;
-}
-.ins-hbar-value em {
-  color: var(--ins-danger);
-  font-style: normal;
-}
-.ins-trend {
-  display: flex;
-  align-items: flex-end;
   gap: 14px;
-  height: 150px;
 }
-.ins-trend-col {
-  flex: 1;
+.insights .grid.c2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.insights .grid.c2-1 {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+.insights .panel {
+  border: 1px solid var(--ins-border);
+  border-radius: 10px;
+  background: var(--ins-surface);
+  min-width: 0;
+}
+.insights .panel-head {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  height: 100%;
-  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ins-border);
 }
-.ins-trend-bars {
+.insights .panel-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.insights .panel-body {
+  padding: 14px 16px;
+}
+.insights .spacer {
   flex: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 4px;
-  width: 100%;
 }
-.ins-trend-bar {
-  width: 14px;
-  border-radius: 4px 4px 0 0;
-  min-height: 2px;
-  transition: height 0.4s ease;
-}
-.ins-trend-bar.created,
-.ins-legend i.created {
-  background: color-mix(in srgb, var(--ins-accent) 55%, transparent);
-}
-.ins-trend-bar.done,
-.ins-legend i.done {
-  background: var(--ins-ok);
-}
-.ins-trend-label {
-  font-size: 10.5px;
+.insights .subtle {
   color: var(--ins-ink-3);
 }
-.ins-legend {
-  display: flex;
-  gap: 16px;
-  margin-top: 10px;
+.insights .small {
   font-size: 11.5px;
+}
+.insights .tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.insights .tbl th {
+  text-align: left;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ins-ink-3);
+  font-weight: 600;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ins-border);
+  white-space: nowrap;
+}
+.insights .tbl td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ins-border);
+  vertical-align: middle;
+}
+.insights .tbl tbody tr:last-child td {
+  border-bottom: 0;
+}
+.insights .tbl .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.insights .tbl .nowrap {
+  white-space: nowrap;
+}
+.insights .tbl-wrap {
+  overflow-x: auto;
+}
+.insights .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--ins-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 10.5px;
   color: var(--ins-ink-2);
+  white-space: nowrap;
 }
-.ins-legend i {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 3px;
-  margin-right: 5px;
+.insights .chip.ok {
+  color: var(--ins-ok);
+  border-color: color-mix(in srgb, var(--ins-ok) 35%, transparent);
 }
-.ins-project {
-  padding: 6px 0;
+.insights .chip.warn {
+  color: var(--ins-warn);
+  border-color: color-mix(in srgb, var(--ins-warn) 35%, transparent);
 }
-.ins-project-head {
+.insights .chip.danger {
+  color: var(--ins-danger);
+  border-color: color-mix(in srgb, var(--ins-danger) 35%, transparent);
+}
+.insights .chip.accent {
+  color: var(--ins-accent);
+  border-color: color-mix(in srgb, var(--ins-accent) 35%, transparent);
+}
+.insights .hist-item {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
+  gap: 9px;
+  padding: 7px 0;
+  font-size: 12px;
+  border-bottom: 1px dashed var(--ins-border);
+}
+.insights .hist-item:last-child {
+  border-bottom: 0;
+}
+.insights .hist-item time {
+  margin-left: auto;
+  color: var(--ins-ink-3);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.insights .section-h {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ins-ink-3);
+}
+.insights .ins-muted {
+  color: var(--ins-ink-3);
+  font-size: 11.5px;
+}
+.insights .fbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
-.ins-project-name {
-  font-size: 12px;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ins-project-meta {
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-  color: var(--ins-ink-2);
-}
-.ins-project-track {
-  height: 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--ins-border) 55%, transparent);
-  overflow: hidden;
-  margin: 5px 0 3px;
-}
-.ins-project-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--ins-ok);
-}
-.ins-risks {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-.ins-risks li {
-  border-left: 3px solid var(--ins-danger);
-  padding-left: 9px;
-  display: flex;
-  flex-direction: column;
-}
-.ins-risk-title {
-  font-size: 12px;
-  font-weight: 500;
-}
-.ins-risk-meta {
-  font-size: 11px;
-  color: var(--ins-ink-3);
-}
-.ins-muted {
-  color: var(--ins-ink-3);
-  font-size: 11.5px;
-}
-@media (max-width: 860px) {
-  .ins-grid {
+@media (max-width: 900px) {
+  .insights .grid.c2,
+  .insights .grid.c2-1 {
     grid-template-columns: 1fr;
   }
-  .ins-wide {
-    grid-column: span 1;
-  }
-  .ins-head {
+  .insights .ins-head {
     flex-direction: column;
   }
 }
