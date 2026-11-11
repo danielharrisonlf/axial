@@ -73,32 +73,32 @@
     "AUDIT_API_URL",
     "MCP_API_URL",
     "GATEWAY_CORS_ORIGINS",
-    "INSIGHTS_REMOTE_ENTRY"
+    "INSIGHTS_REMOTE_ENTRY",
+    "PERF_DATABASE_URL",
+    "PERF_REDIS_URL",
+    "PERF_LOGIN_EMAIL",
+    "PERF_LOGIN_PASSWORD",
+    "PERF_LOGIN_ORG",
+    "PERF_REPORT_OUT",
+    "PERF_SKIP_INFRA",
+    "PERF_KEEP_STACK",
+    "WEB_URL",
+    "CHROME_PATH"
   ],
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "dist/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
     },
     "typecheck": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "test:unit": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "outputs": []
     },
     "dev": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     }

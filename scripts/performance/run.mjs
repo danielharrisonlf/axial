@@ -287,6 +287,23 @@ async function stop() {
     }
     console.log(`[stack] ${name} encerrado (pid ${pid})`);
   }
+  // Libera portas ocupadas por sobras de execuções anteriores.
+  for (const service of services) {
+    if (await portOpen(service.port)) {
+      killPort(service.port);
+      console.log(`[stack] porta ${service.port} liberada`);
+    }
+  }
+  if (process.platform === "win32")
+    spawnSync(
+      "powershell",
+      [
+        "-NoProfile",
+        "-Command",
+        "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -match 'dist/main.js' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+      ],
+      { stdio: "ignore" },
+    );
   rmSync(file, { force: true });
 }
 

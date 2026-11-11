@@ -920,14 +920,8 @@ export function useWorkspace() {
   // Derived collections keep a stable identity between renders. Without this,
   // consumers such as the Insights remote would see a new array on every
   // render and restart their effects (which cancelled the first remote mount).
-  const visibleProjects = useMemo(
-    () => workspaceStore.visibleProjects(snapshot.db),
-    [snapshot.db],
-  );
-  const accessibleProjects = useMemo(
-    () => workspaceStore.visibleProjects(snapshot.db, true),
-    [snapshot.db],
-  );
+  const visibleProjects = useMemo(() => workspaceStore.visibleProjects(snapshot.db), [snapshot.db]);
+  const accessibleProjects = useMemo(() => workspaceStore.visibleProjects(snapshot.db, true), [snapshot.db]);
   const projectIds = useMemo(() => new Set(visibleProjects.map((p) => p.id)), [visibleProjects]);
   const visibleTasks = useMemo(
     () => snapshot.db.tasks.filter((t) => projectIds.has(t.projectId)),

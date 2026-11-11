@@ -100,8 +100,7 @@ export function Insights() {
         </div>
         <b>Insights indisponível</b>
         <p>
-          O microfrontend remoto não respondeu. Inicie-o com <code>pnpm dev:insights</code> e tente
-          novamente.
+          O microfrontend remoto não respondeu. Inicie-o com <code>pnpm dev:insights</code> e tente novamente.
         </p>
         <button type="button" className="btn btn-sm" onClick={() => setAttempt((value) => value + 1)}>
           <Icon name="refresh" size={13} />
