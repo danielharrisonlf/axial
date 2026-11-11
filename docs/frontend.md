@@ -17,6 +17,7 @@ Tipografia, tokens de claro/escuro, sidebar de 240px, topbar de 50px, tabelas, f
 - Kanban com cinco colunas, filtros combinados, criação rápida e movimentação por arrastar ou seletor.
 - Backlog, planejamento e ciclo de sprints.
 - Cronograma com projetos e marcos.
+- Notificações com histórico multicanal, preferências por evento e canal, catálogo de templates e estado dos provedores.
 - Drawer de tarefa com propriedades, critérios de aceite, dependências, subtarefas, comentários e histórico local.
 - Tema, perfil de demonstração, busca global e navegação responsiva.
 
@@ -27,6 +28,8 @@ Entradas de módulos futuros mantêm a composição da navegação, sem alegar q
 O cenário inicial usa os mesmos 11 projetos e 109 tarefas fictícias do protótipo. Datas são relativas ao dia de restauração. O estado é atualizado imutavelmente e compartilha a mesma fonte entre lista, detalhes, Kanban e contadores. O navegador persiste somente sob a chave axial.workspace.demo.v1; a chave do protótipo original permanece intacta.
 
 Dados locais inválidos são recuperados com aviso. Se o navegador impedir gravação, a aplicação informa que as alterações duram apenas a sessão. Restaurar demonstração repõe o cenário inicial.
+
+A tela de Notificações reutiliza os 6 templates, as preferências evento × canal e os 3 provedores do protótipo. Atribuir uma tarefa, bloquear uma tarefa, iniciar ou encerrar uma sprint gera entregas simuladas; canal sem provedor configurado é registrado como falha e o reenvio só muda para entregue quando o provedor está configurado. Esses dados são fictícios e não representam chamadas ao ms-notifications.
 
 Esta entrega é a interface fiel e interativa da demonstração; **não conecta suas mutações à API**. Não emite tokens de identidade nem inclui chaves privadas no bundle. O comportamento de perfis fictícios reproduz o protótipo e não substitui a autorização de produção do ms-projects.
 

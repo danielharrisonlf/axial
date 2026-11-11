@@ -4,6 +4,18 @@ import { z } from "zod";
 const id = z.string().min(1);
 const optionalRef = id.nullable();
 const roleId = z.enum(["admin", "pm", "lead", "dev", "viewer"]);
+const notificationChannel = z.enum(["email", "whatsapp", "sms"]);
+const notificationPreference = z.object({
+  email: z.boolean(),
+  whatsapp: z.boolean(),
+  sms: z.boolean(),
+});
+const notificationProvider = z.object({
+  name: z.string(),
+  configured: z.boolean(),
+  from: z.string(),
+  host: z.string(),
+});
 const project = z.looseObject({
   id,
   orgId: id,
@@ -44,7 +56,7 @@ const task = z.looseObject({
   createdBy: id,
 });
 export const workspaceDataSchema = z.looseObject({
-  meta: z.object({ seedVersion: z.literal(7), seededAt: z.string() }),
+  meta: z.object({ seedVersion: z.literal(8), seededAt: z.string() }),
   settings: z.object({
     theme: z.enum(["light", "dark", "system"]),
     activeApp: z.string(),
@@ -108,15 +120,25 @@ export const workspaceDataSchema = z.looseObject({
     z.looseObject({
       id,
       ts: z.string(),
-      channel: z.string(),
+      channel: notificationChannel,
       templateId: id,
       eventType: z.string(),
       toUserId: id,
       subject: z.string(),
       body: z.string(),
-      status: z.string(),
+      status: z.enum(["delivered", "failed", "pending", "accepted", "unknown"]),
       attempts: z.number(),
+      failReason: z.string().nullable().optional(),
     }),
   ),
+  notificationTemplates: z.array(
+    z.object({ id, event: z.string(), name: z.string(), subject: z.string(), body: z.string() }),
+  ),
+  notificationPreferences: z.record(z.string(), notificationPreference),
+  notificationProviders: z.object({
+    email: notificationProvider,
+    whatsapp: notificationProvider,
+    sms: notificationProvider,
+  }),
   taskCounters: z.record(z.string(), z.number().int().nonnegative()),
 });

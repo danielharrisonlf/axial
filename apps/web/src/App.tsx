@@ -17,6 +17,7 @@ import type { Project } from "./data/types";
 import { useWorkspace } from "./data/workspace";
 import { navigate, rel } from "./lib/format";
 import { Dashboard } from "./pages/Dashboard";
+import { Notifications } from "./pages/Notifications";
 import { ProjectDetail, Projects } from "./pages/Projects";
 import { Backlog, Board, Sprints, Timeline } from "./pages/Work";
 import "./app.css";
@@ -71,6 +72,7 @@ const enabled = new Set([
   "backlog",
   "sprints",
   "timeline",
+  "notifications",
 
   "settings",
 ]);
@@ -204,6 +206,8 @@ export default function App() {
       <Sprints />
     ) : route === "timeline" ? (
       <Timeline />
+    ) : route === "notifications" ? (
+      <Notifications tab={id} />
     ) : route === "my-tasks" ? (
       <>
         <PageHead title="Minhas tarefas" sub={`Tudo o que está atribuído a ${me.name}.`}>
@@ -448,6 +452,12 @@ export default function App() {
                     sub: `${rel(n.ts)}${n.status === "failed" ? " · FALHOU" : ""}`,
                     onClick: () => notify(n.subject, n.body, n.status === "failed" ? "warn" : "info"),
                   })),
+                "sep",
+                {
+                  label: "Ver todas as notificações",
+                  icon: "bell",
+                  onClick: () => navigate("/notifications"),
+                },
               ]}
             >
               <Icon name="bell" />

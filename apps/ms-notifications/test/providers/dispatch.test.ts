@@ -99,6 +99,7 @@ describe("configured provider dispatch", () => {
         "user",
         channel,
         destination,
+        "task.updated",
       ]);
     },
   );

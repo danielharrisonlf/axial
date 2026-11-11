@@ -36,11 +36,18 @@ export async function ingest(value: unknown): Promise<void> {
           "SELECT channel FROM notifications.preferences WHERE organization_id=$1 AND user_id=$2 AND enabled",
           [event.organizationId, after.data.assigneeId],
         );
-        for (const pref of prefs.rows)
+        const optedOut = await c.query<{ channel: string }>(
+          "SELECT channel FROM notifications.event_preferences WHERE organization_id=$1 AND user_id=$2 AND event_type=$3 AND NOT enabled",
+          [event.organizationId, after.data.assigneeId, event.type],
+        );
+        const disabled = new Set(optedOut.rows.map((row) => row.channel));
+        for (const pref of prefs.rows) {
+          if (disabled.has(pref.channel)) continue;
           await c.query(
             "INSERT INTO notifications.deliveries(id,event_id,organization_id,user_id,channel) VALUES($1,$2,$3,$4,$5) ON CONFLICT(event_id,user_id,channel) DO NOTHING",
             [randomUUID(), event.id, event.organizationId, after.data.assigneeId, pref.channel],
           );
+        }
       }
     }
     await c.query("COMMIT");
@@ -144,8 +151,14 @@ export async function dispatchOne(provider: Provider): Promise<boolean> {
   if (!delivery) return false;
   // Recheck the preference immediately before sending; this is not atomic with the external request.
   const preference = await db.query(
-    "SELECT 1 FROM notifications.preferences WHERE organization_id=$1 AND user_id=$2 AND channel=$3 AND enabled AND verified_at IS NOT NULL AND destination=$4",
-    [delivery.organization_id, delivery.user_id, delivery.channel, delivery.destination],
+    "SELECT 1 FROM notifications.preferences p WHERE p.organization_id=$1 AND p.user_id=$2 AND p.channel=$3 AND p.enabled AND p.verified_at IS NOT NULL AND p.destination=$4 AND NOT EXISTS (SELECT 1 FROM notifications.event_preferences e WHERE e.organization_id=p.organization_id AND e.user_id=p.user_id AND e.event_type=$5 AND e.channel=p.channel AND NOT e.enabled)",
+    [
+      delivery.organization_id,
+      delivery.user_id,
+      delivery.channel,
+      delivery.destination,
+      delivery.payload.type,
+    ],
   );
   if (!preference.rowCount) {
     await db.query(

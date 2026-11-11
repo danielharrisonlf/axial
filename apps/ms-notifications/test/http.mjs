@@ -109,6 +109,9 @@ try {
   }
   assert.equal((await request(base, "health/ready")).status, 200);
   assert.equal((await request(base, "notification-preferences")).status, 401);
+  assert.equal((await request(base, "notification-templates")).status, 401);
+  assert.equal((await request(base, "notification-providers")).status, 401);
+  assert.equal((await request(base, "notification-event-preferences")).status, 401);
   assert.equal((await request(base, "notification-preferences", "GET", "invalid")).status, 401);
   assert.equal(
     (await request(base, "notification-preferences", "GET", await token(user, org, { issuer: "wrong" })))
@@ -122,6 +125,57 @@ try {
   const a = await token(user, org),
     b = await token(user2, org),
     c = await token(user, org2);
+  const templates = await request(base, "notification-templates", "GET", a);
+  assert.equal(templates.status, 200);
+  assert.ok(templates.body.length > 0);
+  assert.ok(templates.body.every((item) => typeof item.event === "string" && item.subject));
+  const providers = await request(base, "notification-providers", "GET", a);
+  assert.deepEqual(
+    providers.body.map((item) => [item.channel, item.configured]),
+    [
+      ["email", false],
+      ["sms", false],
+      ["whatsapp", false],
+    ],
+  );
+  const matrix = await request(base, "notification-event-preferences", "GET", a);
+  assert.equal(matrix.body.length, templates.body.length * 3);
+  assert.ok(matrix.body.every((item) => item.enabled === true));
+  assert.equal(
+    (
+      await request(base, "notification-event-preferences/task.assigned.v1/email", "PATCH", a, {
+        enabled: false,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await request(base, "notification-event-preferences", "GET", a)).body.find(
+      (item) => item.event === "task.assigned.v1" && item.channel === "email",
+    ).enabled,
+    false,
+  );
+  assert.ok(
+    (await request(base, "notification-event-preferences", "GET", b)).body.every(
+      (item) => item.enabled === true,
+    ),
+  );
+  assert.equal(
+    (
+      await request(base, "notification-event-preferences/other.event/email", "PATCH", a, {
+        enabled: false,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request(base, "notification-event-preferences/task.assigned.v1/letter", "PATCH", a, {
+        enabled: false,
+      })
+    ).status,
+    400,
+  );
   assert.equal((await request(base, "notification-preferences/email/verification", "POST")).status, 401);
   assert.equal((await request(base, "notification-preferences/email/verification", "POST", a)).status, 503);
   assert.equal(
@@ -222,8 +276,11 @@ try {
     [deliveryId, eventId, org, user],
   );
   assert.equal((await request(base, "notifications", "GET", a)).body.length, 1);
+  assert.equal((await request(base, "notifications", "GET", a)).body[0].event_type, "task.completed");
   assert.equal((await request(base, "notifications", "GET", b)).body.length, 0);
   assert.equal((await request(base, "notifications", "GET", c)).body.length, 0);
+  assert.equal((await request(base, `notifications/${deliveryId}`, "GET", a)).status, 200);
+  assert.equal((await request(base, `notifications/${deliveryId}`, "GET", b)).status, 404);
   assert.equal((await request(base, `notifications/${deliveryId}/retry`, "POST", b)).status, 404);
   assert.equal((await request(base, `notifications/${deliveryId}/retry`, "POST", c)).status, 404);
   assert.equal((await request(base, `notifications/${deliveryId}/retry`, "POST", a)).status, 201);

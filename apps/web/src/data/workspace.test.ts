@@ -181,6 +181,50 @@ describe("local workspace behavior", () => {
     ).toBeNull();
   });
 
+  it("records notification deliveries, honors event preferences and retries failed channels", () => {
+    const { store } = fixture();
+    const before = store.getSnapshot().db.notifications.length;
+    required(
+      store.act.createTask({ projectId: "prj-pcl", title: "Notificar responsável", assigneeId: "u8" }),
+    );
+    const first = store.getSnapshot().db.notifications.slice(0, 2);
+    expect(store.getSnapshot().db.notifications).toHaveLength(before + 2);
+    expect(first.map((item) => item.channel).sort()).toEqual(["email", "whatsapp"]);
+    expect(first.every((item) => item.status === "delivered")).toBe(true);
+    store.act.setNotifPref("task.assigned.v1", "whatsapp", false);
+    store.act.setProvider("email", {
+      from: "noreply@test.dev",
+      host: "api.resend.com",
+      configured: false,
+    });
+    required(store.act.createTask({ projectId: "prj-pcl", title: "Canal em falha", assigneeId: "u8" }));
+    const failed = required(store.getSnapshot().db.notifications[0]);
+    expect(failed).toMatchObject({ channel: "email", status: "failed", attempts: 1 });
+    store.act.resendNotification(failed.id);
+    expect(store.getSnapshot().db.notifications[0]).toMatchObject({ status: "failed", attempts: 2 });
+    store.act.setProvider("email", {
+      from: "noreply@test.dev",
+      host: "api.resend.com",
+      configured: true,
+    });
+    store.act.resendNotification(failed.id);
+    expect(store.getSnapshot().db.notifications[0]).toMatchObject({ status: "delivered", attempts: 3 });
+  });
+
+  it("does not let a viewer change notification preferences or providers", () => {
+    const { store } = fixture();
+    store.act.setUser("u18");
+    const before = structuredClone(store.getSnapshot().db);
+    store.act.setNotifPref("task.assigned.v1", "email", false);
+    store.act.setProvider("email", {
+      from: "viewer@test.dev",
+      host: "api.resend.com",
+      configured: true,
+    });
+    expect(store.getSnapshot().db).toEqual(before);
+    expect(store.getSnapshot().toasts.filter((toast) => toast.tone === "err")).toHaveLength(2);
+  });
+
   it.each(["{invalid JSON", JSON.stringify({ settings: { currentUserId: "missing" } })])(
     "recovers incompatible saved data with a visible warning",
     (raw) => {

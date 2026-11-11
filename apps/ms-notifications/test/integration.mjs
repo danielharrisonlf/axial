@@ -264,6 +264,61 @@ try {
   } finally {
     globalThis.fetch = originalFetch;
   }
+  // Event-level preferences are enforced at ingestion and immediately before dispatch.
+  const optedOut = { ...event, id: randomUUID(), occurredAt: new Date().toISOString() };
+  await db.query(
+    "INSERT INTO notifications.event_preferences(organization_id,user_id,event_type,channel,enabled) VALUES($1,$2,$3,'email',false)",
+    [org, user, event.type],
+  );
+  await ingest(optedOut);
+  assert.equal(
+    (await db.query("SELECT 1 FROM notifications.deliveries WHERE event_id=$1", [optedOut.id])).rowCount,
+    0,
+  );
+  await db.query(
+    "UPDATE notifications.event_preferences SET enabled=true WHERE organization_id=$1 AND user_id=$2 AND event_type=$3 AND channel='email'",
+    [org, user, event.type],
+  );
+  const optedIn = { ...event, id: randomUUID(), occurredAt: new Date().toISOString() };
+  await ingest(optedIn);
+  const optedInDelivery = (
+    await db.query("SELECT id,status FROM notifications.deliveries WHERE event_id=$1", [optedIn.id])
+  ).rows[0];
+  assert.equal(optedInDelivery.status, "pending");
+  await db.query(
+    "UPDATE notifications.event_preferences SET enabled=false WHERE organization_id=$1 AND user_id=$2 AND event_type=$3 AND channel='email'",
+    [org, user, event.type],
+  );
+  assert.equal(
+    await dispatchOne({
+      channels: ["email"],
+      send: async () => {
+        throw new Error("must not send opted-out event");
+      },
+    }),
+    true,
+  );
+  assert.equal(
+    (await db.query("SELECT status FROM notifications.deliveries WHERE id=$1", [optedInDelivery.id])).rows[0]
+      .status,
+    "pending",
+  );
+  await db.query(
+    "UPDATE notifications.event_preferences SET enabled=true WHERE organization_id=$1 AND user_id=$2 AND event_type=$3 AND channel='email'",
+    [org, user, event.type],
+  );
+  assert.equal(
+    await dispatchOne({
+      channels: ["email"],
+      send: async () => "accepted-event-preference",
+    }),
+    true,
+  );
+  assert.equal(
+    (await db.query("SELECT status FROM notifications.deliveries WHERE id=$1", [optedInDelivery.id])).rows[0]
+      .status,
+    "accepted",
+  );
   await job.remove();
   console.log(
     "Integration: BullMQ ingestion, durable dedup, tenant/channel preferences and uncertain outcomes passed",
@@ -271,6 +326,10 @@ try {
 } finally {
   if (worker) await worker.close();
   await db.query("DELETE FROM notifications.deliveries WHERE organization_id IN ($1,$2)", [org, other]);
+  await db.query("DELETE FROM notifications.event_preferences WHERE organization_id IN ($1,$2)", [
+    org,
+    other,
+  ]);
   await db.query("DELETE FROM notifications.events WHERE organization_id IN ($1,$2)", [org, other]);
   await db.query("DELETE FROM notifications.preferences WHERE organization_id IN ($1,$2)", [org, other]);
   await q.close();

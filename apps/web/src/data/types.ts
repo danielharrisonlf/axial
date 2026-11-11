@@ -127,14 +127,31 @@ export interface AuditEntry {
 export interface Notification {
   id: string;
   ts: string;
-  channel: string;
+  channel: NotificationChannel;
   templateId: string;
   eventType: string;
   toUserId: string;
   subject: string;
   body: string;
-  status: string;
+  status: NotificationStatus;
   attempts: number;
+  failReason?: string | null;
+}
+export type NotificationChannel = "email" | "whatsapp" | "sms";
+export type NotificationStatus = "delivered" | "failed" | "pending" | "accepted" | "unknown";
+export interface NotificationTemplate {
+  id: string;
+  event: string;
+  name: string;
+  subject: string;
+  body: string;
+}
+export type NotificationPreference = Record<NotificationChannel, boolean>;
+export interface NotificationProvider {
+  name: string;
+  configured: boolean;
+  from: string;
+  host: string;
 }
 export interface WorkspaceData {
   meta: { seedVersion: number; seededAt: string };
@@ -157,6 +174,9 @@ export interface WorkspaceData {
   comments: Comment[];
   audit: AuditEntry[];
   notifications: Notification[];
+  notificationTemplates: NotificationTemplate[];
+  notificationPreferences: Record<string, NotificationPreference>;
+  notificationProviders: Record<NotificationChannel, NotificationProvider>;
   taskCounters: Record<string, number>;
 }
 export type ProjectInput = Pick<Project, "key" | "name"> &

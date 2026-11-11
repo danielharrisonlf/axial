@@ -87,6 +87,7 @@ O token dura 15 minutos. Para criar tokens locais de outros papéis: `node scrip
 - Marcos, cronograma e indicadores sem dupla contagem de subtarefas.
 - Controle de acesso por organização, projeto, equipe e papel; concorrência por versão.
 - Eventos persistidos na mesma transação da alteração e publicação nas três filas previstas no PDF.
+- Notificações com preferências por canal e por evento, catálogo de templates, estado dos provedores e histórico de entregas próprio.
 
 ## Verificação
 
@@ -123,6 +124,7 @@ Os testes de integração/HTTP recusam bancos cujo nome não termine em `_test`.
 - [Configuração e protocolo do ms-realtime](apps/ms-realtime/README.md)
 - [Configuração e limites do ms-notifications](apps/ms-notifications/README.md)
 - [Relatório de realtime e notificações](docs/relatorio-realtime-notifications.md)
+- [Relatório da interface de notificações](docs/relatorio-notificacoes-workspace.md)
 - [Provedores de notificações e limites](docs/relatorio-provedores-notificacoes.md)
 
 MCP, Insights Vue e o consumidor de auditoria são integrações futuras. O frontend ainda usa dados de demonstração local. Notificações suportam Resend, SMSGo e WhatsApp Cloud API, com confirmação de posse por código; credenciais e templates devem ser configurados. Aceite do provedor não comprova entrega. O WebSocket envia invalidações e exige nova leitura pela API após reconexão.

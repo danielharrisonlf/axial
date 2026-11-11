@@ -269,6 +269,58 @@ test("incompatible local data recovers visibly and remains usable", async ({ pag
   );
 });
 
+test("notifications history, preferences, templates and providers follow the prototype", async ({
+  page,
+}, info) => {
+  await page.goto("/#/dashboard");
+  await page
+    .getByLabel("Navegação principal")
+    .getByRole("button", { name: "Notificações", exact: true })
+    .click();
+  await expect(page.getByRole("heading", { name: "Notificações multicanal", exact: true })).toBeVisible();
+  await expect(page.getByRole("table").locator("tbody tr")).toHaveCount(20);
+  await page.locator(".row-link").first().click();
+  const drawer = page.getByRole("dialog");
+  await expect(drawer.getByText("Mensagem", { exact: true })).toBeVisible();
+  await evidence(page, info, "notifications-drawer");
+  await drawer.getByRole("button", { name: "Fechar", exact: true }).click();
+  await page.getByRole("tab", { name: "Preferências", exact: true }).click();
+  await expect(page.getByRole("checkbox")).toHaveCount(18);
+  const emailPreference = page.getByRole("checkbox", {
+    name: "Tarefa atribuída via E-mail",
+    exact: true,
+  });
+  await expect(emailPreference).toBeChecked();
+  await emailPreference.uncheck();
+  expect(
+    await page.evaluate(() => {
+      const data = JSON.parse(localStorage.getItem("axial.workspace.demo.v1") ?? "null") as {
+        notificationPreferences?: Record<string, { email: boolean }>;
+      } | null;
+      return data?.notificationPreferences?.["task.assigned.v1"]?.email;
+    }),
+  ).toBe(false);
+  await page.getByRole("tab", { name: "Templates", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tarefa atribuída", exact: true })).toBeVisible();
+  await expect(page.getByText("Templates", { exact: true }).first()).toBeVisible();
+  await page.getByRole("tab", { name: "Provedores", exact: true }).click();
+  const sms = page.locator(".panel").filter({ has: page.getByRole("heading", { name: "SMS", exact: true }) });
+  await expect(sms.getByText("não configurado", { exact: true })).toBeVisible();
+  await sms.getByRole("button", { name: "Configurar", exact: true }).click();
+  const modal = page.getByRole("dialog", { name: "Configurar SMS (SMSGo)", exact: true });
+  await modal.getByRole("textbox").first().fill("+55 11 90000-0002");
+  await modal.getByRole("button", { name: "Salvar configuração", exact: true }).click();
+  await expect(sms.getByText("configurado", { exact: true })).toBeVisible();
+  await evidence(page, info, "notifications-providers");
+  await page.getByRole("button", { name: "Trocar perfil de demonstração", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Sérgio Tavares/ }).click();
+  await page.goto("/#/notifications/prefs");
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
+  await expect(page.getByText("Seu perfil pode visualizar, mas não alterar as preferências.")).toBeVisible();
+  await page.goto("/#/notifications/providers");
+  await expect(page.getByRole("button", { name: "Configurar", exact: true })).toHaveCount(0);
+});
+
 test("archived projects remain scoped in lists and direct links after profile switching", async ({
   page,
 }) => {

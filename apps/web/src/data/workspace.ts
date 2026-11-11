@@ -6,6 +6,8 @@ import type {
   AuditEntry,
   Epic,
   Milestone,
+  NotificationChannel,
+  NotificationProvider,
   Project,
   ProjectInput,
   RoleId,
@@ -38,6 +40,8 @@ const CAPS: Record<RoleId, string[]> = {
     "sprint.manage",
     "team.view",
     "team.manage",
+    "notif.view",
+    "notif.manage",
     "audit.view",
   ],
   pm: [
@@ -55,6 +59,7 @@ const CAPS: Record<RoleId, string[]> = {
     "sprint.view",
     "sprint.manage",
     "team.view",
+    "notif.view",
     "audit.view",
   ],
   lead: [
@@ -67,9 +72,19 @@ const CAPS: Record<RoleId, string[]> = {
     "sprint.view",
     "team.view",
     "team.manage",
+    "notif.view",
   ],
-  dev: ["project.view", "task.view", "task.create", "task.edit", "task.move", "sprint.view", "team.view"],
-  viewer: ["project.view", "task.view", "sprint.view", "team.view", "audit.view"],
+  dev: [
+    "project.view",
+    "task.view",
+    "task.create",
+    "task.edit",
+    "task.move",
+    "sprint.view",
+    "team.view",
+    "notif.view",
+  ],
+  viewer: ["project.view", "task.view", "sprint.view", "team.view", "notif.view", "audit.view"],
 };
 type StoragePort = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 export interface WorkspaceSnapshot {
@@ -164,7 +179,7 @@ export function createWorkspaceStore(
     action: string,
     entityType: string,
     entityId: string,
-    projectId: string,
+    projectId: string | null,
     summary: string,
     before: unknown = null,
     after: unknown = null,
@@ -269,6 +284,56 @@ export function createWorkspaceStore(
       if (input.blockedBy.some((id) => reaches(id, new Set())))
         throw new Error("Essa dependência criaria um ciclo.");
     }
+  };
+  const notificationChannels: NotificationChannel[] = ["email", "whatsapp", "sms"];
+  const fillTemplate = (value: string, vars: Record<string, string>) =>
+    Object.entries(vars).reduce(
+      (text, [key, replacement]) => text.split(`{${key}}`).join(replacement),
+      value,
+    );
+  /**
+   * Mirrors the prototype's event fan-out: enabled event/channel pairs become deliveries.
+   * Channels without a configured provider are recorded as failed, never as delivered.
+   */
+  const queueNotifications = (
+    db: WorkspaceData,
+    eventType: string,
+    toUserId: string,
+    vars: Record<string, string>,
+  ) => {
+    const template = db.notificationTemplates.find((item) => item.event === eventType);
+    const preferences = db.notificationPreferences[eventType];
+    if (!template || !preferences) return;
+    if (!db.users.some((user) => user.id === toUserId && user.active)) return;
+    for (const channel of notificationChannels) {
+      if (!preferences[channel]) continue;
+      const provider = db.notificationProviders[channel];
+      db.notifications.unshift({
+        id: uid("nf"),
+        ts: now().toISOString(),
+        channel,
+        templateId: template.id,
+        eventType,
+        toUserId,
+        subject: fillTemplate(template.subject, vars),
+        body: fillTemplate(template.body, vars),
+        status: provider.configured ? "delivered" : "failed",
+        attempts: 1,
+        failReason: provider.configured
+          ? null
+          : `Provedor de ${channel === "whatsapp" ? "WhatsApp" : channel.toUpperCase()} não configurado`,
+      });
+    }
+    db.notifications = db.notifications.slice(0, 200);
+  };
+  const taskNotificationVars = (db: WorkspaceData, task: Task, projectName: string) => {
+    const user = db.users.find((item) => item.id === task.assigneeId);
+    return {
+      ref: task.ref,
+      nome: user ? (user.name.split(" ")[0] ?? user.name) : "",
+      titulo: task.title,
+      projeto: projectName,
+    };
   };
   const act = {
     dismissToast,
@@ -451,6 +516,8 @@ export function createWorkspaceStore(
         };
         db.tasks.push(task);
         audit(db, "create", "task", task.id, p.id, `criou a tarefa ${task.ref}`, null, task);
+        if (task.assigneeId)
+          queueNotifications(db, "task.assigned.v1", task.assigneeId, taskNotificationVars(db, task, p.name));
         return task;
       });
       if (result && !input.silent) notify("Tarefa criada", `${result.ref} — ${result.title}`, "ok");
@@ -509,6 +576,20 @@ export function createWorkspaceStore(
             ? `moveu ${task.ref} de ${STATUS_META[before.status].label} para ${STATUS_META[task.status].label}`
             : `atualizou ${task.ref}`;
         audit(db, fields.status ? "status" : "update", "task", id, task.projectId, summary, before, task);
+        if (task.assigneeId && task.assigneeId !== before.assigneeId)
+          queueNotifications(
+            db,
+            "task.assigned.v1",
+            task.assigneeId,
+            taskNotificationVars(db, task, project.name),
+          );
+        if (task.assigneeId && task.blockedBy.length > before.blockedBy.length) {
+          const blocker = db.tasks.find((item) => item.id === task.blockedBy[0]);
+          queueNotifications(db, "task.blocked.v1", task.assigneeId, {
+            ref: task.ref,
+            bloqueio: blocker?.ref ?? "?",
+          });
+        }
       });
     },
     moveTask(id: string, status: TaskStatus) {
@@ -567,11 +648,16 @@ export function createWorkspaceStore(
       write((db) => {
         const s = db.sprints.find((s) => s.id === id);
         if (s?.status !== "planned") throw new Error("Somente sprints planejadas podem iniciar.");
-        projectFor(db, s.projectId);
+        const project = projectFor(db, s.projectId);
         if (db.sprints.some((other) => other.projectId === s.projectId && other.status === "active"))
           throw new Error("Já existe uma sprint ativa neste projeto.");
         s.status = "active";
         audit(db, "sprint_start", "sprint", id, s.projectId, `iniciou a ${s.name}`);
+        queueNotifications(db, "sprint.started.v1", project.leadId, {
+          sprint: s.name,
+          projeto: project.name,
+          meta: s.goal,
+        });
       });
     },
     completeSprint(id: string) {
@@ -579,14 +665,19 @@ export function createWorkspaceStore(
       write((db) => {
         const s = db.sprints.find((s) => s.id === id);
         if (s?.status !== "active") throw new Error("Somente sprints ativas podem encerrar.");
-        projectFor(db, s.projectId);
+        const project = projectFor(db, s.projectId);
         s.status = "done";
         for (const t of db.tasks.filter((t) => t.sprintId === id && t.status !== "done")) {
           t.sprintId = null;
           t.status = "backlog";
           t.updatedAt = now().toISOString();
         }
+        const finished = db.tasks.filter((t) => t.sprintId === id && t.status === "done").length;
         audit(db, "sprint_end", "sprint", id, s.projectId, `encerrou a ${s.name}`);
+        queueNotifications(db, "sprint.completed.v1", project.leadId, {
+          sprint: s.name,
+          feitas: String(finished),
+        });
       });
     },
     createMilestone(projectId: string, input: { name: string; date: string }): Milestone | null {
@@ -617,6 +708,78 @@ export function createWorkspaceStore(
         if (fields.status !== undefined) m.status = fields.status;
         audit(db, "update", "milestone", id, m.projectId, `atualizou o marco ${m.name}`);
       });
+    },
+    setNotifPref(eventType: string, channel: NotificationChannel, enabled: boolean) {
+      if (!guard("notif.manage")) return;
+      write((db) => {
+        const preference = db.notificationPreferences[eventType];
+        if (!preference) throw new Error("Evento de notificação desconhecido.");
+        preference[channel] = enabled;
+        audit(
+          db,
+          "update",
+          "notification",
+          eventType,
+          null,
+          `alterou a preferência ${eventType} / ${channel} para ${enabled ? "ligada" : "desligada"}`,
+          { channel, enabled: !enabled },
+          { channel, enabled },
+        );
+      });
+    },
+    resendNotification(id: string) {
+      if (!guard("notif.manage")) return;
+      const delivered = write((db) => {
+        const notification = db.notifications.find((item) => item.id === id);
+        if (!notification) throw new Error("Notificação não encontrada.");
+        if (notification.status !== "failed")
+          throw new Error("Somente notificações com falha podem ser reenviadas.");
+        const provider = db.notificationProviders[notification.channel];
+        notification.attempts += 1;
+        if (provider.configured) {
+          notification.status = "delivered";
+          notification.failReason = null;
+          notification.ts = now().toISOString();
+        } else {
+          notification.failReason = `Provedor de ${
+            notification.channel === "whatsapp" ? "WhatsApp" : notification.channel.toUpperCase()
+          } não configurado`;
+        }
+        audit(
+          db,
+          "retry",
+          "notification",
+          id,
+          null,
+          `reenviou a notificação ${notification.channel} de ${notification.toUserId}`,
+        );
+        return provider.configured;
+      });
+      if (delivered === true) notify("Notificação reenviada", "Entrega concluída na demonstração.", "ok");
+      else if (delivered === false)
+        notify("Reenvio falhou", "O provedor deste canal segue não configurado.", "err");
+    },
+    setProvider(
+      channel: NotificationChannel,
+      fields: Pick<NotificationProvider, "from" | "host" | "configured">,
+    ) {
+      if (!guard("notif.manage")) return;
+      const saved = write((db) => {
+        const provider = db.notificationProviders[channel];
+        if (!fields.from.trim()) throw new Error("Informe o remetente.");
+        Object.assign(provider, {
+          from: fields.from.trim(),
+          host: fields.host.trim(),
+          configured: fields.configured,
+        });
+        audit(db, "update", "notification", channel, null, `configurou o provedor de ${channel}`);
+      });
+      if (saved === null) return;
+      notify(
+        "Provedor atualizado",
+        channel === "email" ? "E-mail" : channel === "whatsapp" ? "WhatsApp" : "SMS",
+        "ok",
+      );
     },
   };
   if (recovery)

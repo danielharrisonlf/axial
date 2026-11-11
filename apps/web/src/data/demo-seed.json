@@ -1,6 +1,6 @@
 {
   "meta": {
-    "seedVersion": 7,
+    "seedVersion": 8,
     "seededAt": "2026-11-05T10:22:55.902Z"
   },
   "settings": {
@@ -5740,5 +5740,101 @@
     "prj-web": 6,
     "prj-cma": 7,
     "prj-erp": 6
+  },
+  "notificationTemplates": [
+    {
+      "id": "nt-assigned",
+      "event": "task.assigned.v1",
+      "name": "Tarefa atribuída",
+      "subject": "[{ref}] Tarefa atribuída a você",
+      "body": "Olá {nome}, a tarefa {ref} — {titulo} foi atribuída a você no projeto {projeto}."
+    },
+    {
+      "id": "nt-due",
+      "event": "task.due_soon.v1",
+      "name": "Prazo próximo",
+      "subject": "[{ref}] Vence em breve",
+      "body": "A tarefa {ref} — {titulo} vence em {dias} dia(s)."
+    },
+    {
+      "id": "nt-mention",
+      "event": "comment.mention.v1",
+      "name": "Menção em comentário",
+      "subject": "[{ref}] Você foi mencionado",
+      "body": "{autor} mencionou você em um comentário na tarefa {ref}."
+    },
+    {
+      "id": "nt-sprint-start",
+      "event": "sprint.started.v1",
+      "name": "Sprint iniciada",
+      "subject": "Sprint {sprint} iniciada",
+      "body": "A {sprint} do projeto {projeto} começou. Meta: {meta}."
+    },
+    {
+      "id": "nt-sprint-end",
+      "event": "sprint.completed.v1",
+      "name": "Sprint concluída",
+      "subject": "Sprint {sprint} concluída",
+      "body": "A {sprint} foi encerrada com {feitas} tarefas concluídas."
+    },
+    {
+      "id": "nt-blocked",
+      "event": "task.blocked.v1",
+      "name": "Tarefa bloqueada",
+      "subject": "[{ref}] Tarefa bloqueada",
+      "body": "A tarefa {ref} está bloqueada por {bloqueio}."
+    }
+  ],
+  "notificationPreferences": {
+    "task.assigned.v1": {
+      "email": true,
+      "whatsapp": true,
+      "sms": false
+    },
+    "task.due_soon.v1": {
+      "email": true,
+      "whatsapp": false,
+      "sms": true
+    },
+    "comment.mention.v1": {
+      "email": true,
+      "whatsapp": true,
+      "sms": false
+    },
+    "sprint.started.v1": {
+      "email": true,
+      "whatsapp": false,
+      "sms": false
+    },
+    "sprint.completed.v1": {
+      "email": true,
+      "whatsapp": false,
+      "sms": false
+    },
+    "task.blocked.v1": {
+      "email": true,
+      "whatsapp": true,
+      "sms": false
+    }
+  },
+  "notificationProviders": {
+    "email": {
+      "name": "E-mail (Resend)",
+      "configured": true,
+      "from": "noreply@vetorlabs.dev",
+      "host": "api.resend.com"
+    },
+    "whatsapp": {
+      "name": "WhatsApp Cloud API (Meta)",
+      "configured": true,
+      "from": "+55 11 90000-0001",
+      "host": "graph.facebook.com"
+    },
+    "sms": {
+      "name": "SMS (SMSGo)",
+      "configured": false,
+      "from": "",
+      "host": "api.smsgo.com.br"
+    }
   }
 }

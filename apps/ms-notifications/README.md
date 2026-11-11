@@ -22,13 +22,20 @@ Porta padrão 3003 (`NOTIFICATIONS_PORT`); prefixo `/api/v1`. O serviço verific
 - `PATCH /notification-preferences/:channel`: `channel` é `email`, `sms` ou `whatsapp`; corpo exato `{ "enabled": true, "destination": "..." }`. Telefone em E.164. Padrão é desabilitado; uma preferência habilitada demonstra a escolha do usuário, mas não verifica posse do destino. Alterar o endereço ou desabilitar invalida a verificação.
 - `POST /notification-preferences/:channel/verification`: solicita código ao contato ativo; resposta `requested` é neutra e não comprova envio. Canal sem configuração retorna 503.
 - `POST /notification-preferences/:channel/verification/confirm`: recebe `{ "code": "123456" }` e devolve `verified`. Consulte `GET /notification-preferences` para o estado atual.
-- `GET /notifications`: até 100 entregas próprias recentes e respectivos estados.
+- `GET /notification-templates`: catálogo dos eventos `task.*` com nome e textos genéricos enviados. Não inclui dados de projeto.
+- `GET /notification-event-preferences`: matriz evento × canal do próprio usuário. A ausência de linha significa habilitado.
+- `PATCH /notification-event-preferences/:event/:channel`: corpo exato `{ "enabled": true|false }`; evento fora do catálogo retorna 400. A preferência é aplicada no consumo e novamente imediatamente antes do envio.
+- `GET /notification-providers`: estado de configuração por canal e se a verificação de destino está habilitada. `configured` exige configuração completa e o interruptor de envio ativo. Não retorna credenciais nem destinos.
+- `GET /notifications`: até 100 entregas próprias recentes, com tipo do evento e estado.
+- `GET /notifications/:id`: detalhe de uma entrega própria; entregas de outro usuário ou organização retornam 404.
 - `POST /notifications/:id/retry`: antecipa tentativa própria pendente/falha; não reinicia envio em andamento, aceito ou com resultado desconhecido.
-- `GET /health/live`: verifica o processo. `GET /health/ready`: verifica a migração do banco, se o worker está ativo e a conexão com o Redis por ping com prazo limitado; não valida o provedor.
+- `GET /health/live`: verifica o processo. `GET /health/ready`: verifica a migration 004, se o worker está ativo e a conexão com o Redis por ping com prazo limitado; não valida o provedor.
 
 ## Eventos e provedores
 
 Valida envelope v1 do outbox. Para eventos `task.*`, exceto `task.deleted`, apenas `data.after.assigneeId` UUID é elegível. Eventos sem responsável ou sem preferência ativa são registrados sem criar entrega; habilitar uma preferência depois não retroage. Outros tipos são registrados, mas não geram entregas. O evento armazenado retém apenas ID, organização e tipo, não os dados completos.
+
+Preferências por evento são opcionais e nascem habilitadas: uma linha desabilitada em `notifications.event_preferences` impede a criação da entrega daquele evento/canal e é conferida novamente antes da chamada externa. A migration 004 adiciona a tabela sem alterar envios existentes.
 
 Para provedores diretos, configure cada canal independentemente: `RESEND_API_KEY` e `RESEND_FROM` para email; `SMSGO_API_KEY` e `SMSGO_SMS_TYPE_ID` para SMS; `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_TEMPLATE_NAME`, `META_LANGUAGE_CODE` e `META_GRAPH_VERSION` para WhatsApp. O tipo de SMS deve ser um ID positivo adequado ao uso transacional, obtido no catálogo da conta SMSGo; não é inferido automaticamente. O remetente Resend precisa de domínio autorizado; o template Meta deve estar aprovado e não ter parâmetros. Dados secretos devem vir do gerenciador de segredos do ambiente, nunca do Git. Canais sem configuração permanecem pendentes. As mensagens usam texto genérico sem dados privados de projeto.
 
@@ -49,4 +56,4 @@ $env:TEST_REDIS_URL = 'redis://localhost:6389/14'
 pnpm --filter @axial/ms-notifications test:integration
 ```
 
-O teste requer URL de banco terminado em `_test`, permissão PostgreSQL `CREATEDB` e banco lógico Redis não zero dedicado. Cria um banco temporário exclusivo terminado em `_test`, aguarda o fechamento das conexões e o remove; não usa `FLUSHDB` e remove apenas os próprios jobs Redis. Confere consumo BullMQ, deduplicação, preferências, isolamento por usuário e organização, retry, confirmação de aceite, minimização do payload, autenticação JWT HTTP e readiness com Redis indisponível. Não prova entrega externa.
+O teste requer URL de banco terminado em `_test`, permissão PostgreSQL `CREATEDB` e banco lógico Redis não zero dedicado. Cria um banco temporário exclusivo terminado em `_test`, aguarda o fechamento das conexões e o remove; não usa `FLUSHDB` e remove apenas os próprios jobs Redis. Confere consumo BullMQ, deduplicação, preferências por canal e por evento, isolamento por usuário e organização, retry, confirmação de aceite, minimização do payload, catálogo e estado dos provedores, autenticação JWT HTTP e readiness com Redis indisponível. Não prova entrega externa.
