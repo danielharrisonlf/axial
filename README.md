@@ -64,6 +64,8 @@ O seed cria dados fictícios em uma organização de demonstração e preserva r
 
 Para abrir somente a interface, sem dependência de Docker ou da API: `pnpm dev:web`. Para iniciar somente o backend: `pnpm dev:api`. O comando `pnpm dev` inicia Workspace e Insights. Serviços adicionais têm atalhos próprios: `pnpm dev:gateway`, `pnpm dev:mcp`, `pnpm dev:audit` e `pnpm dev:insights`.
 
+Em um clone novo, `pnpm dev` e os atalhos `dev:*` compilam `packages/contracts` antes de iniciar: o pacote é consumido por `dist/index.js` e ainda não existe logo após o `pnpm install`. Se você rodar o script `dev` de um app diretamente, sem passar pelo Turbo, execute `pnpm --filter @axial/contracts build` uma vez. Durante o `pnpm dev`, o aviso `[Module Federation DTS] Failed to download types archive` pode aparecer enquanto o remote de Insights inicia; é apenas a geração de tipos do Module Federation e não impede a aplicação.
+
 O login do Workspace usa o endpoint de compatibilidade `POST /api/v1/auth/login`, que troca credenciais BetterAuth pelo JWT RS256 curto consumido por ms-projects, ms-notifications, ms-realtime, ms-audit e mcp-server.
 
 ### Workspace e fidelidade ao protótipo
