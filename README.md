@@ -132,11 +132,11 @@ pnpm perf:demo
 
 Abre o **painel de desempenho** em `http://127.0.0.1:4900` (sobe a stack com `perf:stack` se ela não estiver no ar; requer `pnpm build` e banco migrado/populado). O painel é local, não depende de serviço externo e tem cinco abas:
 
-- **Teste de carga ao vivo**: escolha o endpoint, as conexões e a duração; o autocannon roda no servidor do painel e os gráficos de vazão e de latência p50/p95/p99 se atualizam a cada segundo. Os cartões mostram, ao mesmo tempo, o que o gateway e o ms-projects registram nas próprias métricas (vazão, p95, CPU, uso e atraso do event loop, heap);
-- **Gargalo: gateway A/B**: sobe um segundo gateway na porta 3100 com `GATEWAY_UPSTREAM_KEEPALIVE=false` e roda a mesma carga nos dois, reproduzindo ao vivo o gargalo corrigido (conexão TCP por requisição);
-- **Antes × depois**: gráficos e tabela de `docs/performance/resultados.json`;
-- **Front-end**: scores do Lighthouse, Web Vitals e bundle, com botão para rodar o Lighthouse na hora;
-- **Observabilidade**: saída Prometheus ao vivo, rotas mais acessadas e estado do NestJS Observe.
+- **Teste de carga**: escolhe o endpoint, os usuários simultâneos e a duração; o autocannon roda no servidor do painel e os gráficos de pedidos por segundo e de tempo de resposta (p50/p99) se atualizam a cada segundo. Abaixo, uma tabela mostra o que o gateway e o ms-projects registram nas próprias métricas (pedidos/s, p95, CPU, event loop e memória);
+- **Gateway: antes × depois**: sobe um segundo gateway na porta 3100 com `GATEWAY_UPSTREAM_KEEPALIVE=false` e roda a mesma carga nas duas versões, reproduzindo ao vivo o gargalo corrigido (uma conexão TCP por pedido);
+- **Resultados registrados**: a comparação de `docs/performance/resultados.json`;
+- **Front-end**: notas do Lighthouse e tamanho da página, com botão para rodar o Lighthouse na hora;
+- **Métricas dos serviços**: rotas mais acessadas, saída Prometheus e estado do NestJS Observe.
 
 `PERF_DEMO_PORT` troca a porta, e `PERF_DEMO_NO_OPEN=1` não abre o navegador. `Ctrl+C` fecha o painel; a stack continua no ar até `pnpm perf:stop`.
 
