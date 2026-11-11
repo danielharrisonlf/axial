@@ -30,6 +30,7 @@ apps/
     tests/                  # aceitação no navegador com Playwright
 packages/
   contracts/                # esquemas de entrada, tipos e eventos compartilhados
+  observability/            # métricas HTTP/runtime (/api/v1/metrics, Prometheus)
 docs/                       # arquitetura, contratos e relatório
 scripts/                    # emissor de identidade exclusivamente local
 ```
@@ -64,7 +65,7 @@ O seed cria dados fictícios em uma organização de demonstração e preserva r
 
 Para abrir somente a interface, sem dependência de Docker ou da API: `pnpm dev:web`. Para iniciar somente o backend: `pnpm dev:api`. O comando `pnpm dev` inicia Workspace e Insights. Serviços adicionais têm atalhos próprios: `pnpm dev:gateway`, `pnpm dev:mcp`, `pnpm dev:audit` e `pnpm dev:insights`.
 
-Em um clone novo, `pnpm dev` e os atalhos `dev:*` compilam `packages/contracts` antes de iniciar: o pacote é consumido por `dist/index.js` e ainda não existe logo após o `pnpm install`. Se você rodar o script `dev` de um app diretamente, sem passar pelo Turbo, execute `pnpm --filter @axial/contracts build` uma vez. Durante o `pnpm dev`, o aviso `[Module Federation DTS] Failed to download types archive` pode aparecer enquanto o remote de Insights inicia; é apenas a geração de tipos do Module Federation e não impede a aplicação.
+Em um clone novo, `pnpm dev` e os atalhos `dev:*` compilam os pacotes internos (`packages/contracts` e `packages/observability`) antes de iniciar: eles são consumidos por `dist/index.js`, que ainda não existe logo após o `pnpm install`. Se você rodar o script `dev` de um app diretamente, sem passar pelo Turbo, e aparecer `ERR_MODULE_NOT_FOUND ... @axial/contracts/dist/index.js`, execute `pnpm --filter "./packages/*" build` uma vez. Durante o `pnpm dev`, o aviso `[Module Federation DTS] Failed to download types archive` pode aparecer enquanto o remote de Insights inicia; é apenas a geração de tipos do Module Federation e não impede a aplicação.
 
 O login do Workspace usa o endpoint de compatibilidade `POST /api/v1/auth/login`, que troca credenciais BetterAuth pelo JWT RS256 curto consumido por ms-projects, ms-notifications, ms-realtime, ms-audit e mcp-server.
 
@@ -123,6 +124,28 @@ Os testes de integração/HTTP recusam bancos cujo nome não termine em `_test`.
 
 A camada de análise de desempenho cobre Lighthouse, DevTools/Web Vitals, carga das APIs com autocannon e consolidação de evidências. Dependências fixadas na raiz: `autocannon@9.0.0` e `lighthouse@13.6.0`.
 
+### Demonstração ao vivo
+
+```powershell
+pnpm perf:demo
+```
+
+Abre o **painel de desempenho** em `http://127.0.0.1:4900` (sobe a stack com `perf:stack` se ela não estiver no ar; requer `pnpm build` e banco migrado/populado). O painel é local, não depende de serviço externo e tem cinco abas:
+
+- **Teste de carga ao vivo**: escolha o endpoint, as conexões e a duração; o autocannon roda no servidor do painel e os gráficos de vazão e de latência p50/p95/p99 se atualizam a cada segundo. Os cartões mostram, ao mesmo tempo, o que o gateway e o ms-projects registram nas próprias métricas (vazão, p95, CPU, uso e atraso do event loop, heap);
+- **Gargalo: gateway A/B**: sobe um segundo gateway na porta 3100 com `GATEWAY_UPSTREAM_KEEPALIVE=false` e roda a mesma carga nos dois, reproduzindo ao vivo o gargalo corrigido (conexão TCP por requisição);
+- **Antes × depois**: gráficos e tabela de `docs/performance/resultados.json`;
+- **Front-end**: scores do Lighthouse, Web Vitals e bundle, com botão para rodar o Lighthouse na hora;
+- **Observabilidade**: saída Prometheus ao vivo, rotas mais acessadas e estado do NestJS Observe.
+
+`PERF_DEMO_PORT` troca a porta, e `PERF_DEMO_NO_OPEN=1` não abre o navegador. `Ctrl+C` fecha o painel; a stack continua no ar até `pnpm perf:stop`.
+
+### Observabilidade
+
+- **Métricas nativas** (`packages/observability`): gateway e ms-projects expõem `GET /api/v1/metrics` (JSON com p50/p95/p99, vazão, taxa de erro, rotas, CPU, heap e event loop) e `GET /api/v1/metrics/prometheus`. Com `NODE_ENV=production`, os endpoints só respondem se `METRICS_TOKEN` estiver definido, e exigem `Authorization: Bearer <token>`.
+- **Logs estruturados**: um log JSON por requisição no ms-projects, com `durationMs` e `x-correlation-id`.
+- **NestJS Observe** (`@nestjs/observe`, SDK oficial do NestJS 12): integrado ao ms-projects e **desligado por padrão**. Liga quando `OBSERVE_APP_KEY` e `OBSERVE_APP_SECRET` estão no `.env` (conta gratuita em observe.nestjs.com, até 300 mil eventos por mês). Os traces vão para o painel hospedado deles; não há painel local.
+
 ### Um comando
 
 ```powershell
@@ -158,6 +181,7 @@ Variáveis úteis:
 | `pnpm perf:lighthouse` | Roda Lighthouse desktop/mobile e copia as evidências |
 | `pnpm perf:report` | Consolida `docs/performance/resultados.json` |
 | `pnpm perf:stop` | Encerra os processos iniciados (e libera as portas) |
+| `pnpm perf:demo` | Painel local de desempenho ao vivo (porta 4900) |
 
 ### Saídas
 

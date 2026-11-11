@@ -52,7 +52,8 @@
     "perf:load": "node scripts/performance/run.mjs load",
     "perf:web": "node scripts/performance/run.mjs web",
     "perf:lighthouse": "node scripts/performance/run.mjs lighthouse",
-    "perf:report": "node scripts/performance/run.mjs report"
+    "perf:report": "node scripts/performance/run.mjs report",
+    "perf:demo": "node scripts/performance/demo.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

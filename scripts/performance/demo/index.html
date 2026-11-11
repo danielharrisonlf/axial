@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Axial · Desempenho ao vivo</title>
+<style>
+:root {
+  --bg: #f2f4f7; --panel: #ffffff; --ink: #1c2127; --muted: #55606e; --subtle: #8b93a1;
+  --line: #d8dee6; --line-soft: #e8ecf1; --accent: #2b5fd9; --accent-soft: #e8eefc;
+  --good: #1d7a4c; --good-soft: #e3f3ea; --bad: #be3030; --bad-soft: #fbe9e9; --warn: #a86400; --warn-soft: #fdf1dc;
+  --p50: #2b5fd9; --p95: #a86400; --p99: #be3030; --before: #9aa4b2;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161c; --panel: #1a2029; --ink: #e8ecf2; --muted: #a3adbb; --subtle: #7d8796;
+    --line: #2c3542; --line-soft: #232b36; --accent: #6b93f5; --accent-soft: #1f2b45;
+    --good: #4cc38a; --good-soft: #17322a; --bad: #f07272; --bad-soft: #3a1d20; --warn: #e5a54a; --warn-soft: #3a2c16;
+    --p50: #6b93f5; --p95: #e5a54a; --p99: #f07272; --before: #6c7686; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161c; --panel: #1a2029; --ink: #e8ecf2; --muted: #a3adbb; --subtle: #7d8796;
+  --line: #2c3542; --line-soft: #232b36; --accent: #6b93f5; --accent-soft: #1f2b45;
+  --good: #4cc38a; --good-soft: #17322a; --bad: #f07272; --bad-soft: #3a1d20; --warn: #e5a54a; --warn-soft: #3a2c16;
+  --p50: #6b93f5; --p95: #e5a54a; --p99: #f07272; --before: #6c7686; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); }
+.num, .kpi b, td.n, th.n { font-variant-numeric: tabular-nums; }
+header { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.bar { max-width: 1320px; margin: 0 auto; padding: 12px 24px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; }
+.brand b { font-size: 15px; display: block; }
+.brand span { color: var(--muted); font-size: 12px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.chip { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); display: inline-flex; gap: 6px; align-items: center; background: var(--panel); }
+.chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--subtle); }
+.tabs { max-width: 1320px; margin: 0 auto; padding: 0 24px; display: flex; gap: 4px; overflow-x: auto; }
+.tabs button { border: 0; background: none; color: var(--muted); font: 500 13.5px var(--sans); padding: 10px 12px; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+main { max-width: 1320px; margin: 0 auto; padding: 20px 24px 60px; }
+h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 14px; margin: 0; }
+.lead { color: var(--muted); margin: 0 0 18px; max-width: 860px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.panel-head { padding: 12px 16px; border-bottom: 1px solid var(--line-soft); display: flex; align-items: center; gap: 10px; }
+.panel-head .spacer { flex: 1; }
+.panel-body { padding: 14px 16px; }
+.grid { display: grid; gap: 14px; }
+.live-layout { grid-template-columns: 320px 1fr; align-items: start; }
+.c2 { grid-template-columns: 1fr 1fr; } .c3 { grid-template-columns: repeat(3, 1fr); } .c4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 1000px) { .live-layout, .c2, .c3, .c4 { grid-template-columns: 1fr; } }
+.scenario { display: block; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; margin-bottom: 7px; cursor: pointer; }
+.scenario:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.scenario input { margin: 0 6px 0 0; accent-color: var(--accent); }
+.scenario b { font-size: 12.5px; }
+.scenario span { display: block; color: var(--muted); font-size: 11.5px; margin: 2px 0 0 20px; }
+label.field { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 4px; }
+.field-row { display: flex; align-items: center; gap: 10px; }
+.field-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+.field-row output { font: 600 13px var(--mono); min-width: 54px; text-align: right; color: var(--ink); }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 600 13px var(--sans); border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+.btn:hover { border-color: var(--subtle); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { filter: brightness(1.07); border-color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.btn-row .btn { flex: 1; }
+.kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+@media (max-width: 1000px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; }
+.kpi span { color: var(--muted); font-size: 11.5px; display: block; }
+.kpi b { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; display: block; line-height: 1.2; margin-top: 2px; }
+.kpi small { color: var(--subtle); font-size: 11px; }
+.chart { width: 100%; height: 220px; display: block; }
+.legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+.status { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 8px; min-height: 20px; }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--subtle); }
+.status.running .dot { background: var(--good); animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .status.running .dot { animation: none; } }
+.svc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 14px; }
+.spark { width: 100%; height: 46px; display: block; margin-top: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line-soft); }
+th { color: var(--subtle); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+td.n, th.n { text-align: right; }
+.empty { color: var(--subtle); font-size: 12.5px; padding: 18px 0; text-align: center; }
+.tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--line-soft); color: var(--muted); }
+.tag.good { background: var(--good-soft); color: var(--good); } .tag.bad { background: var(--bad-soft); color: var(--bad); }
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.verdict { border-radius: 10px; padding: 14px 16px; background: var(--good-soft); color: var(--good); font-weight: 600; display: none; }
+.verdict.show { display: block; }
+.verdict span { display: block; font-weight: 500; color: var(--ink); opacity: .85; font-size: 12.5px; margin-top: 4px; }
+.ab-card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.ab-card.before { border-top: 3px solid var(--before); } .ab-card.after { border-top: 3px solid var(--good); }
+.ab-card h3 { font-size: 13px; margin: 0 0 10px; }
+.hbars .row { display: grid; grid-template-columns: 230px 1fr; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.hbars .row:last-child { border-bottom: 0; }
+.hbars .label { font-size: 12.5px; color: var(--muted); }
+.track { display: flex; align-items: center; gap: 8px; }
+.track + .track { margin-top: 3px; }
+.track .fill { height: 12px; border-radius: 3px; min-width: 2px; }
+.track b { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+@media (max-width: 700px) { .hbars .row { grid-template-columns: 1fr; } }
+.score { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.ring { width: 86px; height: 86px; }
+.score b { font-size: 12.5px; }
+.score span { font-size: 11.5px; color: var(--muted); }
+pre.code { background: var(--bg); border: 1px solid var(--line-soft); border-radius: 8px; padding: 12px; font: 11.5px/1.5 var(--mono); overflow: auto; max-height: 340px; margin: 0; white-space: pre; }
+code { font-family: var(--mono); font-size: 12px; background: var(--line-soft); padding: 1px 5px; border-radius: 4px; }
+.steps { margin: 0; padding-left: 18px; color: var(--muted); }
+.steps li { margin-bottom: 6px; }
+.steps b { color: var(--ink); }
+a { color: var(--accent); }
+.toast { position: fixed; right: 20px; bottom: 20px; background: var(--ink); color: var(--panel); padding: 10px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transform: translateY(8px); transition: .2s; pointer-events: none; max-width: 420px; }
+.toast.show { opacity: 1; transform: none; }
+.gap { height: 14px; }
+.note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+/* Seletores mais específicos ficam no fim (ordem crescente de especificidade). */
+.chip.ok i { background: var(--good); } .chip.down i { background: var(--bad); }
+.svc div span { color: var(--muted); font-size: 11px; display: block; }
+.svc div b { font: 600 17px var(--sans); font-variant-numeric: tabular-nums; }
+.svc div b small { font-size: 11px; color: var(--subtle); font-weight: 500; }
+.kpi.p50 b { color: var(--p50); } .kpi.p95 b { color: var(--p95); } .kpi.p99 b { color: var(--p99); }
+.ab-card .svc div b { font-size: 20px; }
+.kpi.err b.bad { color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><div class="logo" aria-hidden="true">A</div><div><b>Axial · Desempenho ao vivo</b><span>2ª entrega — análise de desempenho</span></div></div>
+    <div class="chips" id="health" title="Saúde dos serviços"></div>
+    <button class="btn" id="theme" type="button" aria-label="Alternar tema" style="padding:6px 10px">◐</button>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Seções do painel">
+    <button type="button" role="tab" aria-selected="true" data-tab="live">Teste de carga ao vivo</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="ab">Gargalo: gateway A/B</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="results">Antes × depois</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="front">Front-end</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="obs">Observabilidade</button>
+  </div>
+</header>
+<main>
+  <!-- ============================================================ AO VIVO -->
+  <section data-panel="live">
+    <h1>Teste de carga ao vivo</h1>
+    <p class="lead">Escolha um endpoint e dispare carga real com o <code>autocannon</code>. Os gráficos mostram o que o <b>cliente</b> mede (latência ponta a ponta). Os cartões abaixo mostram o que os <b>próprios serviços NestJS</b> registram em <code>/api/v1/metrics</code>: vazão, p95, CPU e event loop. Conexões cortadas no fim do teste aparecem no servidor como status 499.</p>
+    <div class="grid live-layout">
+      <div class="panel">
+        <div class="panel-head"><h2>Cenário</h2></div>
+        <div class="panel-body">
+          <div id="scenarios"></div>
+          <label class="field" for="conn">Conexões simultâneas</label>
+          <div class="field-row"><input type="range" id="conn" min="1" max="200" value="50" /><output id="connOut" class="num">50</output></div>
+          <label class="field" for="dur">Duração</label>
+          <div class="field-row"><input type="range" id="dur" min="5" max="30" value="10" /><output id="durOut" class="num">10 s</output></div>
+          <div class="btn-row"><button class="btn btn-primary" id="start" type="button">Iniciar teste</button><button class="btn" id="stop" type="button" disabled>Parar</button></div>
+          <p class="note" id="target"></p>
+        </div>
+      </div>
+      <div class="grid" style="gap:14px">
+        <div class="kpis">
+          <div class="kpi"><span>Vazão (último s)</span><b id="kRps">—</b><small>req/s</small></div>
+          <div class="kpi p50"><span>Latência p50</span><b id="kP50">—</b><small>ms</small></div>
+          <div class="kpi p95"><span id="kP95Label">Latência p95</span><b id="kP95">—</b><small>ms</small></div>
+          <div class="kpi p99"><span>Latência p99</span><b id="kP99">—</b><small>ms</small></div>
+          <div class="kpi err"><span>Erros / não-2xx</span><b id="kErr">—</b><small>acumulado</small></div>
+          <div class="kpi"><span>Requisições</span><b id="kTotal">—</b><small>no teste</small></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Vazão por segundo</h2><span class="spacer"></span><div class="status" id="status"><span class="dot"></span><span id="statusText">Pronto</span></div></div>
+          <div class="panel-body"><canvas class="chart" id="cRps"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Latência por segundo (cliente)</h2><span class="spacer"></span>
+            <div class="legend"><span><i style="background:var(--p50)"></i>p50</span><span><i style="background:var(--p95)"></i>p95</span><span><i style="background:var(--p99)"></i>p99</span></div></div>
+          <div class="panel-body"><canvas class="chart" id="cLat"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="gap"></div>
+    <div class="grid c2" id="services"></div>
+    <div class="gap"></div>
+    <div class="panel">
+      <div class="panel-head"><h2>Execuções desta sessão</h2><span class="spacer"></span><span class="tag">compare cenários e níveis de carga</span></div>
+      <div class="panel-body" style="padding-top:4px">
+        <table><thead><tr><th>Hora</th><th>Cenário</th><th class="n">Conexões</th><th class="n">req/s</th><th class="n">p50 (ms)</th><th class="n">p90 (ms)</th><th class="n">p99 (ms)</th><th class="n">Erros</th><th class="n">Total</th></tr></thead><tbody id="history"></tbody></table>
+        <div class="empty" id="historyEmpty">Nenhum teste executado ainda.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ A/B -->
+  <section data-panel="ab" hidden>
+    <h1>Gargalo encontrado: conexão TCP por requisição no gateway</h1>
+    <p class="lead">O <code>http-proxy</code> usa <code>agent: false</code> por padrão: cada requisição proxiada abre e fecha uma conexão TCP com o microsserviço. Sob carga, isso gera handshakes, portas em <i>TIME_WAIT</i>, filas e erros. A correção foi um pool <code>keep-alive</code> compartilhado. Este teste sobe uma segunda instância do gateway <b>sem</b> keep-alive (porta 3100) e roda a mesma carga nas duas, com o mesmo código e na mesma máquina.</p>
+    <div class="grid" style="grid-template-columns: 1fr auto; align-items:center; margin-bottom:14px">
+      <div class="status" id="abStatus"><span class="dot"></span><span id="abStatusText">Pronto: GET /projects via gateway, 50 conexões, 10 s por lado.</span></div>
+      <button class="btn btn-primary" id="abStart" type="button">Rodar A/B (≈ 25 s)</button>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Latência p50 por segundo</h2><span class="spacer"></span>
+        <div class="legend"><span><i style="background:var(--before)"></i>sem keep-alive (antes)</span><span><i style="background:var(--good)"></i>com keep-alive (depois)</span></div></div>
+      <div class="panel-body"><canvas class="chart" id="cAb"></canvas></div>
+    </div>
+    <div class="gap"></div>
+    <div class="compare">
+      <div class="ab-card before"><h3>Sem keep-alive (antes)</h3><div class="svc" id="abBefore"></div></div>
+      <div class="ab-card after"><h3>Com keep-alive (depois)</h3><div class="svc" id="abAfter"></div></div>
+    </div>
+    <div class="gap"></div>
+    <div class="verdict" id="abVerdict"></div>
+    <p class="note">Medição registrada no relatório (mesmo cenário): sem keep-alive, 1.309 req/s, p50 1.922 ms e 35 erros. Com keep-alive, 1.755 req/s, p50 27 ms e 0 erros.</p>
+  </section>
+
+  <!-- ============================================================ ANTES x DEPOIS -->
+  <section data-panel="results" hidden>
+    <h1>Antes × depois das correções</h1>
+    <p class="lead" id="resultsLead">Coleta comparativa registrada em <code>docs/performance/resultados.json</code>, com os mesmos cenários antes e depois das melhorias.</p>
+    <div class="grid c2">
+      <div class="panel"><div class="panel-head"><h2>Vazão (req/s): maior é melhor</h2></div><div class="panel-body hbars" id="barsRps"></div></div>
+      <div class="panel"><div class="panel-head"><h2>Latência p99 (ms): menor é melhor</h2></div><div class="panel-body hbars" id="barsP99"></div></div>
+    </div>
+    <div class="legend" style="margin:10px 2px 14px"><span><i style="background:var(--before)"></i>antes</span><span><i style="background:var(--accent)"></i>depois</span></div>
+    <div class="panel">
+      <div class="panel-head"><h2>Tabela completa</h2></div>
+      <div class="panel-body" style="padding-top:4px"><table><thead><tr><th>Cenário</th><th class="n">req/s antes</th><th class="n">req/s depois</th><th class="n">p50 antes</th><th class="n">p50 depois</th><th class="n">p99 antes</th><th class="n">p99 depois</th><th class="n">Erros</th></tr></thead><tbody id="resultsTable"></tbody></table></div>
+    </div>
+    <div class="gap"></div>
+    <div class="grid c3">
+      <div class="panel"><div class="panel-head"><h2>Correções aplicadas</h2></div><div class="panel-body"><ol class="steps">
+        <li><b>Gateway:</b> pool keep-alive compartilhado com os upstreams.</li>
+        <li><b>APIs:</b> gzip acima de 1 KB (auditoria −79%, tarefas −65%).</li>
+        <li><b>Web:</b> fontes self-hosted com <code>font-display: optional</code>.</li>
+        <li><b>Web:</b> code splitting por rota e remote do Insights sob demanda.</li>
+      </ol></div></div>
+      <div class="panel"><div class="panel-head"><h2>Compressão de payload</h2></div><div class="panel-body" id="payloads"></div></div>
+      <div class="panel"><div class="panel-head"><h2>Gargalos remanescentes</h2></div><div class="panel-body"><ol class="steps">
+        <li><b>Gateway</b> limita a vazão dos proxiados (~1,7–2,4k req/s). Próximo passo: cluster ou HTTP/2.</li>
+        <li><b>Login</b> é CPU-bound (scrypt, p50 ~69 ms) e tem rate limit de 20/min por IP, por segurança.</li>
+        <li><b>Cache</b> de <code>/assets/*</code> com <code>immutable</code> em produção.</li>
+      </ol></div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ FRONT -->
+  <section data-panel="front" hidden>
+    <h1>Front-end: Lighthouse e Web Vitals</h1>
+    <p class="lead">Scores registrados antes e depois das correções, e execução do Lighthouse ao vivo contra o build de produção do Workspace (<code>vite preview</code> na porta 4173).</p>
+    <div class="grid c2">
+      <div class="panel"><div class="panel-head"><h2>Desktop</h2><span class="spacer"></span><a href="/evidencias/lighthouse-desktop.report.html" target="_blank" rel="noopener">relatório completo</a></div><div class="panel-body"><div class="grid c4" id="lhDesktop"></div><div class="note" id="lhDesktopMeta"></div></div></div>
+      <div class="panel"><div class="panel-head"><h2>Mobile</h2><span class="spacer"></span><a href="/evidencias/lighthouse-mobile.report.html" target="_blank" rel="noopener">relatório completo</a></div><div class="panel-body"><div class="grid c4" id="lhMobile"></div><div class="note" id="lhMobileMeta"></div></div></div>
+    </div>
+    <div class="gap"></div>
+    <div class="panel">
+      <div class="panel-head"><h2>Rodar Lighthouse agora</h2><span class="spacer"></span><button class="btn" data-lh="desktop" type="button">Desktop</button><button class="btn" data-lh="mobile" type="button">Mobile</button></div>
+      <div class="panel-body"><div class="status" id="lhStatus"><span class="dot"></span><span id="lhStatusText">Leva de 20 a 40 s. O modo mobile simula CPU 4× mais lenta e rede 4G, e varia entre execuções (o relatório usa a mediana de 5).</span></div><div id="lhLive" class="grid c4" style="margin-top:12px"></div></div>
+    </div>
+    <div class="gap"></div>
+    <div class="grid c2">
+      <div class="panel"><div class="panel-head"><h2>Lighthouse: antes × depois</h2></div><div class="panel-body" style="padding-top:4px"><table><thead><tr><th>Perfil</th><th class="n">Score</th><th class="n">LCP</th><th class="n">TBT</th><th class="n">Speed Index</th><th class="n">Peso</th></tr></thead><tbody id="lhTable"></tbody></table></div></div>
+      <div class="panel"><div class="panel-head"><h2>Bundle e Web Vitals (DevTools)</h2></div><div class="panel-body" style="padding-top:4px"><table><thead><tr><th>Métrica</th><th class="n">Antes</th><th class="n">Depois</th></tr></thead><tbody>
+        <tr><td>JavaScript principal</td><td class="n">500,2 KB</td><td class="n">236,2 KB</td></tr>
+        <tr><td>JavaScript principal (gzip)</td><td class="n">133,9 KB</td><td class="n">71,8 KB</td></tr>
+        <tr><td>Peso total da página</td><td class="n">1.159 KiB</td><td class="n">287 KiB</td></tr>
+        <tr><td>DOMContentLoaded (desktop)</td><td class="n">~3,2 s</td><td class="n">~34 ms</td></tr>
+        <tr><td>Remote do Insights no boot</td><td class="n">+168 KB</td><td class="n">sob demanda</td></tr>
+        <tr><td>CLS</td><td class="n">0</td><td class="n">0</td></tr>
+      </tbody></table></div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ OBSERVABILIDADE -->
+  <section data-panel="obs" hidden>
+    <h1>Observabilidade dos serviços NestJS</h1>
+    <p class="lead">Três camadas, todas ativas na demonstração. As duas primeiras são locais e não dependem de serviço externo.</p>
+    <div class="grid c3">
+      <div class="panel"><div class="panel-head"><h2>1 · Métricas nativas</h2><span class="spacer"></span><span class="tag good">local</span></div><div class="panel-body">
+        <p style="margin-top:0">O pacote <code>@axial/observability</code> é registrado como middleware no gateway e no ms-projects. Ele mede cada requisição em um histograma fixo (O(1), memória constante) e expõe:</p>
+        <ul class="steps"><li><code>GET /api/v1/metrics</code>: JSON com p50/p95/p99, vazão, taxa de erro, rotas, CPU, heap e atraso do event loop</li><li><code>GET /api/v1/metrics/prometheus</code>: formato Prometheus, pronto para Grafana</li></ul>
+        <p class="note">Em produção, o endpoint só responde com <code>METRICS_TOKEN</code>.</p>
+      </div></div>
+      <div class="panel"><div class="panel-head"><h2>2 · Logs estruturados</h2><span class="spacer"></span><span class="tag good">local</span></div><div class="panel-body">
+        <p style="margin-top:0">O ms-projects grava um log JSON por requisição (<code>http_request</code>) com método, rota, status, <code>durationMs</code> e <code>x-correlation-id</code>. O mesmo id volta no header da resposta, o que permite seguir uma requisição lenta do gateway até o serviço.</p>
+      </div></div>
+      <div class="panel"><div class="panel-head"><h2>3 · NestJS Observe</h2><span class="spacer"></span><span class="tag" id="observeTag">—</span></div><div class="panel-body">
+        <p style="margin-top:0">SDK oficial de APM lançado com o NestJS 12 (<code>@nestjs/observe</code>), já integrado ao ms-projects. Gera traces por classe e método (guard → controller → service → query <code>pg</code>), erros agrupados e SLOs, em painel hospedado em <a href="https://observe.nestjs.com" target="_blank" rel="noopener">observe.nestjs.com</a>.</p>
+        <p class="note">Desligado por padrão. Para ligar: crie uma conta grátis, defina <code>OBSERVE_APP_KEY</code> e <code>OBSERVE_APP_SECRET</code> no <code>.env</code> e reinicie o ms-projects. Painel de exemplo, sem cadastro: <a href="https://www.observe-demo.nestjs.com/dashboard" target="_blank" rel="noopener">observe-demo.nestjs.com</a>.</p>
+      </div></div>
+    </div>
+    <div class="gap"></div>
+    <div class="panel">
+      <div class="panel-head"><h2>Saída Prometheus (ao vivo)</h2><span class="spacer"></span><button class="btn" data-prom="gateway" type="button">Gateway</button><button class="btn" data-prom="api" type="button">ms-projects</button></div>
+      <div class="panel-body"><pre class="code" id="prom">Clique em um serviço para carregar.</pre></div>
+    </div>
+    <div class="gap"></div>
+    <div class="panel">
+      <div class="panel-head"><h2>Rotas mais acessadas (medição do servidor)</h2></div>
+      <div class="panel-body" style="padding-top:4px"><table><thead><tr><th>Serviço</th><th>Rota</th><th class="n">Requisições</th><th class="n">Média (ms)</th><th class="n">p95 (ms)</th><th class="n">p99 (ms)</th><th class="n">Erros 5xx</th></tr></thead><tbody id="routes"></tbody></table></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (n, d = 0) => (n == null || Number.isNaN(n) ? "—" : Number(n).toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: 0 }));
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function toast(message) { const el = $("toast"); el.textContent = message; el.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("show"), 4000); }
+
+// ---------------------------------------------------------------- tema
+try { const saved = localStorage.getItem("perf-theme"); if (saved) document.documentElement.dataset.theme = saved; } catch {}
+$("theme").onclick = () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("perf-theme", document.documentElement.dataset.theme); } catch {}
+  redrawAll();
+};
+
+// ---------------------------------------------------------------- abas
+for (const button of document.querySelectorAll(".tabs button")) button.addEventListener("click", () => {
+  for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b === button));
+  for (const section of document.querySelectorAll("section[data-panel]")) section.hidden = section.dataset.panel !== button.dataset.tab;
+  try { localStorage.setItem("perf-tab", button.dataset.tab); } catch {}
+  redrawAll();
+});
+
+// ---------------------------------------------------------------- gráfico de linhas (canvas)
+function lineChart(canvas, lines, { maxX = 30, unit = "", minY = 0 } = {}) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w) return;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const g = canvas.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+  const pad = { l: 52, r: 12, t: 10, b: 24 };
+  const values = lines.flatMap((l) => l.values);
+  const n = Math.max(maxX, ...lines.map((l) => l.values.length));
+  let max = Math.max(minY, ...values, 1);
+  const pow = 10 ** Math.floor(Math.log10(max)); max = Math.ceil(max / pow) * pow;
+  const x = (i) => pad.l + (i / Math.max(n - 1, 1)) * (w - pad.l - pad.r);
+  const y = (v) => pad.t + (1 - v / max) * (h - pad.t - pad.b);
+  g.font = `11px ${css("--sans")}`; g.fillStyle = css("--subtle"); g.strokeStyle = css("--line-soft"); g.lineWidth = 1;
+  for (let k = 0; k <= 4; k++) {
+    const v = (max / 4) * k, yy = Math.round(y(v)) + 0.5;
+    g.beginPath(); g.moveTo(pad.l, yy); g.lineTo(w - pad.r, yy); g.stroke();
+    g.textAlign = "right"; g.textBaseline = "middle"; g.fillText(fmt(v) + unit, pad.l - 8, yy);
+  }
+  g.textAlign = "center"; g.textBaseline = "top";
+  for (let s = 0; s < n; s += Math.max(1, Math.ceil(n / 10))) g.fillText(`${s + 1}s`, x(s), h - pad.b + 7);
+  for (const line of lines) {
+    if (!line.values.length) continue;
+    g.strokeStyle = line.color; g.lineWidth = line.width ?? 2; g.lineJoin = "round"; g.setLineDash(line.dash ?? []);
+    g.beginPath(); line.values.forEach((v, i) => { if (i) g.lineTo(x(i), y(v)); else g.moveTo(x(i), y(v)); }); g.stroke(); g.setLineDash([]);
+    if (line.fill) { g.lineTo(x(line.values.length - 1), y(0)); g.lineTo(x(0), y(0)); g.closePath(); g.globalAlpha = 0.08; g.fillStyle = line.color; g.fill(); g.globalAlpha = 1; }
+    const last = line.values.length - 1;
+    g.fillStyle = line.color; g.beginPath(); g.arc(x(last), y(line.values[last]), 3, 0, Math.PI * 2); g.fill();
+  }
+}
+function spark(canvas, values, color, max) {
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w) return;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const g = canvas.getContext("2d"); g.scale(dpr, dpr);
+  const top = Math.max(max ?? 0, ...values, 1);
+  g.strokeStyle = color; g.lineWidth = 1.5; g.beginPath();
+  values.forEach((v, i) => { const xx = (i / Math.max(values.length - 1, 1)) * w, yy = h - 2 - (v / top) * (h - 4); i ? g.lineTo(xx, yy) : g.moveTo(xx, yy); });
+  g.stroke(); g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.globalAlpha = 0.1; g.fillStyle = color; g.fill(); g.globalAlpha = 1;
+}
+
+// ---------------------------------------------------------------- estado
+const live = { rps: [], p50: [], p95: [], p99: [], duration: 10, total: 0 };
+const ab = { before: [], after: [], duration: 10 };
+const runtime = {}; // id -> { cpu: [], elu: [], rps: [] }
+let lastMetrics = {};
+
+function redrawLive() {
+  lineChart($("cRps"), [{ values: live.rps, color: css("--accent"), fill: true }], { maxX: live.duration });
+  lineChart($("cLat"), [
+    { values: live.p50, color: css("--p50") },
+    { values: live.p95, color: css("--p95") },
+    { values: live.p99, color: css("--p99"), dash: [5, 4] },
+  ], { maxX: live.duration, unit: " ms" });
+}
+function redrawAb() {
+  lineChart($("cAb"), [
+    { values: ab.before, color: css("--before"), width: 2.5 },
+    { values: ab.after, color: css("--good"), width: 2.5 },
+  ], { maxX: ab.duration, unit: " ms" });
+}
+function redrawAll() { redrawLive(); redrawAb(); renderServices(); }
+addEventListener("resize", redrawAll);
+
+// ---------------------------------------------------------------- cenários
+let scenarios = {};
+fetch("/api/scenarios").then((r) => r.json()).then((data) => {
+  scenarios = data.scenarios;
+  $("scenarios").innerHTML = Object.entries(scenarios).map(([id, s], i) => `
+    <label class="scenario"><input type="radio" name="scenario" value="${id}" ${i === 1 ? "checked" : ""}/><b>${s.label}</b><span>${s.detail}</span></label>`).join("");
+  for (const input of document.querySelectorAll('input[name="scenario"]')) input.addEventListener("change", syncScenario);
+  syncScenario();
+});
+function syncScenario() {
+  const id = document.querySelector('input[name="scenario"]:checked')?.value;
+  const s = scenarios[id]; if (!s) return;
+  $("conn").value = s.connections; $("connOut").textContent = s.connections;
+  $("target").innerHTML = `Alvo: <code>${s.base.replace("http://127.0.0.1", "localhost")}${s.path.replace("PROJECT", ":id")}</code>`;
+}
+$("conn").oninput = () => ($("connOut").textContent = $("conn").value);
+$("dur").oninput = () => ($("durOut").textContent = `${$("dur").value} s`);
+
+async function post(url, body) {
+  const response = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body ?? {}) });
+  if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || response.statusText); }
+}
+$("start").onclick = () => post("/api/load", {
+  scenarioId: document.querySelector('input[name="scenario"]:checked')?.value,
+  connections: Number($("conn").value), duration: Number($("dur").value),
+}).catch((e) => toast(e.message));
+$("stop").onclick = () => post("/api/stop").catch((e) => toast(e.message));
+$("abStart").onclick = () => post("/api/ab", { scenarioId: "projects-gateway", connections: 50, duration: 10 }).catch((e) => toast(e.message));
+
+function setRunning(value, text) {
+  $("start").disabled = value; $("stop").disabled = !value; $("abStart").disabled = value;
+  $("status").classList.toggle("running", value); $("statusText").textContent = text;
+}
+
+// ---------------------------------------------------------------- serviços (métricas do servidor)
+const serviceLabels = { gateway: "Gateway (NestJS + http-proxy)", api: "ms-projects (NestJS + Prisma)", "gateway-b": "Gateway B (sem keep-alive)" };
+function renderServices() {
+  const ids = Object.keys(lastMetrics);
+  if (!ids.length) { $("services").innerHTML = `<div class="panel"><div class="panel-body empty">Aguardando métricas dos serviços em /api/v1/metrics…</div></div>`; return; }
+  $("services").innerHTML = ids.map((id) => {
+    const m = lastMetrics[id];
+    return `<div class="panel"><div class="panel-head"><h2>${serviceLabels[id] ?? m.service}</h2><span class="spacer"></span><span class="tag">pid ${m.pid} · ${m.node}</span></div><div class="panel-body">
+      <div class="svc">
+        <div><span>Vazão observada (5 s)</span><b>${fmt(m.window.rps)} <small>req/s</small></b></div>
+        <div><span>p95 no servidor</span><b>${fmt(m.window.p95, 1)} <small>ms</small></b></div>
+        <div><span>Em andamento</span><b>${fmt(m.inFlight)}</b></div>
+        <div><span>CPU do processo</span><b>${fmt(m.process.cpuPercent)} <small>%</small></b></div>
+        <div><span>Event loop (uso · p99)</span><b>${fmt(m.process.eventLoop.utilization)}<small>%</small> · ${fmt(m.process.eventLoop.p99, 1)} <small>ms</small></b></div>
+        <div><span>Heap / RSS</span><b>${fmt(m.process.heapUsedMb)} <small>/ ${fmt(m.process.rssMb)} MB</small></b></div>
+      </div>
+      <canvas class="spark" id="spark-${id}" aria-label="CPU nos últimos 60 s"></canvas>
+      <div class="legend" style="margin-top:4px"><span><i style="background:var(--accent)"></i>req/s nos últimos 60 s (servidor)</span><span><i style="background:var(--warn)"></i>CPU %</span></div>
+    </div></div>`;
+  }).join("");
+  for (const id of ids) {
+    const canvas = $(`spark-${id}`); const r = runtime[id]; if (!canvas || !r) continue;
+    spark(canvas, lastMetrics[id].series.map((s) => s.rps), css("--accent"));
+    const g = canvas.getContext("2d"); const w = canvas.clientWidth, h = canvas.clientHeight;
+    g.strokeStyle = css("--warn"); g.lineWidth = 1.2; g.setLineDash([3, 3]); g.beginPath();
+    r.cpu.forEach((v, i) => { const xx = w - (r.cpu.length - 1 - i) * (w / 59), yy = h - 2 - (Math.min(v, 100) / 100) * (h - 4); i ? g.lineTo(xx, yy) : g.moveTo(xx, yy); });
+    g.stroke(); g.setLineDash([]);
+  }
+}
+function renderRoutes() {
+  const rows = Object.entries(lastMetrics).flatMap(([id, m]) => m.routes.map((r) => ({ id, ...r })));
+  $("routes").innerHTML = rows.length ? rows.map((r) => `<tr><td>${serviceLabels[r.id]?.split(" (")[0] ?? r.id}</td><td><code>${r.route}</code></td><td class="n">${fmt(r.requests)}</td><td class="n">${fmt(r.avg, 1)}</td><td class="n">${fmt(r.p95, 1)}</td><td class="n">${fmt(r.p99, 1)}</td><td class="n">${fmt(r.errors)}</td></tr>`).join("")
+    : `<tr><td colspan="7" class="empty">Sem tráfego registrado ainda. Rode um teste de carga.</td></tr>`;
+  const obs = lastMetrics.api?.info?.nestjsObserve;
+  if (obs) { $("observeTag").textContent = obs === "enabled" ? "ativo" : "desligado"; $("observeTag").className = `tag ${obs === "enabled" ? "good" : ""}`; }
+}
+
+// ---------------------------------------------------------------- histórico
+function renderHistory(items) {
+  $("historyEmpty").style.display = items.length ? "none" : "block";
+  $("history").innerHTML = items.map((h) => `<tr><td>${new Date(h.at).toLocaleTimeString("pt-BR")}</td><td>${h.label}</td><td class="n">${h.connections}</td><td class="n"><b>${fmt(h.throughput)}</b></td><td class="n">${fmt(h.p50)}</td><td class="n">${fmt(h.p90)}</td><td class="n">${fmt(h.p99)}</td><td class="n">${h.errors + h.non2xx ? `<span class="tag bad">${h.errors + h.non2xx}</span>` : "0"}</td><td class="n">${fmt(h.total)}</td></tr>`).join("");
+}
+let historyItems = [];
+
+// ---------------------------------------------------------------- saúde
+function renderHealth(h) {
+  const names = { projects: "ms-projects", identity: "identity", notifications: "notifications", realtime: "realtime", audit: "audit", mcp: "mcp" };
+  const chips = [`<span class="chip ${h.status === "down" ? "down" : "ok"}"><i></i>gateway</span>`];
+  for (const s of h.services ?? []) chips.push(`<span class="chip ${s.ok ? "ok" : "down"}"><i></i>${names[s.name] ?? s.name}</span>`);
+  chips.push(`<span class="chip ${h.web ? "ok" : "down"}"><i></i>web</span>`);
+  $("health").innerHTML = chips.join("");
+}
+
+// ---------------------------------------------------------------- A/B
+function abCard(summary) {
+  return `<div><span>Vazão</span><b>${fmt(summary.throughput)} <small>req/s</small></b></div>
+    <div><span>p50</span><b>${fmt(summary.p50)} <small>ms</small></b></div>
+    <div><span>p99</span><b>${fmt(summary.p99)} <small>ms</small></b></div>
+    <div><span>Erros</span><b>${fmt(summary.errors + summary.non2xx)}</b></div>
+    <div><span>Requisições</span><b>${fmt(summary.total)}</b></div>
+    <div><span>Conexões</span><b>${summary.connections}</b></div>`;
+}
+
+// ---------------------------------------------------------------- eventos (SSE)
+const events = new EventSource("/api/events");
+events.onmessage = (message) => {
+  const e = JSON.parse(message.data);
+  if (e.type === "hello") { renderHealth(e.health); historyItems = e.history; renderHistory(historyItems); if (e.running) setRunning(true, "Teste em execução"); }
+  if (e.type === "health") renderHealth(e.health);
+  if (e.type === "metrics") {
+    lastMetrics = e.services;
+    for (const [id, m] of Object.entries(e.services)) {
+      runtime[id] ??= { cpu: [] };
+      const r = runtime[id];
+      r.cpu.push(m.process.cpuPercent); if (r.cpu.length > 60) r.cpu.shift();
+    }
+    if (!document.querySelector('section[data-panel="live"]').hidden) renderServices();
+    renderRoutes();
+  }
+  if (e.type === "load-start") {
+    if (e.series === "live") {
+      Object.assign(live, { rps: [], p50: [], p95: [], p99: [], duration: e.duration, total: 0 });
+      for (const id of ["kRps", "kP50", "kP95", "kP99", "kErr", "kTotal"]) $(id).textContent = "—";
+      $("kP95Label").textContent = "Latência p95"; $("kRps").nextElementSibling.textContent = "req/s";
+      redrawLive();
+    } else {
+      ab.duration = e.duration;
+      $("abStatus").classList.add("running"); $("abStatusText").textContent = `Rodando: ${e.label}, ${e.connections} conexões`;
+    }
+    setRunning(true, `Rodando · ${e.connections} conexões · ${e.duration} s`);
+  }
+  if (e.type === "load-tick") {
+    if (e.series === "live") {
+      live.rps.push(e.rps); live.p50.push(e.p50); live.p95.push(e.p95); live.p99.push(e.p99); live.total += e.rps;
+      $("kRps").textContent = fmt(e.rps); $("kP50").textContent = fmt(e.p50, 1); $("kP95").textContent = fmt(e.p95, 1); $("kP99").textContent = fmt(e.p99, 1);
+      const err = e.errors + e.non2xx; $("kErr").textContent = fmt(err); $("kErr").className = err ? "bad" : ""; $("kTotal").textContent = fmt(live.total);
+      redrawLive();
+    } else {
+      (e.series === "ab-before" ? ab.before : ab.after).push(e.p50); redrawAb();
+    }
+  }
+  if (e.type === "load-done") {
+    historyItems.unshift(e.summary); renderHistory(historyItems);
+    const s = e.summary;
+    if (s.series === "live") {
+      setRunning(false, `Concluído: ${fmt(s.throughput)} req/s em média · p99 ${fmt(s.p99)} ms`);
+      $("kRps").textContent = fmt(s.throughput); $("kRps").nextElementSibling.textContent = "req/s (média)";
+      $("kP50").textContent = fmt(s.p50); $("kP99").textContent = fmt(s.p99); $("kTotal").textContent = fmt(s.total);
+      // O resumo do autocannon traz p90 (não p95): o cartão passa a mostrar o valor do teste inteiro.
+      $("kP95Label").textContent = "Latência p90 (teste)"; $("kP95").textContent = fmt(s.p90);
+    } else {
+      $(s.series === "ab-before" ? "abBefore" : "abAfter").innerHTML = abCard(s);
+      setRunning(s.series === "ab-before", s.series === "ab-before" ? "A/B: trocando de lado…" : "Pronto");
+    }
+  }
+  if (e.type === "ab-start") {
+    ab.before = []; ab.after = []; $("abBefore").innerHTML = ""; $("abAfter").innerHTML = ""; $("abVerdict").classList.remove("show"); redrawAb();
+  }
+  if (e.type === "ab-done") {
+    const { before, after } = e;
+    const gain = before.throughput ? ((after.throughput / before.throughput - 1) * 100) : 0;
+    const factor = after.p50 ? before.p50 / after.p50 : 0;
+    $("abVerdict").innerHTML = `Com keep-alive: vazão ${gain >= 0 ? "+" : ""}${fmt(gain)}% · p50 ${factor >= 1 ? `${fmt(factor, 1)}× menor` : "sem ganho"} · erros ${fmt(before.errors + before.non2xx)} → ${fmt(after.errors + after.non2xx)}<span>Mesmo código, mesma máquina e mesma carga. A única diferença é o pool de conexões entre o gateway e o microsserviço.</span>`;
+    $("abVerdict").classList.add("show");
+    $("abStatus").classList.remove("running"); $("abStatusText").textContent = "A/B concluído.";
+    setRunning(false, "Pronto");
+  }
+  if (e.type === "load-error") { setRunning(false, "Erro"); $("abStatus").classList.remove("running"); toast(e.message); }
+  if (e.type === "lighthouse-start") { $("lhStatus").classList.add("running"); $("lhStatusText").textContent = `Rodando Lighthouse ${e.profile}…`; for (const b of document.querySelectorAll("[data-lh]")) b.disabled = true; }
+  if (e.type === "lighthouse-done") {
+    const r = e.result;
+    $("lhStatus").classList.remove("running");
+    $("lhStatusText").innerHTML = `Lighthouse ${r.profile} concluído em ${r.seconds} s · LCP ${r.lcp} · TBT ${r.tbt} · CLS ${r.cls} · ${r.totalBytes.replace("Total size was ", "")} · <a href="${r.report}" target="_blank" rel="noopener">abrir relatório</a>`;
+    $("lhLive").innerHTML = scoreRings(r);
+    for (const b of document.querySelectorAll("[data-lh]")) b.disabled = false;
+  }
+  if (e.type === "lighthouse-error") { $("lhStatus").classList.remove("running"); $("lhStatusText").textContent = `Falhou: ${e.message}`; for (const b of document.querySelectorAll("[data-lh]")) b.disabled = false; }
+};
+events.onerror = () => { $("statusText").textContent = "Reconectando ao painel…"; };
+for (const b of document.querySelectorAll("[data-lh]")) b.onclick = () => post("/api/lighthouse", { profile: b.dataset.lh }).catch((e) => toast(e.message));
+for (const b of document.querySelectorAll("[data-prom]")) b.onclick = async () => {
+  const text = await fetch(`/api/prometheus?service=${b.dataset.prom}`).then((r) => r.text()).catch(() => "Serviço indisponível.");
+  $("prom").textContent = text.split("\n").filter((l) => !l.includes("_bucket{") || l.includes('le="50"') || l.includes('le="+Inf"')).join("\n");
+};
+
+// ---------------------------------------------------------------- resultados registrados
+function ring(score, label) {
+  const pct = Math.round((score ?? 0) * 100), color = pct >= 90 ? css("--good") : pct >= 50 ? css("--warn") : css("--bad");
+  const c = 2 * Math.PI * 36, off = c * (1 - pct / 100);
+  return `<div class="score"><svg class="ring" viewBox="0 0 86 86" role="img" aria-label="${label}: ${score == null ? "sem dado" : pct}"><circle cx="43" cy="43" r="36" fill="none" stroke="${css("--line-soft")}" stroke-width="7"/>${score == null ? "" : `<circle cx="43" cy="43" r="36" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 43 43)"/>`}<text x="43" y="49" text-anchor="middle" font-size="20" font-weight="600" fill="${color}" font-family="${css("--sans")}">${score == null ? "—" : pct}</text></svg><b>${label}</b></div>`;
+}
+const scoreRings = (r) => ring(r.performance, "Performance") + ring(r.accessibility, "Acessibilidade") + ring(r.bestPractices, "Boas práticas") + ring(r.seo, "SEO");
+
+const scenarioNames = {
+  "health-gateway": "Health · gateway", "health-api": "Health · API", "projects-api": "GET /projects · API",
+  "projects-gateway": "GET /projects · gateway", "tasks-api": "GET /tasks · API", "audit-gateway": "GET /audit · gateway",
+  "notifications-gateway": "Notificações · gateway",
+};
+fetch("/api/results").then((r) => r.json()).then((data) => {
+  const before = data.loadBefore ?? {}, after = data.loadAfter ?? {};
+  const keys = Object.keys(after).filter((k) => before[k]);
+  const maxRps = Math.max(...keys.flatMap((k) => [before[k].throughput, after[k].throughput]));
+  const maxP99 = Math.max(...keys.flatMap((k) => [before[k].p99, after[k].p99]));
+  const bars = (metric, max, log) => keys.map((k) => {
+    const scale = (v) => log ? (Math.log10(v + 1) / Math.log10(max + 1)) * 100 : (v / max) * 100;
+    return `<div class="row"><span class="label">${scenarioNames[k] ?? k}</span><div>
+      <div class="track"><div class="fill" style="width:${scale(before[k][metric])}%;background:var(--before)"></div><b>${fmt(before[k][metric])}</b></div>
+      <div class="track"><div class="fill" style="width:${scale(after[k][metric])}%;background:var(--accent)"></div><b>${fmt(after[k][metric])}</b></div></div></div>`;
+  }).join("");
+  $("barsRps").innerHTML = bars("throughput", maxRps, false);
+  $("barsP99").innerHTML = `${bars("p99", maxP99, true)}<p class="note">Escala logarítmica: as quedas vão de segundos para dezenas de milissegundos.</p>`;
+  $("resultsTable").innerHTML = keys.map((k) => `<tr><td>${scenarioNames[k] ?? k}</td><td class="n">${fmt(before[k].throughput)}</td><td class="n"><b>${fmt(after[k].throughput)}</b></td><td class="n">${fmt(before[k].p50)}</td><td class="n"><b>${fmt(after[k].p50)}</b></td><td class="n">${fmt(before[k].p99)}</td><td class="n"><b>${fmt(after[k].p99)}</b></td><td class="n">${fmt(before[k].errors)} → ${fmt(after[k].errors)}</td></tr>`).join("");
+  $("resultsLead").innerHTML = `Coleta comparativa registrada em <code>docs/performance/resultados.json</code> (${new Date(data.collectedAt).toLocaleString("pt-BR")}, Node ${data.environment?.node ?? ""}). Mesmos cenários antes e depois das melhorias; <code>autocannon</code> com 30 a 100 conexões por 10 s.`;
+  const p = data.payloads ?? {};
+  $("payloads").innerHTML = `<table><thead><tr><th>Resposta</th><th class="n">Bruto</th><th class="n">gzip</th><th class="n">Redução</th></tr></thead><tbody>
+    ${p.auditPage50 ? `<tr><td>Auditoria, 50 registros</td><td class="n">${fmt(p.auditPage50.rawBytes)} B</td><td class="n">${fmt(p.auditPage50.gzipBytes)} B</td><td class="n"><span class="tag good">${p.auditPage50.reduction}</span></td></tr>` : ""}
+    ${p.tasksPage20 ? `<tr><td>Tarefas, 20 registros</td><td class="n">${fmt(p.tasksPage20.rawBytes)} B</td><td class="n">${fmt(p.tasksPage20.gzipBytes)} B</td><td class="n"><span class="tag good">${p.tasksPage20.reduction}</span></td></tr>` : ""}</tbody></table>`;
+  const lb = data.lighthouseBefore ?? {}, la = data.lighthouseAfter ?? {};
+  $("lhDesktop").innerHTML = scoreRings(la.desktop ?? {});
+  const mobile = { ...(data.lighthouse?.mobile ?? {}), ...Object.fromEntries(Object.entries(la.mobile ?? {}).filter(([, v]) => v != null)) };
+  $("lhMobile").innerHTML = scoreRings(mobile);
+  $("lhDesktopMeta").textContent = la.desktop ? `LCP ${la.desktop.lcp} · TBT ${la.desktop.tbt} · CLS ${la.desktop.cls} · Speed Index ${la.desktop.speedIndex}` : "";
+  $("lhMobileMeta").textContent = la.mobile ? `LCP ${la.mobile.lcp} · TBT ${la.mobile.tbt} · CLS ${la.mobile.cls} · mediana de 5 execuções` : "";
+  const weight = (s) => (s ?? "").replace("Total size was ", "");
+  $("lhTable").innerHTML = ["desktop", "mobile"].flatMap((profile) => [
+    lb[profile] && `<tr><td>${profile} · antes</td><td class="n">${Math.round(lb[profile].performance * 100)}</td><td class="n">${lb[profile].lcp}</td><td class="n">${lb[profile].tbt}</td><td class="n">${lb[profile].speedIndex}</td><td class="n">${weight(lb[profile].totalBytes)}</td></tr>`,
+    la[profile] && `<tr><td><b>${profile} · depois</b></td><td class="n"><b>${Math.round(la[profile].performance * 100)}</b></td><td class="n"><b>${la[profile].lcp}</b></td><td class="n"><b>${la[profile].tbt}</b></td><td class="n"><b>${la[profile].speedIndex}</b></td><td class="n"><b>${weight(la[profile].totalBytes)}</b></td></tr>`,
+  ]).filter(Boolean).join("");
+}).catch(() => toast("Não foi possível carregar docs/performance/resultados.json"));
+
+try { const tab = localStorage.getItem("perf-tab"); if (tab) document.querySelector(`.tabs button[data-tab="${tab}"]`)?.click(); } catch {}
+redrawAll();
+</script>
+</body>
+</html>

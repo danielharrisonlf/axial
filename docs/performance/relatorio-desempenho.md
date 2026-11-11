@@ -126,7 +126,41 @@ As consultas de listagem usam índices compostos existentes (`organizationId`, `
 4. **Lighthouse mobile tem variância** alta no modo simulado. A mediana foi 1,00; repetir 3–5 vezes é o procedimento adotado.
 5. **Testes de carga autenticados** dependem de token de 15 min. O script regenera o token antes da execução; tokens expirados retornam 401 e invalidam a medição.
 
-## 5. Como reproduzir
+## 5. Observabilidade e demonstração ao vivo
+
+Para a apresentação, a análise ganhou instrumentação nos próprios serviços e um painel local que repete as medições ao vivo.
+
+### 5.1 Métricas nativas nos serviços NestJS
+
+O pacote `packages/observability` (`@axial/observability`) é registrado como middleware no gateway e no ms-projects. Cada requisição entra em um histograma de latência com buckets fixos, de 1 ms a 10 s: o registro é O(1) e a memória fica constante, seja qual for o volume. Uma janela deslizante de 60 s guarda os dados por segundo.
+
+| Endpoint | Conteúdo |
+|---|---|
+| `GET /api/v1/metrics` | JSON: vazão, p50/p95/p99, taxa de erro, requisições em andamento, rotas mais acessadas, série dos últimos 60 s, CPU, heap/RSS, uso e atraso do event loop |
+| `GET /api/v1/metrics/prometheus` | Formato de exposição Prometheus (contadores, histograma `http_request_duration_ms` e gauges de runtime) |
+
+O atraso do event loop é medido com `setImmediate`, e não com `monitorEventLoopDelay`. A API nativa depende de timers, e a resolução de ~15,6 ms dos timers no Windows aparecia como atraso mesmo com o processo ocioso. Com `NODE_ENV=production`, os endpoints só respondem com `METRICS_TOKEN`.
+
+### 5.2 NestJS Observe
+
+O ms-projects importa o `@nestjs/observe` (SDK oficial de APM lançado com o NestJS 12). Ele gera traces por classe e método (guard → controller → service → query `pg`), agrupa erros e declara SLOs. O SDK só envia dados para o painel hospedado em observe.nestjs.com e exige credenciais. Por isso fica **desligado por padrão** e liga apenas com `OBSERVE_APP_KEY` e `OBSERVE_APP_SECRET`. Assim, as medições deste relatório não incluem o overhead do agente.
+
+### 5.3 Painel ao vivo (`pnpm perf:demo`)
+
+O painel roda em `http://127.0.0.1:4900`. Ele dispara o `autocannon` programaticamente e transmite, segundo a segundo, a vazão e as latências medidas pelo cliente, junto com as métricas que os serviços registram. Também refaz o A/B do gateway subindo uma segunda instância com `GATEWAY_UPSTREAM_KEEPALIVE=false` na porta 3100.
+
+Execução do A/B pelo painel em 11/11/2026 (GET /projects via gateway, 50 conexões, 10 s por lado, mesma máquina, com a stack recém-iniciada):
+
+| Gateway | req/s | p50 (ms) | p99 (ms) | Erros |
+|---|---|---|---|---|
+| Sem keep-alive | 497 | 2.509 | 4.378 | 467 |
+| Com keep-alive | **681** | **68** | **127** | **0** |
+
+A vazão absoluta ficou abaixo da coleta da seção 3 porque a máquina dividia CPU com outros processos. O padrão, porém, se repete: sem o pool, a latência mediana sobe para segundos e surgem erros de conexão. Com ele, a latência cai para dezenas de milissegundos, sem erros.
+
+Lighthouse desktop executado pelo painel na mesma sessão: Performance 100, FCP/LCP 0,2 s, TBT 0 ms, CLS 0, peso total 287 KiB.
+
+## 6. Como reproduzir
 
 A camada de desempenho está automatizada em `scripts/performance/run.mjs`.
 
@@ -147,11 +181,12 @@ pnpm perf:web          # Web Vitals/DevTools via Playwright
 pnpm perf:lighthouse   # Lighthouse desktop e mobile + cópia das evidências
 pnpm perf:report       # consolida os resultados em docs/performance/resultados.json
 pnpm perf:stop         # encerra os processos iniciados
+pnpm perf:demo         # painel local de desempenho ao vivo (porta 4900)
 ```
 
 Dependências fixadas na raiz: `autocannon@9.0.0` e `lighthouse@13.6.0`. O Chromium é localizado automaticamente em `%LOCALAPPDATA%\ms-playwright` ou via `CHROME_PATH`. Para medir login, defina `PERF_LOGIN_EMAIL`, `PERF_LOGIN_PASSWORD` e `PERF_LOGIN_ORG`; sem isso o cenário é omitido.
 
-## 6. Índice de evidências
+## 7. Índice de evidências
 
 | Arquivo | Conteúdo |
 |---|---|
