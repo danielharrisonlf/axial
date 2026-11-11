@@ -119,13 +119,59 @@ Os testes de integração/HTTP recusam bancos cujo nome não termine em `_test`.
 
 ## Desempenho
 
-A camada de análise de desempenho (Lighthouse, DevTools/Web Vitals, carga com autocannon e evidências) roda com:
+A camada de análise de desempenho cobre Lighthouse, DevTools/Web Vitals, carga das APIs com autocannon e consolidação de evidências. Dependências fixadas na raiz: `autocannon@9.0.0` e `lighthouse@13.6.0`.
+
+### Um comando
 
 ```powershell
 pnpm perf
 ```
 
-O comando sobe a infraestrutura, aplica migrations/seed, compila, inicia os serviços, mede APIs e front-end e grava os resultados em `docs/performance/resultados.json`. Comandos parciais: `pnpm perf:stack`, `pnpm perf:load`, `pnpm perf:web`, `pnpm perf:lighthouse`, `pnpm perf:report` e `pnpm perf:stop`. Detalhes, comparação antes/depois e gargalos em [relatório de desempenho](docs/performance/relatorio-desempenho.md).
+O comando executa, em sequência:
+
+1. `docker compose up -d --wait` (PostgreSQL e Redis);
+2. `db:generate`, migrations de projects/identity/notifications/audit e seed;
+3. build do monorepo;
+4. start de API, identidade, notificações, realtime, audit, MCP, gateway, Workspace e Insights;
+5. geração de token ADMIN e cenários de carga (health, projetos, tarefas, auditoria, notificações);
+6. Web Vitals via Playwright/Chromium;
+7. Lighthouse desktop e mobile;
+8. consolidação em `docs/performance/resultados.json` e cópia das evidências;
+9. encerramento da stack.
+
+Variáveis úteis:
+
+- `PERF_KEEP_STACK=1` mantém os serviços no ar ao final;
+- `PERF_SKIP_INFRA=1` reaproveita Docker/migrations já prontos;
+- `PERF_LOGIN_EMAIL`, `PERF_LOGIN_PASSWORD` e `PERF_LOGIN_ORG` habilitam a medição do login (sem elas o cenário é omitido);
+- `CHROME_PATH` aponta um Chromium específico; por padrão o script localiza o do Playwright em `%LOCALAPPDATA%\ms-playwright`.
+
+### Comandos parciais
+
+| Comando | O que faz |
+|---|---|
+| `pnpm perf:stack` | Inicia os nove processos e espera a saúde de todos |
+| `pnpm perf:load` | Gera o token e roda os cenários de autocannon |
+| `pnpm perf:web` | Coleta LCP, CLS, long tasks e métricas CDP |
+| `pnpm perf:lighthouse` | Roda Lighthouse desktop/mobile e copia as evidências |
+| `pnpm perf:report` | Consolida `docs/performance/resultados.json` |
+| `pnpm perf:stop` | Encerra os processos iniciados (e libera as portas) |
+
+### Saídas
+
+- `docs/performance/relatorio-desempenho.md` — método, resultados antes/depois, gargalos e próximos passos;
+- `docs/performance/resultados.json` — números consolidados (carga, Lighthouse, Web Vitals, payloads, login);
+- `docs/performance/evidencias/` — relatórios Lighthouse HTML/JSON, gráficos, Web Vitals e JSONs brutos do autocannon;
+- `output/validation/performance/` — logs, relatórios e artefatos da última execução.
+
+### Pré-requisitos
+
+- Node.js 22.12+ e pnpm 10.11.1;
+- Docker com contêineres Linux para PostgreSQL/Redis;
+- portas 3000–3006, 4173 e 5174 livres;
+- Chromium do Playwright (`pnpm --filter @axial/web exec playwright install chromium`) ou `CHROME_PATH`.
+
+Resultados e comparação completa em [relatório de desempenho](docs/performance/relatorio-desempenho.md).
 
 ## Documentação
 
