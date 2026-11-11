@@ -1,6 +1,6 @@
 import { federation } from "@module-federation/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, type Plugin, type PreviewServer, type ViteDevServer } from "vite";
 
 const remoteEntry = process.env.INSIGHTS_REMOTE_ENTRY ?? "http://localhost:5174/remoteEntry.js";
 
@@ -46,6 +46,27 @@ function optionalFontDisplay(): Plugin {
   };
 }
 
+// Security headers checked by Lighthouse "Best practices" (trust and safety).
+const securityHeaders = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+};
+
+function securityHeadersPlugin(): Plugin {
+  // Returns nothing on purpose: a function returned from these hooks would run
+  // as a post-middleware hook.
+  const apply = (server: ViteDevServer | PreviewServer): void => {
+    server.middlewares.use((_request, response, next) => {
+      for (const [name, value] of Object.entries(securityHeaders)) response.setHeader(name, value);
+      next();
+    });
+  };
+  return { name: "axial:security-headers", configureServer: apply, configurePreviewServer: apply };
+}
+
 export default defineConfig({
   plugins: [
     react(),
@@ -58,6 +79,7 @@ export default defineConfig({
       shared: {},
     }),
     lazyRemotePreload(),
+    securityHeadersPlugin(),
   ],
   server: {
     host: "0.0.0.0",
