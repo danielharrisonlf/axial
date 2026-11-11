@@ -368,7 +368,7 @@ export function Overlay({
       aria-labelledby={titleId}
     >
       <div className={drawer ? "drawer-head" : "modal-head"}>
-        <h3 id={titleId}>{title}</h3>
+        <h2 id={titleId}>{title}</h2>
         {!drawer && <span className="grow" aria-hidden="true" />}
         <span className="spacer" />
         {headActions}

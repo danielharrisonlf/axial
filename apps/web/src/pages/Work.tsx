@@ -403,7 +403,7 @@ export function Sprints() {
         return (
           <div className="panel" key={s.id} style={{ marginBottom: 14 }}>
             <div className="panel-head">
-              <h3>{s.name}</h3>
+              <h2>{s.name}</h2>
               <span className={`chip ${s.status === "active" ? "accent" : s.status === "done" ? "ok" : ""}`}>
                 {s.status === "active" ? "ativa" : s.status === "done" ? "concluída" : "planejada"}
               </span>

@@ -601,7 +601,7 @@ function Teams() {
           return (
             <div className="panel" key={tm.id}>
               <div className="panel-head">
-                <h3>{tm.name}</h3>
+                <h2>{tm.name}</h2>
                 <span className="spacer" />
                 <span className="chip">{db.orgs.find((o) => o.id === tm.orgId)?.name}</span>
               </div>
@@ -652,7 +652,7 @@ function Settings() {
       <PageHead title="Configurações" sub="Preferências da aplicação e dados da demonstração." />
       <div className="panel" style={{ maxWidth: 720 }}>
         <div className="panel-head">
-          <h3>Aparência</h3>
+          <h2>Aparência</h2>
         </div>
         <div className="panel-body">
           <Select
@@ -669,7 +669,7 @@ function Settings() {
       </div>
       <div className="panel" style={{ maxWidth: 720, marginTop: 14 }}>
         <div className="panel-head">
-          <h3>Ambiente de demonstração</h3>
+          <h2>Ambiente de demonstração</h2>
         </div>
         <div className="panel-body">
           <p className="muted">

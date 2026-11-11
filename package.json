@@ -25,6 +25,7 @@
     "test:notifications:integration": "pnpm --filter @axial/ms-notifications test:integration",
     "test:web:e2e": "pnpm --filter @axial/web test:e2e",
     "dev:web": "turbo run dev --filter=@axial/web",
+    "web:prod": "turbo run build --filter=@axial/web && pnpm --filter @axial/web exec vite preview --host 127.0.0.1",
     "dev:api": "turbo run dev --filter=@axial/ms-projects",
     "dev:identity": "pnpm --filter @axial/ms-identity dev",
     "dev:realtime": "turbo run dev --filter=@axial/ms-realtime",

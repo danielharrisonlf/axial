@@ -19,7 +19,7 @@ function Panel({
   return (
     <div className="panel">
       <div className="panel-head">
-        <h3>{title}</h3>
+        <h2>{title}</h2>
         {action && (
           <>
             <span className="spacer" />
@@ -314,7 +314,7 @@ export function Dashboard() {
           </Panel>
           <div className="panel">
             <div className="panel-head">
-              <h3>Resumo por equipe</h3>
+              <h2>Resumo por equipe</h2>
             </div>
             <div className="tbl-wrap">
               <table className="tbl">

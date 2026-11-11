@@ -134,7 +134,7 @@ export function Access({ tab = "users" }: { tab?: string }) {
       {active === "users" ? (
         <div className="panel">
           <div className="panel-head">
-            <h3>Colaboradores</h3>
+            <h2>Colaboradores</h2>
             <span className="spacer" />
             <span className="chip">{db.users.length}</span>
           </div>
@@ -217,7 +217,7 @@ export function Access({ tab = "users" }: { tab?: string }) {
           {CAPABILITY_MATRIX.map((group) => (
             <div className="panel" style={{ marginBottom: 14 }} key={group.group}>
               <div className="panel-head">
-                <h3>{group.group}</h3>
+                <h2>{group.group}</h2>
               </div>
               <div className="tbl-wrap">
                 <table className="tbl">

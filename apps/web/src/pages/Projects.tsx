@@ -297,7 +297,7 @@ export function ProjectDetail({ id, tab = "overview" }: { id: string; tab?: stri
         <div className="grid c2">
           <div className="panel">
             <div className="panel-head">
-              <h3>Épicos</h3>
+              <h2>Épicos</h2>
               <span className="spacer" />
               {can("task.create") && (
                 <button type="button" className="btn btn-sm" onClick={() => setEpic(true)}>
@@ -337,7 +337,7 @@ export function ProjectDetail({ id, tab = "overview" }: { id: string; tab?: stri
           <div className="grid stack-start">
             <div className="panel">
               <div className="panel-head">
-                <h3>Marcos de entrega</h3>
+                <h2>Marcos de entrega</h2>
               </div>
               <div className="panel-body">
                 {!db.milestones.some((m) => m.projectId === id) && (
@@ -359,7 +359,7 @@ export function ProjectDetail({ id, tab = "overview" }: { id: string; tab?: stri
             </div>
             <div className="panel">
               <div className="panel-head">
-                <h3>Atividade do projeto</h3>
+                <h2>Atividade do projeto</h2>
               </div>
               <div className="panel-body">
                 {db.audit
@@ -392,7 +392,7 @@ export function ProjectDetail({ id, tab = "overview" }: { id: string; tab?: stri
                 tm && (
                   <div className="panel" key={tid}>
                     <div className="panel-head">
-                      <h3>{tm.name}</h3>
+                      <h2>{tm.name}</h2>
                       <span className="spacer" />
                       <span className="chip">{tm.memberIds.length} pessoas</span>
                     </div>
@@ -437,7 +437,7 @@ export function ProjectDetail({ id, tab = "overview" }: { id: string; tab?: stri
           <>
             <div className="panel" style={{ maxWidth: 720 }}>
               <div className="panel-head">
-                <h3>Configurações do projeto</h3>
+                <h2>Configurações do projeto</h2>
               </div>
               <div className="panel-body">
                 <p className="muted">Edite nome, descrição, datas, prioridade e equipes.</p>
@@ -449,7 +449,7 @@ export function ProjectDetail({ id, tab = "overview" }: { id: string; tab?: stri
             </div>
             <div className="panel" style={{ maxWidth: 720, marginTop: 14, borderColor: "var(--danger)" }}>
               <div className="panel-head">
-                <h3 style={{ color: "var(--danger)" }}>Zona de risco</h3>
+                <h2 style={{ color: "var(--danger)" }}>Zona de risco</h2>
               </div>
               <div className="panel-body">
                 <button

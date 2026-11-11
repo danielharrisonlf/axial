@@ -248,7 +248,7 @@ function Templates({ templates }: { templates: NotificationTemplate[] }) {
         {templates.map((template) => (
           <div className="panel" key={template.id}>
             <div className="panel-head">
-              <h3>{template.name}</h3>
+              <h2>{template.name}</h2>
               <span className="spacer" />
               <span className="chip mono" style={{ fontSize: 10.5 }}>
                 {template.event}
@@ -290,7 +290,7 @@ function Providers({ onConfigure }: { onConfigure: (channel: NotificationChannel
             <div className="panel" key={channel}>
               <div className="panel-head">
                 <Icon name={CHANNEL_META[channel].icon} size={15} />
-                <h3>{CHANNEL_META[channel].label}</h3>
+                <h2>{CHANNEL_META[channel].label}</h2>
                 <span className="spacer" />
                 {provider.configured ? (
                   <span className="chip ok">configurado</span>

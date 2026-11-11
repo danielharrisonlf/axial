@@ -53,6 +53,7 @@
   min-height: 40px;
   resize: none;
 }
+.drawer-head h2,
 .drawer-head h3 {
   font-size: 13px;
   font-weight: 400;
