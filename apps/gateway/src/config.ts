@@ -18,6 +18,12 @@ const schema = z
     REALTIME_API_URL: serviceUrl.default("http://localhost:3004"),
     AUDIT_API_URL: serviceUrl.default("http://localhost:3005"),
     MCP_API_URL: serviceUrl.default("http://localhost:3006"),
+    // Kept as a switch only to reproduce the "before" scenario of the performance
+    // analysis (one TCP connection per proxied request). Always on in production.
+    GATEWAY_UPSTREAM_KEEPALIVE: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
     GATEWAY_CORS_ORIGINS: z
       .string()
       .default("http://localhost:5173")
@@ -29,6 +35,12 @@ const schema = z
       ),
   })
   .superRefine((value, context) => {
+    if (value.NODE_ENV === "production" && !value.GATEWAY_UPSTREAM_KEEPALIVE)
+      context.addIssue({
+        code: "custom",
+        path: ["GATEWAY_UPSTREAM_KEEPALIVE"],
+        message: "Upstream keep-alive is required in production",
+      });
     if (value.NODE_ENV !== "production") return;
     for (const name of [
       "PROJECTS_API_URL",

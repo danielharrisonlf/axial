@@ -1,0 +1,26 @@
+{
+  "name": "@axial/observability",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Metricas HTTP e de runtime (latencia, vazao, event loop, CPU, memoria) para os servicos Axial",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

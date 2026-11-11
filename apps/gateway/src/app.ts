@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { Agent as HttpAgent } from "node:http";
+import { createMetrics } from "@axial/observability";
 import { Controller, Get, Inject, Injectable, Module, ServiceUnavailableException } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -100,6 +101,14 @@ export async function createGateway(): Promise<Gateway> {
     bodyParser: false,
     logger: config.NODE_ENV === "test" ? false : undefined,
   });
+  // Registered before the proxies so that proxied requests are timed end to end.
+  const metrics = createMetrics({
+    service: "gateway",
+    ignore: ["/api/v1/metrics", "/api/v1/health"],
+    info: () => ({ upstreamKeepAlive: config.GATEWAY_UPSTREAM_KEEPALIVE }),
+  });
+  app.use(metrics.middleware);
+  app.use("/api/v1/metrics", metrics.handler);
   app.enableCors({ origin: config.GATEWAY_CORS_ORIGINS, credentials: true });
   app.use(compression({ threshold: 1024 }));
 
@@ -120,7 +129,7 @@ export async function createGateway(): Promise<Gateway> {
         target,
         changeOrigin: true,
         xfwd: true,
-        agent: upstreamAgent,
+        agent: config.GATEWAY_UPSTREAM_KEEPALIVE ? upstreamAgent : undefined,
         proxyTimeout: 20_000,
         timeout: 20_000,
         pathFilter: (pathname) =>

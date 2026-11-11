@@ -47,12 +47,18 @@ importers:
       '@axial/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@axial/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       '@nestjs/common':
         specifier: 12.3.3
         version: 12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core':
         specifier: 12.3.3
         version: 12.3.3(@nestjs/common@12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@12.3.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/observe':
+        specifier: 0.3.25
+        version: 0.3.25(@nestjs/common@12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.3.3)(@opentelemetry/api@1.10.0)(bullmq@5.81.5)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/platform-express':
         specifier: 12.3.3
         version: 12.3.3(@nestjs/common@12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.3.3)
@@ -132,6 +138,9 @@ importers:
 
   apps/gateway:
     dependencies:
+      '@axial/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       '@modelcontextprotocol/server':
         specifier: 2.4.0
         version: 2.4.0
@@ -562,6 +571,18 @@ importers:
         specifier: 'catalog:'
         version: 4.1.2(@opentelemetry/api@1.10.0)(@types/node@24.13.3)(vite@8.3.5(@types/node@24.13.3)(jiti@2.7.0)(tsx@4.20.6))
 
+  packages/observability:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.2(@opentelemetry/api@1.10.0)(@types/node@24.13.3)(vite@8.3.5(@types/node@24.13.3)(jiti@2.7.0)(tsx@4.20.6))
+
 packages:
 
   '@assemblyscript/loader@0.19.23':
@@ -917,8 +938,15 @@ packages:
   '@isaacs/nonrecursive-glob-match@1.1.0':
     resolution: {integrity: sha512-GPm/Dbvk5RLmhRnxXIa7nTpK0xtl4E0wj0MslsuNiJ1FIROU+2+9lgUC/dgF7Ey4QCWhfEsgxilMRMCdHPfDfw==}
 
+  '@jridgewell/resolve-uri@3.1.2':
+    resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
+    engines: {node: '>=6.0.0'}
+
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
+
+  '@jridgewell/trace-mapping@0.3.31':
+    resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
   '@lukeed/csprng@1.1.0':
     resolution: {integrity: sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA==}
@@ -1062,6 +1090,47 @@ packages:
       rxjs: ^7.1.0
     peerDependenciesMeta:
       '@modelcontextprotocol/client':
+        optional: true
+
+  '@nestjs/observe@0.3.25':
+    resolution: {integrity: sha512-kZ9tgDd2R8fpO4TGArLz1kkIPDCt7v2iyiclDbA2ci7on6Y34EGQcksns1MskxpuY8r8wxN2IMw9dO+7bkrhgw==}
+    engines: {node: '>= 20.19.0'}
+    hasBin: true
+    peerDependencies:
+      '@nestjs/bull': ^11.0.0 || ^12.0.0
+      '@nestjs/bullmq': ^11.0.0 || ^12.0.0
+      '@nestjs/common': ^11.0.0 || ^12.0.0
+      '@nestjs/core': ^11.0.0 || ^12.0.0
+      '@nestjs/graphql': ^13.0.0 || ^14.0.0
+      '@nestjs/microservices': ^11.0.0 || ^12.0.0
+      '@nestjs/schedule': ^4.0.0 || ^5.0.0 || ^6.0.0 || ^12.0.0
+      '@nestjs/websockets': ^11.0.0 || ^12.0.0
+      '@opentelemetry/api': ^1.0.0
+      '@taskforcesh/bullmq-pro': ^7.0.0
+      bull: ^3.3.0 || ^4.0.0
+      bullmq: ^5.0.0 || ^6.0.0
+      reflect-metadata: ^0.1.12 || ^0.2.0
+      rxjs: ^7.0.0
+    peerDependenciesMeta:
+      '@nestjs/bull':
+        optional: true
+      '@nestjs/bullmq':
+        optional: true
+      '@nestjs/graphql':
+        optional: true
+      '@nestjs/microservices':
+        optional: true
+      '@nestjs/schedule':
+        optional: true
+      '@nestjs/websockets':
+        optional: true
+      '@opentelemetry/api':
+        optional: true
+      '@taskforcesh/bullmq-pro':
+        optional: true
+      bull:
+        optional: true
+      bullmq:
         optional: true
 
   '@nestjs/platform-express@12.3.3':
@@ -3996,7 +4065,14 @@ snapshots:
 
   '@isaacs/nonrecursive-glob-match@1.1.0': {}
 
+  '@jridgewell/resolve-uri@3.1.2': {}
+
   '@jridgewell/sourcemap-codec@1.6.0': {}
+
+  '@jridgewell/trace-mapping@0.3.31':
+    dependencies:
+      '@jridgewell/resolve-uri': 3.1.2
+      '@jridgewell/sourcemap-codec': 1.6.0
 
   '@lukeed/csprng@1.1.0': {}
 
@@ -4133,6 +4209,17 @@ snapshots:
       rxjs: 7.8.2
     optionalDependencies:
       '@modelcontextprotocol/client': 2.4.0
+
+  '@nestjs/observe@0.3.25(@nestjs/common@12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.3.3)(@opentelemetry/api@1.10.0)(bullmq@5.81.5)(reflect-metadata@0.2.2)(rxjs@7.8.2)':
+    dependencies:
+      '@jridgewell/trace-mapping': 0.3.31
+      '@nestjs/common': 12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 12.3.3(@nestjs/common@12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@12.3.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      reflect-metadata: 0.2.2
+      rxjs: 7.8.2
+    optionalDependencies:
+      '@opentelemetry/api': 1.10.0
+      bullmq: 5.81.5
 
   '@nestjs/platform-express@12.3.3(@nestjs/common@12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.3.3)':
     dependencies:
