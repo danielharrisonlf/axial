@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { STATUS_META } from "../lib/format";
 import { workspaceDataSchema } from "./schema";
 import { createDemoData } from "./seed";
@@ -917,14 +917,29 @@ export function useWorkspace() {
     workspaceStore.getSnapshot,
     workspaceStore.getSnapshot,
   );
-  const visibleProjects = workspaceStore.visibleProjects(snapshot.db);
-  const projectIds = new Set(visibleProjects.map((p) => p.id));
+  // Derived collections keep a stable identity between renders. Without this,
+  // consumers such as the Insights remote would see a new array on every
+  // render and restart their effects (which cancelled the first remote mount).
+  const visibleProjects = useMemo(
+    () => workspaceStore.visibleProjects(snapshot.db),
+    [snapshot.db],
+  );
+  const accessibleProjects = useMemo(
+    () => workspaceStore.visibleProjects(snapshot.db, true),
+    [snapshot.db],
+  );
+  const projectIds = useMemo(() => new Set(visibleProjects.map((p) => p.id)), [visibleProjects]);
+  const visibleTasks = useMemo(
+    () => snapshot.db.tasks.filter((t) => projectIds.has(t.projectId)),
+    [snapshot.db.tasks, projectIds],
+  );
+  const me = useMemo(() => workspaceStore.currentUser(snapshot.db), [snapshot.db]);
   return {
     ...snapshot,
-    me: workspaceStore.currentUser(snapshot.db),
+    me,
     visibleProjects,
-    accessibleProjects: workspaceStore.visibleProjects(snapshot.db, true),
-    visibleTasks: snapshot.db.tasks.filter((t) => projectIds.has(t.projectId)),
+    accessibleProjects,
+    visibleTasks,
     can: workspaceStore.can,
     canTouchTask: workspaceStore.canTouchTask,
     act: workspaceStore.act,
