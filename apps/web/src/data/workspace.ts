@@ -73,6 +73,7 @@ const CAPS: Record<RoleId, string[]> = {
     "team.view",
     "team.manage",
     "notif.view",
+    "audit.view",
   ],
   dev: [
     "project.view",
@@ -84,7 +85,7 @@ const CAPS: Record<RoleId, string[]> = {
     "team.view",
     "notif.view",
   ],
-  viewer: ["project.view", "task.view", "sprint.view", "team.view", "notif.view", "audit.view"],
+  viewer: ["project.view", "task.view", "sprint.view", "team.view", "notif.view"],
 };
 type StoragePort = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 export interface WorkspaceSnapshot {

@@ -11,8 +11,7 @@ export const BETTER_AUTH_BASE_PATH = "/api/v1/session";
  */
 export function createAuth(database: Pool) {
   const secret = process.env.BETTER_AUTH_SECRET;
-  if (!secret || secret.length < 32)
-    throw new Error("BETTER_AUTH_SECRET must have at least 32 characters");
+  if (!secret || secret.length < 32) throw new Error("BETTER_AUTH_SECRET must have at least 32 characters");
   const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
   const trustedOrigins = (process.env.IDENTITY_TRUSTED_ORIGINS ?? "http://localhost:5173")
     .split(",")

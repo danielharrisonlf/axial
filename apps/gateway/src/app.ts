@@ -1,17 +1,10 @@
 import "reflect-metadata";
-import {
-  Controller,
-  Get,
-  Inject,
-  Injectable,
-  Module,
-  ServiceUnavailableException,
-} from "@nestjs/common";
+import { Controller, Get, Inject, Injectable, Module, ServiceUnavailableException } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { type GatewayConfig, readConfig } from "./config.js";
-import { routeTable, type RouteName } from "./routing.js";
+import { type RouteName, routeTable } from "./routing.js";
 
 export const GATEWAY_CONFIG = Symbol("GATEWAY_CONFIG");
 
@@ -91,7 +84,11 @@ const targets: Record<RouteName, (config: GatewayConfig) => string> = {
 export interface Gateway {
   app: NestExpressApplication;
   realtime: {
-    upgrade: (request: import("node:http").IncomingMessage, socket: import("node:net").Socket, head: Buffer) => void;
+    upgrade: (
+      request: import("node:http").IncomingMessage,
+      socket: import("node:net").Socket,
+      head: Buffer,
+    ) => void;
   };
 }
 

@@ -345,3 +345,25 @@ test("archived projects remain scoped in lists and direct links after profile sw
   await expect(page.getByText("Diagnóstico Industrial Andrade", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Restaurar", exact: true })).toHaveCount(0);
 });
+
+test("audit trail is scoped to delivery leadership and links to its project", async ({ page }, info) => {
+  await page.goto("/#/audit");
+  await expect(page.getByRole("heading", { name: "Trilha de auditoria", exact: true })).toBeVisible();
+  await expect(page.getByRole("table")).toBeVisible();
+  await evidence(page, info, "audit");
+  await page.getByRole("searchbox", { name: "Buscar na auditoria", exact: true }).fill("zzz-nada");
+  await expect(page.getByText("Nenhum evento", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Trocar perfil de demonstração", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Sérgio Tavares/ }).click();
+  await page.goto("/#/audit");
+  await expect(page.getByText("Acesso restrito", { exact: true })).toBeVisible();
+  await expect(page.getByRole("table")).toHaveCount(0);
+});
+
+test("insights microfrontend mounts the Vue remote", async ({ page }, info) => {
+  await page.goto("/#/insights");
+  await expect(page.getByRole("heading", { name: "Insights de entrega", exact: true })).toBeVisible();
+  await expect(page.getByText("Distribuição por status", { exact: true })).toBeVisible();
+  await expect(page.getByText("Carga por pessoa", { exact: true })).toBeVisible();
+  await evidence(page, info, "insights");
+});

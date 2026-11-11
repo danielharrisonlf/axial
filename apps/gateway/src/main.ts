@@ -10,14 +10,15 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invali
 await app.listen(port, "0.0.0.0");
 
 const server = app.getHttpServer();
-server.on("upgrade", (request: import("node:http").IncomingMessage, socket: import("node:net").Socket, head: Buffer) => {
-  if (request.url === "/ws") realtime.upgrade(request, socket, head);
-  else socket.destroy();
-});
+server.on(
+  "upgrade",
+  (request: import("node:http").IncomingMessage, socket: import("node:net").Socket, head: Buffer) => {
+    if (request.url === "/ws") realtime.upgrade(request, socket, head);
+    else socket.destroy();
+  },
+);
 
 for (const signal of ["SIGTERM", "SIGINT"] as const)
   process.once(signal, () => {
-    void app
-      .close()
-      .finally(() => process.exit());
+    void app.close().finally(() => process.exit());
   });

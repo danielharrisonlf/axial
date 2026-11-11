@@ -11,6 +11,7 @@
       "!**/coverage",
       "!**/pnpm-lock.yaml",
       "!**/output",
+      "!**/.mf",
       "!apps/web/src/styles/prototype.css",
       "!apps/web/src/data/demo-seed.json"
     ]
@@ -24,5 +25,13 @@
     "enabled": true,
     "rules": { "preset": "recommended", "suspicious": { "noExplicitAny": "error" } }
   },
+  "overrides": [
+    {
+      "includes": ["apps/insights/src/**/*.vue"],
+      "linter": {
+        "rules": { "correctness": { "noUnusedVariables": "off" } }
+      }
+    }
+  ],
   "assist": { "actions": { "source": { "organizeImports": "on" } } }
 }

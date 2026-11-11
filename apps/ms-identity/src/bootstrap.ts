@@ -37,14 +37,13 @@ try {
       organizationId,
       input.IDENTITY_BOOTSTRAP_ORGANIZATION,
     ]);
-    await client.query(
-      "INSERT INTO identity.members(organization_id,user_id,role) VALUES($1,$2,'ADMIN')",
-      [organizationId, created.user.id],
-    );
-    await client.query(
-      `UPDATE identity."user" SET "mustChangePassword"=false WHERE id=$1`,
-      [created.user.id],
-    );
+    await client.query("INSERT INTO identity.members(organization_id,user_id,role) VALUES($1,$2,'ADMIN')", [
+      organizationId,
+      created.user.id,
+    ]);
+    await client.query(`UPDATE identity."user" SET "mustChangePassword"=false WHERE id=$1`, [
+      created.user.id,
+    ]);
     await client.query("COMMIT");
     console.log(`Bootstrap complete; organization ID: ${organizationId}`);
   } catch (error) {

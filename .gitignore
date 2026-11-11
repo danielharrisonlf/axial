@@ -13,3 +13,5 @@ tmp/
 output/
 *.log
 .DS_Store
+
+apps/insights/.mf/

@@ -19,24 +19,17 @@ describe("audit visibility", () => {
     expect(canReadProject(scope, project)).toBe(true);
     expect(canReadProject(scope, other)).toBe(false);
     expect(canReadProject(scope, undefined)).toBe(false);
-    expect(
-      canReadProject({ organizationId: org, role: "ADMIN", projectIds: [] }, undefined),
-    ).toBe(true);
+    expect(canReadProject({ organizationId: org, role: "ADMIN", projectIds: [] }, undefined)).toBe(true);
   });
 
   it("adds no project restriction for administrators", () => {
-    const { where, values } = buildWhere(
-      { organizationId: org, role: "ADMIN", projectIds: [] },
-      {},
-    );
+    const { where, values } = buildWhere({ organizationId: org, role: "ADMIN", projectIds: [] }, {});
     expect(where).toBe("WHERE organization_id=$1");
     expect(values).toEqual([org]);
   });
 
   it("restricts non-administrators and denies empty assignments", () => {
-    expect(
-      buildWhere({ organizationId: org, role: "PROJECT_MANAGER", projectIds: [project] }, {}),
-    ).toEqual({
+    expect(buildWhere({ organizationId: org, role: "PROJECT_MANAGER", projectIds: [project] }, {})).toEqual({
       where: "WHERE organization_id=$1 AND project_id = ANY($2::uuid[])",
       values: [org, [project]],
     });

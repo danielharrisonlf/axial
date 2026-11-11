@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
+import type { AuthInfo } from "@modelcontextprotocol/server";
 import { Injectable } from "@nestjs/common";
 import type { McpTokenVerifier } from "@nestjs/mcp";
-import type { AuthInfo } from "@modelcontextprotocol/server";
-import { createRemoteJWKSet, importSPKI, jwtVerify, type CryptoKey, type JWTVerifyGetKey } from "jose";
+import { type CryptoKey, createRemoteJWKSet, importSPKI, type JWTVerifyGetKey, jwtVerify } from "jose";
 import { z } from "zod";
-import { readConfig, type McpConfig } from "./config.js";
+import { type McpConfig, readConfig } from "./config.js";
 
 const claimsSchema = z.object({
   sub: z.uuid(),

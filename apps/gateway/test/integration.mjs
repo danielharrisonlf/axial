@@ -6,9 +6,7 @@ import { WebSocket, WebSocketServer } from "ws";
 
 async function freePort() {
   const socket = createTcpServer();
-  await new Promise((resolve, reject) =>
-    socket.once("error", reject).listen(0, "127.0.0.1", resolve),
-  );
+  await new Promise((resolve, reject) => socket.once("error", reject).listen(0, "127.0.0.1", resolve));
   const port = socket.address().port;
   await new Promise((resolve, reject) => socket.close((error) => (error ? reject(error) : resolve())));
   return port;
@@ -97,9 +95,19 @@ try {
     assert.equal(routedBody.url, "/api/v1/projects/abc/tasks?page=2");
     assert.equal(routedBody.authorization, "Bearer caller-token");
 
-    assert.equal((await (await fetch(`http://127.0.0.1:${gatewayPort}/api/v1/auth/login`, { method: "POST" })).json()).service, "identity");
-    assert.equal((await (await fetch(`http://127.0.0.1:${gatewayPort}/api/v1/notification-preferences`)).json()).service, "notifications");
-    assert.equal((await (await fetch(`http://127.0.0.1:${gatewayPort}/api/v1/audit/summary`)).json()).service, "audit");
+    assert.equal(
+      (await (await fetch(`http://127.0.0.1:${gatewayPort}/api/v1/auth/login`, { method: "POST" })).json())
+        .service,
+      "identity",
+    );
+    assert.equal(
+      (await (await fetch(`http://127.0.0.1:${gatewayPort}/api/v1/notification-preferences`)).json()).service,
+      "notifications",
+    );
+    assert.equal(
+      (await (await fetch(`http://127.0.0.1:${gatewayPort}/api/v1/audit/summary`)).json()).service,
+      "audit",
+    );
 
     const mcp = await fetch(`http://127.0.0.1:${gatewayPort}/mcp`, {
       method: "POST",

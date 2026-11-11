@@ -2,7 +2,7 @@
 
 Plataforma interna de gestão de projetos, com API NestJS e Workspace React/Vite. O backend **ms-projects** usa PostgreSQL, contratos Zod e outbox transacional para Redis/BullMQ.
 
-O fluxo definitivo é o da apresentação ProjectFlow fornecida em 05/11/2026: planejar, organizar acessos, executar, sincronizar, notificar e acompanhar. A interface de projetos reproduz o protótipo fornecido, com a marca **Axial**. O monorepo inclui ms-projects, ms-identity, ms-realtime e ms-notifications.
+O fluxo definitivo é o da apresentação ProjectFlow fornecida em 05/11/2026: planejar, organizar acessos, executar, sincronizar, notificar e acompanhar. A interface de projetos reproduz o protótipo fornecido, com a marca **Axial**. O monorepo inclui ms-projects, ms-identity (BetterAuth), ms-realtime, ms-notifications, ms-audit, o gateway público, o servidor MCP e o microfrontend Vue de Insights.
 
 ## Estrutura
 
@@ -18,6 +18,10 @@ apps/
       infra/                # Prisma, saúde e relay BullMQ
       modules/              # controller, regras e transações de projetos
     test/                   # testes unitários, integração e HTTP
+  gateway/                  # edge REST/WSS/MCP @axial/gateway
+  mcp-server/               # resource server MCP @axial/mcp-server
+  ms-audit/                 # trilha append-only @axial/ms-audit
+  insights/                 # microfrontend Vue @axial/insights
   web/                      # Workspace React + Vite @axial/web
     src/components/         # shell, tabelas, formulários e drawer
     src/pages/              # projetos, dashboard, Kanban e planejamento
@@ -48,7 +52,9 @@ pnpm dev
 ```
 
 - API: `http://localhost:3001/api/v1`
+- Gateway: `http://localhost:3000`
 - Workspace: `http://localhost:5173`
+- Insights (remote): `http://localhost:5174`
 - Swagger: `http://localhost:3001/docs`
 - OpenAPI: `http://localhost:3001/docs/openapi.json`
 - Liveness: `http://localhost:3001/api/v1/health/live`
@@ -56,7 +62,9 @@ pnpm dev
 
 O seed cria dados fictícios em uma organização de demonstração e preserva registros existentes quando repetido. Só executa em banco terminado em `_dev` e rejeita `NODE_ENV=production`.
 
-Para abrir somente a interface, sem dependência de Docker ou da API: `pnpm dev:web`. Para iniciar somente o backend: `pnpm dev:api`. O comando `pnpm dev` inicia os dois workspaces.
+Para abrir somente a interface, sem dependência de Docker ou da API: `pnpm dev:web`. Para iniciar somente o backend: `pnpm dev:api`. O comando `pnpm dev` inicia Workspace e Insights. Serviços adicionais têm atalhos próprios: `pnpm dev:gateway`, `pnpm dev:mcp`, `pnpm dev:audit` e `pnpm dev:insights`.
+
+O login do Workspace usa o endpoint de compatibilidade `POST /api/v1/auth/login`, que troca credenciais BetterAuth pelo JWT RS256 curto consumido por ms-projects, ms-notifications, ms-realtime, ms-audit e mcp-server.
 
 ### Workspace e fidelidade ao protótipo
 

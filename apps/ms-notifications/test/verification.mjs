@@ -124,7 +124,7 @@ try {
   const quotaDestination = "quota@example.test";
   await preference(quota, quotaDestination);
   const pepper = Buffer.from(process.env.NOTIFICATIONS_VERIFICATION_PEPPER, "base64");
-  const limitKeys = ["user:" + quota.sub, "destination:" + quotaDestination].map((value) =>
+  const limitKeys = [`user:${quota.sub}`, `destination:${quotaDestination}`].map((value) =>
     createHmac("sha256", pepper).update(value).digest(),
   );
   const sendsToQuota = () => calls.filter((call) => call.to[0] === quotaDestination).length;

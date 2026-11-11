@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createTcpServer } from "node:net";
-import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { exportSPKI, generateKeyPair, SignJWT } from "jose";
@@ -12,9 +12,7 @@ const audience = "axial-projects";
 
 async function freePort() {
   const socket = createTcpServer();
-  await new Promise((resolve, reject) =>
-    socket.once("error", reject).listen(0, "127.0.0.1", resolve),
-  );
+  await new Promise((resolve, reject) => socket.once("error", reject).listen(0, "127.0.0.1", resolve));
   const port = socket.address().port;
   await new Promise((resolve, reject) => socket.close((error) => (error ? reject(error) : resolve())));
   return port;
@@ -190,15 +188,11 @@ try {
     });
     assert.equal(rejected.status, 401);
 
-    const metadata = await fetch(
-      `http://127.0.0.1:${mcpPort}/.well-known/oauth-protected-resource/mcp`,
-    );
+    const metadata = await fetch(`http://127.0.0.1:${mcpPort}/.well-known/oauth-protected-resource/mcp`);
     assert.equal(metadata.status, 200);
     assert.equal((await metadata.json()).resource, env.MCP_RESOURCE);
 
-    console.log(
-      "Integration passed: MCP auth, tool listing, caller-token forwarding and resource metadata",
-    );
+    console.log("Integration passed: MCP auth, tool listing, caller-token forwarding and resource metadata");
   } finally {
     if (server.exitCode === null && server.signalCode === null) server.kill();
     await closed;

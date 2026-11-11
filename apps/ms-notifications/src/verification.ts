@@ -13,6 +13,10 @@ function pepper(): Buffer {
     throw new VerificationUnavailableError("Verification unavailable");
   return decoded;
 }
+function required<T>(value: T | undefined | null): T {
+  if (value === undefined || value === null) throw new Error("Verification configuration or row missing");
+  return value;
+}
 function mac(value: string): Buffer {
   return createHmac("sha256", pepper()).update(value).digest();
 }
@@ -63,7 +67,7 @@ async function send(channel: Channel, destination: string, code: string): Promis
     const auth = await fetch("https://api.smsgo.com.br/v1/auth/token", {
       redirect: "error",
       signal: AbortSignal.timeout(10000),
-      headers: { "SMSGo-key": e.SMSGO_API_KEY! },
+      headers: { "SMSGo-key": required(e.SMSGO_API_KEY) },
     });
     if (!auth.ok) throw new Error("Verification send failed");
     const result: unknown = await auth.json();
@@ -148,7 +152,7 @@ export async function beginVerification(actor: Actor, channel: Channel): Promise
       [actor.organizationId, actor.sub, channel],
     );
     if (pref.rowCount) {
-      const destination = pref.rows[0]!.destination;
+      const destination = required(pref.rows[0]).destination;
       const keys = await limits(c, actor, channel, destination);
       let allowed = true;
       for (const [kind, key] of keys) {
@@ -198,7 +202,7 @@ export async function confirmVerification(actor: Actor, channel: Channel, code: 
       [actor.organizationId, actor.sub, channel],
     );
     if (pref.rowCount) {
-      const destination = pref.rows[0]!.destination;
+      const destination = required(pref.rows[0]).destination;
       const keys = await limits(c, actor, channel, destination);
       let allowed = true;
       for (const [kind, key] of keys) {
@@ -222,7 +226,7 @@ export async function confirmVerification(actor: Actor, channel: Channel, code: 
           "UPDATE notifications.verification_challenges SET attempts=attempts+1 WHERE organization_id=$1 AND user_id=$2 AND channel=$3",
           [actor.organizationId, actor.sub, channel],
         );
-        const expected = challenge.rows[0]!.digest;
+        const expected = required(challenge.rows[0]).digest;
         const actual = digest(actor, channel, destination, code);
         if (expected.length === actual.length && timingSafeEqual(expected, actual)) {
           await c.query(

@@ -36,6 +36,120 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+  api:
+    profiles: ["app"]
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://axial:axial_local_only@postgres:5432/axial_dev?schema=projects
+      REDIS_URL: redis://redis:6379
+      JWT_ISSUER: http://localhost:3000/identity
+      JWT_AUDIENCE: axial-projects
+      JWT_PUBLIC_KEY_PATH: /keys/dev-public.pem
+      CORS_ORIGINS: http://localhost:5173
+    volumes: ["./keys:/keys:ro"]
+    ports: ["127.0.0.1:3001:3001"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+  ms-identity:
+    profiles: ["app"]
+    build: { context: ., dockerfile: apps/ms-identity/Dockerfile }
+    environment:
+      NODE_ENV: development
+      IDENTITY_PORT: 3002
+      IDENTITY_DATABASE_URL: postgresql://axial:axial_local_only@postgres:5432/axial_dev
+      BETTER_AUTH_SECRET: development-secret-with-at-least-32-characters
+      BETTER_AUTH_URL: http://localhost:3002
+      IDENTITY_TRUSTED_ORIGINS: http://localhost:5173
+      IDENTITY_ISSUER: http://localhost:3000/identity
+      IDENTITY_AUDIENCE: axial-projects
+      IDENTITY_PRIVATE_KEY_PATH: /keys/dev-private.pem
+      IDENTITY_PUBLIC_KEY_PATH: /keys/dev-public.pem
+    volumes: ["./keys:/keys:ro"]
+    ports: ["127.0.0.1:3002:3002"]
+    depends_on:
+      postgres: { condition: service_healthy }
+  ms-notifications:
+    profiles: ["app"]
+    build: { context: ., dockerfile: apps/ms-notifications/Dockerfile }
+    environment:
+      NODE_ENV: development
+      NOTIFICATIONS_PORT: 3003
+      NOTIFICATIONS_DATABASE_URL: postgresql://axial:axial_local_only@postgres:5432/axial_dev
+      NOTIFICATIONS_REDIS_URL: redis://redis:6379
+      NOTIFICATIONS_PUBLIC_KEY_PATH: /keys/dev-public.pem
+      NOTIFICATIONS_JWT_ISSUER: http://localhost:3000/identity
+      NOTIFICATIONS_JWT_AUDIENCE: axial-projects
+    volumes: ["./keys:/keys:ro"]
+    ports: ["127.0.0.1:3003:3003"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+  ms-realtime:
+    profiles: ["app"]
+    build: { context: ., dockerfile: apps/ms-realtime/Dockerfile }
+    environment:
+      NODE_ENV: development
+      REALTIME_PORT: 3004
+      REALTIME_NAMESPACE: /ws
+      REDIS_URL: redis://redis:6379
+      JWT_ISSUER: http://localhost:3000/identity
+      JWT_AUDIENCE: axial-projects
+      JWT_PUBLIC_KEY_PATH: /keys/dev-public.pem
+      PROJECTS_API_URL: http://api:3001
+    volumes: ["./keys:/keys:ro"]
+    ports: ["127.0.0.1:3004:3004"]
+    depends_on:
+      redis: { condition: service_healthy }
+  gateway:
+    profiles: ["app"]
+    build: { context: ., dockerfile: apps/gateway/Dockerfile }
+    environment:
+      NODE_ENV: development
+      GATEWAY_PORT: 3000
+      PROJECTS_API_URL: http://api:3001
+      IDENTITY_API_URL: http://ms-identity:3002
+      NOTIFICATIONS_API_URL: http://ms-notifications:3003
+      REALTIME_API_URL: http://ms-realtime:3004
+      AUDIT_API_URL: http://ms-audit:3005
+      MCP_API_URL: http://mcp-server:3006
+      GATEWAY_CORS_ORIGINS: http://localhost:5173
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [api, ms-identity, ms-notifications, ms-realtime, ms-audit, mcp-server]
+  ms-audit:
+    profiles: ["app"]
+    build: { context: ., dockerfile: apps/ms-audit/Dockerfile }
+    environment:
+      NODE_ENV: development
+      AUDIT_PORT: 3005
+      AUDIT_DATABASE_URL: postgresql://axial:axial_local_only@postgres:5432/axial_dev
+      AUDIT_REDIS_URL: redis://redis:6379
+      AUDIT_PUBLIC_KEY_PATH: /keys/dev-public.pem
+      AUDIT_JWT_ISSUER: http://localhost:3000/identity
+      AUDIT_JWT_AUDIENCE: axial-projects
+    volumes: ["./keys:/keys:ro"]
+    ports: ["127.0.0.1:3005:3005"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+  mcp-server:
+    profiles: ["app"]
+    build: { context: ., dockerfile: apps/mcp-server/Dockerfile }
+    environment:
+      NODE_ENV: development
+      MCP_PORT: 3006
+      MCP_RESOURCE: http://localhost:3006/mcp
+      MCP_PUBLIC_KEY_PATH: /keys/dev-public.pem
+      MCP_JWT_ISSUER: http://localhost:3000/identity
+      MCP_JWT_AUDIENCE: axial-projects
+      PROJECTS_API_URL: http://api:3001
+      MCP_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:4173
+    volumes: ["./keys:/keys:ro"]
+    ports: ["127.0.0.1:3006:3006"]
+    depends_on: [api]
+
 volumes:
   axial-postgres:
   axial-redis:

@@ -49,12 +49,47 @@
     "NOTIFICATIONS_VERIFY_WHATSAPP",
     "META_VERIFICATION_TEMPLATE_NAME",
     "META_VERIFICATION_LANGUAGE_CODE",
-    "META_VERIFICATION_TEMPLATE_MODE"
+    "META_VERIFICATION_TEMPLATE_MODE",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "IDENTITY_TRUSTED_ORIGINS",
+    "AUDIT_PORT",
+    "AUDIT_DATABASE_URL",
+    "AUDIT_REDIS_URL",
+    "AUDIT_PUBLIC_KEY_PATH",
+    "AUDIT_JWT_ISSUER",
+    "AUDIT_JWT_AUDIENCE",
+    "MCP_PORT",
+    "MCP_RESOURCE",
+    "MCP_PUBLIC_KEY_PATH",
+    "MCP_JWKS_URL",
+    "MCP_JWT_ISSUER",
+    "MCP_JWT_AUDIENCE",
+    "MCP_ALLOWED_ORIGINS",
+    "GATEWAY_PORT",
+    "IDENTITY_API_URL",
+    "NOTIFICATIONS_API_URL",
+    "REALTIME_API_URL",
+    "AUDIT_API_URL",
+    "MCP_API_URL",
+    "GATEWAY_CORS_ORIGINS",
+    "INSIGHTS_REMOTE_ENTRY"
   ],
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
-    "typecheck": { "dependsOn": ["^build"] },
-    "test:unit": { "dependsOn": ["^build"], "outputs": [] },
-    "dev": { "cache": false, "persistent": true }
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test:unit": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
   }
 }

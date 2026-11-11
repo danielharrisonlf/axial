@@ -21,9 +21,7 @@ const claimsSchema = z
   .object({
     sub: z.uuid(),
     organizationId: z.uuid(),
-    role: z
-      .enum(["ADMIN", "PROJECT_MANAGER", "TEAM_LEAD", "CONTRIBUTOR", "VIEWER"])
-      .optional(),
+    role: z.enum(["ADMIN", "PROJECT_MANAGER", "TEAM_LEAD", "CONTRIBUTOR", "VIEWER"]).optional(),
     teamIds: z.array(z.uuid()).default([]),
     projectIds: z.array(z.uuid()).default([]),
     assignableUserIds: z.array(z.uuid()).default([]),
@@ -52,10 +50,7 @@ export async function loadKeys(): Promise<{
   return { privateKey, publicKey };
 }
 
-export async function signAccessToken(
-  privateKey: CryptoKey,
-  claims: AccessClaims,
-): Promise<string> {
+export async function signAccessToken(privateKey: CryptoKey, claims: AccessClaims): Promise<string> {
   return new SignJWT({
     organizationId: claims.organizationId,
     role: claims.role,

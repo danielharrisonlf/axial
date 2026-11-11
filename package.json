@@ -9,7 +9,7 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "turbo run dev --filter=@axial/ms-projects --filter=@axial/web",
+    "dev": "turbo run dev --filter=@axial/ms-projects --filter=@axial/web --filter=@axial/insights",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "biome check .",
@@ -37,7 +37,15 @@
     "infra:up": "docker compose up -d --wait",
     "infra:down": "docker compose down",
     "dev:keys": "node scripts/dev-identity.mjs init",
-    "dev:token": "node scripts/dev-identity.mjs token"
+    "dev:token": "node scripts/dev-identity.mjs token",
+    "dev:gateway": "pnpm --filter @axial/gateway dev",
+    "dev:mcp": "pnpm --filter @axial/mcp-server dev",
+    "dev:audit": "pnpm --filter @axial/ms-audit dev",
+    "dev:insights": "pnpm --filter @axial/insights dev",
+    "db:audit:migrate": "pnpm --filter @axial/ms-audit db:migrate",
+    "test:gateway:integration": "pnpm --filter @axial/gateway test:integration",
+    "test:mcp:integration": "pnpm --filter @axial/mcp-server test:integration",
+    "test:audit:integration": "pnpm --filter @axial/ms-audit test:integration"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

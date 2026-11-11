@@ -1,6 +1,6 @@
+import { BadGatewayException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
 import { compact, queryString, upstreamError } from "../src/upstream.js";
-import { BadGatewayException, ForbiddenException, NotFoundException } from "@nestjs/common";
 
 describe("mcp upstream helpers", () => {
   it("builds query strings and skips empty values", () => {

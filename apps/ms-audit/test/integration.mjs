@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
-import { SignJWT, importPKCS8 } from "jose";
+import { importPKCS8, SignJWT } from "jose";
 import pg from "pg";
 
 const url = process.env.AUDIT_TEST_DATABASE_URL;
@@ -103,7 +103,10 @@ async function waitForRows(count) {
 try {
   await admin.query(`CREATE DATABASE "${databaseName}"`);
   created = true;
-  const migrate = spawnSync(process.execPath, ["--import", "tsx", "src/migrate.ts"], { env, encoding: "utf8" });
+  const migrate = spawnSync(process.execPath, ["--import", "tsx", "src/migrate.ts"], {
+    env,
+    encoding: "utf8",
+  });
   if (migrate.status !== 0) throw new Error(migrate.stderr || migrate.stdout);
   server = spawn(process.execPath, ["--import", "tsx", "src/main.ts"], { env, stdio: "inherit" });
   serverClosed = new Promise((resolve) => server.once("close", resolve));
@@ -169,15 +172,12 @@ try {
   ]);
   assert.equal((await request("audit/summary", leadToken)).body.total, 1);
 
-  await assert.rejects(
-    db.query("UPDATE audit.events SET event_type='tampered'"),
-    /append-only/,
-  );
+  await assert.rejects(db.query("UPDATE audit.events SET event_type='tampered'"), /append-only/);
   await assert.rejects(db.query("DELETE FROM audit.events"), /append-only/);
   assert.equal((await db.query("SELECT count(*)::int AS count FROM audit.events")).rows[0].count, 2);
 
   assert.equal((await request("audit?page=0", adminToken)).status, 400);
-  assert.equal((await request("audit?organizationId=" + organization, adminToken)).status, 400);
+  assert.equal((await request(`audit?organizationId=${organization}`, adminToken)).status, 400);
   console.log("Integration passed: audit ingestion, dedupe, visibility, filters and append-only storage");
 } catch (error) {
   failure = error;

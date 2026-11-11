@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { readFile } from "node:fs/promises";
+import { auditListSchema, auditSummarySchema, type Role } from "@axial/contracts";
 import {
   BadRequestException,
   Controller,
@@ -15,11 +16,10 @@ import {
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { auditListSchema, auditSummarySchema, type Role } from "@axial/contracts";
 import type { Request } from "express";
 import { importSPKI, jwtVerify } from "jose";
 import { z } from "zod";
-import { startConsumer, type Consumer } from "./consumer.js";
+import { type Consumer, startConsumer } from "./consumer.js";
 import { db } from "./db.js";
 import { buildCount, buildList, buildWhere, canReadAudit, canReadProject } from "./query.js";
 
@@ -101,7 +101,10 @@ class AuditService {
           LIMIT $${list.limit} OFFSET $${list.offset}`,
         list.values,
       ),
-      db.query<{ count: number }>(`SELECT count(*)::int AS count FROM audit.events ${count.where}`, count.values),
+      db.query<{ count: number }>(
+        `SELECT count(*)::int AS count FROM audit.events ${count.where}`,
+        count.values,
+      ),
     ]);
     return {
       items: rows.rows,

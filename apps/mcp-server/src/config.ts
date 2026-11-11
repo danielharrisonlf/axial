@@ -3,10 +3,7 @@ import { z } from "zod";
 const httpUrl = z
   .string()
   .url()
-  .refine(
-    (value) => ["http:", "https:"].includes(new URL(value).protocol),
-    "URL must use http or https",
-  );
+  .refine((value) => ["http:", "https:"].includes(new URL(value).protocol), "URL must use http or https");
 
 const schema = z
   .object({

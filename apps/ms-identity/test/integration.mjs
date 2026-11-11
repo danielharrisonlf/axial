@@ -261,9 +261,8 @@ try {
     password: "third-private-password",
     organizationId: orgId,
   });
-  const firstId = (
-    await db.query('SELECT id FROM identity."user" WHERE email=$1', ["admin@example.test"])
-  ).rows[0].id;
+  const firstId = (await db.query('SELECT id FROM identity."user" WHERE email=$1', ["admin@example.test"]))
+    .rows[0].id;
   const simultaneous = await Promise.all([
     request(`members/${third.body.id}`, { role: "VIEWER" }, firstAdmin.body.accessToken, "PATCH"),
     request(`members/${firstId}`, { role: "VIEWER" }, thirdAdmin.body.accessToken, "PATCH"),
@@ -276,10 +275,10 @@ try {
   assert.equal(Number(adminCount.rows[0].count), 1);
 
   await db.query(
-    'INSERT INTO identity."user"(id,email,name) SELECT gen_random_uuid(), \'load-\' || n || \'@example.test\', \'Load\' FROM generate_series(1,150) AS n',
+    "INSERT INTO identity.\"user\"(id,email,name) SELECT gen_random_uuid(), 'load-' || n || '@example.test', 'Load' FROM generate_series(1,150) AS n",
   );
   await db.query(
-    'INSERT INTO identity.members(organization_id,user_id,role) SELECT $1,id,\'VIEWER\' FROM identity."user" WHERE email LIKE \'load-%@example.test\'',
+    "INSERT INTO identity.members(organization_id,user_id,role) SELECT $1,id,'VIEWER' FROM identity.\"user\" WHERE email LIKE 'load-%@example.test'",
     [organization],
   );
   const oversized = await request("auth/login", {

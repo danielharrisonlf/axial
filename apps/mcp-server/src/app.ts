@@ -1,8 +1,8 @@
 import "reflect-metadata";
 import { Controller, Get, Inject, Injectable, Module, ServiceUnavailableException } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import type { NestExpressApplication } from "@nestjs/platform-express";
 import { McpModule } from "@nestjs/mcp";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { readConfig } from "./config.js";
 import { ProjectsApi, ProjectTools } from "./tools.js";
 import { IdentityTokenVerifier } from "./verifier.js";

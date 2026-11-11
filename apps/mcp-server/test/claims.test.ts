@@ -1,5 +1,5 @@
+import { exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
-import { SignJWT, generateKeyPair, exportPKCS8 } from "jose";
 
 /**
  * The verifier is exercised end-to-end by the integration test against a real

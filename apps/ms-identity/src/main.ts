@@ -22,9 +22,9 @@ import {
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { config as loadEnv } from "dotenv";
-import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
+import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
+import { config as loadEnv } from "dotenv";
 import type { Request } from "express";
 import { z } from "zod";
 import { BETTER_AUTH_BASE_PATH, createAuth } from "./auth.js";
@@ -63,9 +63,7 @@ function isDuplicateEmail(error: unknown): boolean {
   const status = betterAuthStatus(error);
   const message = (error as { body?: { message?: string }; message?: string } | null)?.body?.message ?? "";
   return (
-    status === "CONFLICT" ||
-    status === "UNPROCESSABLE_ENTITY" ||
-    /already exists|user already/i.test(message)
+    status === "CONFLICT" || status === "UNPROCESSABLE_ENTITY" || /already exists|user already/i.test(message)
   );
 }
 
@@ -134,7 +132,7 @@ class IdentityService {
         [organizationId, userId],
       ),
       db.query<{ id: string }>(
-        "SELECT m.user_id AS id FROM identity.members m JOIN identity.\"user\" u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.active ORDER BY m.user_id",
+        'SELECT m.user_id AS id FROM identity.members m JOIN identity."user" u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.active ORDER BY m.user_id',
         [organizationId],
       ),
       db.query<{ id: string }>(
@@ -224,7 +222,10 @@ class IdentityService {
     return this.sessionActor(req, options.admin);
   }
 
-  async login(req: Request, data: unknown): Promise<{
+  async login(
+    req: Request,
+    data: unknown,
+  ): Promise<{
     accessToken: string;
     expiresIn: number;
     requiresPasswordChange: boolean;
@@ -309,10 +310,10 @@ class IdentityService {
   async resetPassword(actor: Actor, rawId: string, data: unknown): Promise<{ changed: boolean }> {
     const userId = pathUuid(rawId);
     const input = parse(strict({ newPassword: password }), data);
-    const member = await db.query(
-      "SELECT 1 FROM identity.members WHERE organization_id=$1 AND user_id=$2",
-      [actor.organizationId, userId],
-    );
+    const member = await db.query("SELECT 1 FROM identity.members WHERE organization_id=$1 AND user_id=$2", [
+      actor.organizationId,
+      userId,
+    ]);
     if (!member.rowCount) throw new NotFoundException();
     const hash = await hashPassword(input.newPassword);
     const updated = await db.query(
@@ -345,7 +346,7 @@ class IdentityController {
         required,
       ]);
       if (result.rowCount !== required.length) throw new ServiceUnavailableException();
-      await db.query("SELECT 1 FROM identity.\"user\" LIMIT 1");
+      await db.query('SELECT 1 FROM identity."user" LIMIT 1');
     } catch {
       throw new ServiceUnavailableException("Database not ready");
     }
@@ -434,10 +435,7 @@ class IdentityController {
       throw new BadRequestException("Invalid request");
     }
     try {
-      await db.query(
-        `UPDATE identity."user" SET "mustChangePassword"=true WHERE id=$1`,
-        [created.user.id],
-      );
+      await db.query(`UPDATE identity."user" SET "mustChangePassword"=true WHERE id=$1`, [created.user.id]);
       await db.query("INSERT INTO identity.members(organization_id,user_id,role) VALUES($1,$2,$3)", [
         actor.organizationId,
         created.user.id,
@@ -470,11 +468,9 @@ class IdentityController {
     const c = await db.connect();
     try {
       await c.query("BEGIN");
-      await c.query("SELECT id FROM identity.organizations WHERE id=$1 FOR UPDATE", [
-        actor.organizationId,
-      ]);
+      await c.query("SELECT id FROM identity.organizations WHERE id=$1 FOR UPDATE", [actor.organizationId]);
       const current = await c.query(
-        "SELECT 1 FROM identity.members m JOIN identity.\"user\" u ON u.id=m.user_id JOIN identity.organizations o ON o.id=m.organization_id WHERE m.organization_id=$1 AND m.user_id=$2 AND m.role='ADMIN' AND m.active AND NOT u.\"mustChangePassword\" AND o.active",
+        'SELECT 1 FROM identity.members m JOIN identity."user" u ON u.id=m.user_id JOIN identity.organizations o ON o.id=m.organization_id WHERE m.organization_id=$1 AND m.user_id=$2 AND m.role=\'ADMIN\' AND m.active AND NOT u."mustChangePassword" AND o.active',
         [actor.organizationId, actor.userId],
       );
       if (!current.rowCount) throw new ForbiddenException();
@@ -484,13 +480,12 @@ class IdentityController {
       );
       if (!result.rowCount) throw new NotFoundException();
       const remaining = await c.query(
-        "SELECT 1 FROM identity.members m JOIN identity.\"user\" u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.role='ADMIN' AND m.active AND NOT u.\"mustChangePassword\" LIMIT 1",
+        'SELECT 1 FROM identity.members m JOIN identity."user" u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.role=\'ADMIN\' AND m.active AND NOT u."mustChangePassword" LIMIT 1',
         [actor.organizationId],
       );
       if (!remaining.rowCount)
         throw new HttpException("Organization must retain an active administrator", 409);
-      if (input.active === false)
-        await c.query('DELETE FROM identity.session WHERE "userId"=$1', [id]);
+      if (input.active === false) await c.query('DELETE FROM identity.session WHERE "userId"=$1', [id]);
       await c.query("COMMIT");
       return result.rows[0];
     } catch (error) {
@@ -505,9 +500,9 @@ class IdentityController {
     @Param("id") id: string,
     @Body() body: unknown,
   ) {
-    return this.service.actor(req, { admin: true }).then((actor) =>
-      this.service.resetPassword(actor, id, body),
-    );
+    return this.service
+      .actor(req, { admin: true })
+      .then((actor) => this.service.resetPassword(actor, id, body));
   }
   @Get("teams") async teams(@Req() req: Request) {
     const a = await this.service.actor(req, { admin: true });
@@ -528,11 +523,7 @@ class IdentityController {
     ]);
     return { id, name: input.name };
   }
-  @Patch("teams/:id") async updateTeam(
-    @Req() req: Request,
-    @Param("id") id: string,
-    @Body() body: unknown,
-  ) {
+  @Patch("teams/:id") async updateTeam(@Req() req: Request, @Param("id") id: string, @Body() body: unknown) {
     const a = await this.service.actor(req, { admin: true });
     const input = parse(
       strict({ name: name.optional(), active: z.boolean().optional() }).refine(
@@ -620,32 +611,26 @@ app.setGlobalPrefix("api/v1");
 app.enableShutdownHooks();
 
 const handler = toNodeHandler(auth);
-app.use(
-  (
-    req: Request,
-    res: import("express").Response,
-    next: (error?: unknown) => void,
-  ) => {
-    const path = (req.url ?? "").split("?")[0] ?? "";
-    if (!path.startsWith(BETTER_AUTH_BASE_PATH)) {
-      next();
-      return;
+app.use((req: Request, res: import("express").Response, next: (error?: unknown) => void) => {
+  const path = (req.url ?? "").split("?")[0] ?? "";
+  if (!path.startsWith(BETTER_AUTH_BASE_PATH)) {
+    next();
+    return;
+  }
+  // Public self-signup would create credentials without organization membership.
+  // Accounts are provisioned by an administrator or the bootstrap command.
+  if (path.startsWith(`${BETTER_AUTH_BASE_PATH}/sign-up`)) {
+    res.writeHead(404, { "content-type": "application/json" });
+    res.end('{"error":"Not found"}');
+    return;
+  }
+  Promise.resolve(handler(req, res)).catch(() => {
+    if (!res.headersSent) {
+      res.writeHead(500, { "content-type": "application/json" });
+      res.end('{"error":"Authentication unavailable"}');
     }
-    // Public self-signup would create credentials without organization membership.
-    // Accounts are provisioned by an administrator or the bootstrap command.
-    if (path.startsWith(`${BETTER_AUTH_BASE_PATH}/sign-up`)) {
-      res.writeHead(404, { "content-type": "application/json" });
-      res.end('{"error":"Not found"}');
-      return;
-    }
-    Promise.resolve(handler(req, res)).catch(() => {
-      if (!res.headersSent) {
-        res.writeHead(500, { "content-type": "application/json" });
-        res.end('{"error":"Authentication unavailable"}');
-      }
-    });
-  },
-);
+  });
+});
 app.useBodyParser("json", { limit: "256kb" });
 
 const port = Number(process.env.IDENTITY_PORT ?? "3002");

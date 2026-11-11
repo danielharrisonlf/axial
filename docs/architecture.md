@@ -56,3 +56,44 @@ Inspeção em 05/11/2026, sem alterar os repositórios de origem:
 Versões principais selecionadas e fixadas no lockfile: Nest 12.3.3, Prisma 7.10.1, Zod 4.6.7, BullMQ 5.81.5, Vitest 4.1.2, TypeScript 6.0.3. A release candidate do Prisma 8 não foi adotada.
 
 Referências técnicas consultadas: [Prisma no NestJS](https://docs.nestjs.com/recipes/prisma), [OpenAPI no NestJS](https://docs.nestjs.com/openapi/introduction), [identificadores de jobs BullMQ](https://docs.bullmq.io/guide/jobs/job-ids).
+
+## Topologia Axial
+
+O fluxo do ProjectFlow é atendido por cinco serviços de domínio atrás de um único edge, mais o Workspace e o microfrontend de Insights:
+
+```mermaid
+flowchart LR
+    W[Workspace React] --> G[Gateway :3000]
+    I[Insights Vue] -. Module Federation .-> W
+    G --> P[ms-projects :3001]
+    G --> D[ms-identity :3002]
+    G --> N[ms-notifications :3003]
+    G --> R[ms-realtime :3004]
+    G --> A[ms-audit :3005]
+    G --> M[mcp-server :3006]
+    M --> P
+    P --> Q[(PostgreSQL)]
+    D --> Q
+    N --> Q
+    A --> Q
+    P --> X[(Redis)]
+    N --> X
+    R --> X
+    A --> X
+```
+
+- **gateway**: expõe REST, `/ws` e `/mcp`. Valida URLs HTTPS em produção, aplica CORS, encaminha o header de autorização sem reescrever tokens e agrega a saúde dos seis serviços. Requisições de saúde ficam no próprio gateway.
+- **ms-identity**: BetterAuth gerencia credenciais e sessões nas tabelas `user`, `session`, `account` e `verification` do schema `identity`. Organização, vínculos, equipes e atribuições de projeto continuam tabelas de domínio. O login troca credenciais por um JWT RS256 curto, mantendo o contrato já verificado pelos demais serviços. Auto-cadastro público é bloqueado: contas são provisionadas por administrador ou bootstrap.
+- **ms-audit**: armazenamento append-only com triggers que rejeitam UPDATE e DELETE, consumidor BullMQ dedicado com deduplicação por event ID e REST de leitura. A visibilidade é da organização e limitada a ADMIN, PROJECT_MANAGER e TEAM_LEAD; os demais perfis têm a consulta restrita aos `projectIds` da claim.
+- **mcp-server**: resource server OAuth do MCP construído com `@nestjs/mcp` e `@modelcontextprotocol/server`. Verifica o mesmo JWT RS256 e encaminha o token do chamador ao ms-projects, de modo que as ferramentas herdam organização, papel e escopo do usuário em vez de credenciais próprias.
+- **Insights**: microfrontend Vue 3 exposto por Module Federation (`@module-federation/vite`). O Workspace React é o host e monta o remote sob demanda em `/#/insights`, sem acoplar o bundle de entrega ao de analytics.
+
+## Identidade e autorização no edge
+
+Serviços de domínio continuam validando o JWT localmente com a chave pública ou JWKS. O gateway não emite tokens nem decide autorização: ele apenas roteia. Por isso a identidade não está no caminho crítico de cada requisição e o token curto continua sendo a fronteira de autorização. O MCP reutiliza a mesma claim, incluindo o `source`, para auditoria de origem.
+
+## Observações operacionais
+
+- `AUDIT_*`, `MCP_*`, `GATEWAY_*` e `INSIGHTS_REMOTE_ENTRY` estão documentados em `.env.example`.
+- As imagens Docker dos novos serviços seguem o padrão multi-stage dos serviços existentes e rodam como `node`.
+- No compose, os serviços de aplicação usam o profile `app` para não alterar `pnpm infra:up`, que continua subindo apenas PostgreSQL e Redis.
