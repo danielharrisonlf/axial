@@ -190,9 +190,52 @@ try {
 
     const metadata = await fetch(`http://127.0.0.1:${mcpPort}/.well-known/oauth-protected-resource/mcp`);
     assert.equal(metadata.status, 200);
-    assert.equal((await metadata.json()).resource, env.MCP_RESOURCE);
+    const resourceMetadata = await metadata.json();
+    assert.equal(resourceMetadata.resource, env.MCP_RESOURCE);
+    assert.deepEqual(resourceMetadata.authorization_servers, [issuer]);
+    assert.deepEqual(resourceMetadata.scopes_supported, ["projects:read", "projects:write"]);
+    assert.ok(
+      (unauthenticated.headers.get("www-authenticate") ?? "").includes(
+        `resource_metadata="http://127.0.0.1:${mcpPort}/.well-known/oauth-protected-resource/mcp"`,
+      ),
+    );
 
-    console.log("Integration passed: MCP auth, tool listing, caller-token forwarding and resource metadata");
+    // OAuth tokens (scope claim, MCP resource as audience) are limited to their scopes.
+    const call = (bearer, id, name, args) =>
+      fetch(endpoint, {
+        method: "POST",
+        headers: { ...headers, authorization: `Bearer ${bearer}` },
+        body: JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } }),
+      });
+    const readOnly = await sign({ scope: "projects:read" }, [audience, env.MCP_RESOURCE]);
+    const read = await jsonRpc(
+      await call(readOnly, 5, "list-tasks", { projectId: "0190f0f0-0000-7000-8000-000000000002" }),
+    );
+    assert.ok(read.result, `read scope call failed: ${JSON.stringify(read)}`);
+    const write = await call(readOnly, 6, "create-task", {
+      projectId: "0190f0f0-0000-7000-8000-000000000002",
+      title: "Needs write",
+    });
+    assert.equal(write.status, 403);
+    assert.match(write.headers.get("www-authenticate") ?? "", /insufficient_scope/);
+    const writer = await sign({ scope: "projects:read projects:write" }, [audience, env.MCP_RESOURCE]);
+    const created = await jsonRpc(
+      await call(writer, 7, "create-task", {
+        projectId: "0190f0f0-0000-7000-8000-000000000002",
+        title: "With write",
+      }),
+    );
+    assert.ok(created.result, `write scope call failed: ${JSON.stringify(created)}`);
+    const otherResource = await sign({ scope: "projects:read" }, audience);
+    assert.equal(
+      (await call(otherResource, 8, "list-tasks", { projectId: "0190f0f0-0000-7000-8000-000000000002" }))
+        .status,
+      401,
+    );
+
+    console.log(
+      "Integration passed: MCP auth, tool listing, caller-token forwarding, resource metadata and OAuth scopes",
+    );
   } finally {
     if (server.exitCode === null && server.signalCode === null) server.kill();
     await closed;

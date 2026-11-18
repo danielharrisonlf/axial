@@ -47,7 +47,7 @@ try {
             method: request.method,
             url: request.url,
             authorization: request.headers.authorization ?? null,
-            body: body ? JSON.parse(body) : null,
+            body: !body ? null : request.headers["content-type"]?.includes("json") ? JSON.parse(body) : body,
           }),
         );
       });
@@ -115,6 +115,31 @@ try {
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
     });
     assert.deepEqual((await mcp.json()).body, { jsonrpc: "2.0", id: 1, method: "tools/list" });
+
+    for (const [path, service] of [
+      ["/.well-known/oauth-protected-resource/mcp", "mcp"],
+      ["/.well-known/oauth-authorization-server/identity", "identity"],
+      ["/.well-known/openid-configuration/identity", "identity"],
+      ["/identity/.well-known/oauth-authorization-server", "identity"],
+      ["/identity/oauth/authorize?client_id=abc&state=x", "identity"],
+    ]) {
+      const routedOAuth = await (await fetch(`http://127.0.0.1:${gatewayPort}${path}`)).json();
+      assert.equal(routedOAuth.service, service, path);
+      assert.equal(routedOAuth.url, path, "the path reaches the service unchanged");
+    }
+    const tokenForm = await fetch(`http://127.0.0.1:${gatewayPort}/identity/oauth/token`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: "grant_type=authorization_code&code=abc",
+    });
+    const tokenRouted = await tokenForm.json();
+    assert.equal(tokenRouted.service, "identity");
+    assert.equal(tokenRouted.method, "POST");
+    assert.equal(
+      tokenRouted.body,
+      "grant_type=authorization_code&code=abc",
+      "form bodies pass through intact",
+    );
 
     const health = await fetch(`http://127.0.0.1:${gatewayPort}/api/v1/health/ready`);
     assert.equal(health.status, 200);

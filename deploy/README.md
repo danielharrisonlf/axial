@@ -49,6 +49,37 @@ AXIAL_SEED=true
 
 `sslip.io` resolve `<nome>.179-66-152-186.sslip.io` para o IP da VPS, o que permite HTTPS sem domínio próprio. Com um domínio próprio, troque `PUBLIC_HOST` e os domínios no Dokploy e faça um novo deploy (o Workspace precisa ser recompilado com o novo endereço do Insights).
 
+## Conectar o MCP a Claude, ChatGPT ou Cursor
+
+O MCP fica em `https://api.<PUBLIC_HOST>/mcp` (hoje `https://api.kairos.noxlabs.tech/mcp`). O usuário cola só essa URL no cliente e entra com o e-mail e a senha do Kairos; o cliente descobre o servidor de autorização (ms-identity), registra-se sozinho e renova o acesso sem novo login por até 30 dias de uso.
+
+| Cliente | Como conectar |
+| --- | --- |
+| Claude (web e Desktop) | Configurações → Conectores → Adicionar conector personalizado → cole a URL → Conectar. Em planos Team/Enterprise, um proprietário adiciona o conector para a organização. |
+| Claude Code | `claude mcp add --transport http kairos https://api.kairos.noxlabs.tech/mcp` e, dentro do Claude Code, `/mcp` → `kairos` → Authenticate. |
+| ChatGPT | Configurações → Apps e conectores → Configurações avançadas → modo desenvolvedor; crie um conector com a URL e autenticação OAuth. |
+| Cursor | `~/.cursor/mcp.json`: `{"mcpServers":{"kairos":{"url":"https://api.kairos.noxlabs.tech/mcp"}}}`; em Settings → MCP, clique em Login no servidor `kairos`. |
+
+A conta precisa estar ativa numa organização e ter trocado a senha provisória. Contas em mais de uma organização escolhem a organização no login. Detalhes do protocolo, regras de `redirect_uri`, escopos e prazos estão no [README do ms-identity](../apps/ms-identity/README.md#oauth-21-para-clientes-mcp).
+
+Rotas públicas novas no gateway (as demais não mudaram):
+
+| Caminho | Serviço |
+| --- | --- |
+| `/.well-known/oauth-protected-resource` e `/.well-known/oauth-protected-resource/mcp` | mcp-server (RFC 9728) |
+| `/.well-known/oauth-authorization-server/identity`, `/.well-known/openid-configuration/identity` | ms-identity (RFC 8414) |
+| `/identity/...` (`/identity/oauth/authorize`, `token`, `register`, `revoke`, `/identity/.well-known/*`) | ms-identity |
+
+Variável nova no `compose.yaml`: `IDENTITY_OAUTH_RESOURCE=https://api.${PUBLIC_HOST}/mcp` no ms-identity. Ela é derivada de `PUBLIC_HOST`; não há variável nova a configurar no Dokploy. A migration `004_oauth` é aplicada pelo `setup` no próximo deploy.
+
+Para conferir depois do deploy:
+
+```bash
+curl -s https://api.kairos.noxlabs.tech/.well-known/oauth-protected-resource/mcp
+curl -s https://api.kairos.noxlabs.tech/.well-known/oauth-authorization-server/identity
+curl -si -X POST https://api.kairos.noxlabs.tech/mcp | grep -i www-authenticate
+```
+
 ## Tokens de teste (Swagger e MCP)
 
 Os tokens são assinados pela chave do servidor, então são gerados dentro do contêiner:

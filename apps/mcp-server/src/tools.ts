@@ -2,6 +2,7 @@ import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { type McpContext, Tool } from "@nestjs/mcp";
 import { z } from "zod";
 import { readConfig } from "./config.js";
+import { READ_SCOPE, WRITE_SCOPE } from "./scopes.js";
 import { compact, queryString, upstreamError } from "./upstream.js";
 
 const status = z.enum(["backlog", "todo", "in_progress", "in_review", "done"]);
@@ -38,7 +39,10 @@ export class ProjectsApi {
   }
 }
 
-/** Tools inherit the caller's token; ms-projects remains the authorization boundary. */
+/**
+ * Tools inherit the caller's token; ms-projects remains the authorization boundary.
+ * OAuth scopes narrow it further: reading needs projects:read, changing data projects:write.
+ */
 @Injectable()
 export class ProjectTools {
   constructor(@Inject(ProjectsApi) private readonly projects: ProjectsApi) {}
@@ -53,6 +57,7 @@ export class ProjectTools {
       pageSize: z.number().int().min(1).max(100).optional().describe("Items per page, at most 100"),
     }),
     annotations: { readOnlyHint: true },
+    scopes: [READ_SCOPE],
   })
   listProjects(
     input: { search?: string; page?: number; pageSize?: number },
@@ -66,6 +71,7 @@ export class ProjectTools {
     description: "Read one project by id, including its status, dates and delivery summary.",
     inputSchema: z.object({ projectId: z.uuid().describe("The project id") }),
     annotations: { readOnlyHint: true },
+    scopes: [READ_SCOPE],
   })
   getProject({ projectId }: { projectId: string }, ctx: McpContext): Promise<unknown> {
     return this.projects.request(ctx, `/projects/${projectId}`);
@@ -76,6 +82,7 @@ export class ProjectTools {
     description: "Read the task and sprint summary of a project.",
     inputSchema: z.object({ projectId: z.uuid().describe("The project id") }),
     annotations: { readOnlyHint: true },
+    scopes: [READ_SCOPE],
   })
   projectSummary({ projectId }: { projectId: string }, ctx: McpContext): Promise<unknown> {
     return this.projects.request(ctx, `/projects/${projectId}/summary`);
@@ -93,6 +100,7 @@ export class ProjectTools {
       pageSize: z.number().int().min(1).max(100).optional().describe("Items per page, at most 100"),
     }),
     annotations: { readOnlyHint: true },
+    scopes: [READ_SCOPE],
   })
   listTasks(
     input: {
@@ -114,6 +122,7 @@ export class ProjectTools {
     description: "Read one task by id, including its description, labels and dependencies.",
     inputSchema: z.object({ taskId: z.uuid().describe("The task id") }),
     annotations: { readOnlyHint: true },
+    scopes: [READ_SCOPE],
   })
   getTask({ taskId }: { taskId: string }, ctx: McpContext): Promise<unknown> {
     return this.projects.request(ctx, `/tasks/${taskId}`);
@@ -137,6 +146,7 @@ export class ProjectTools {
         .describe("Due date as an ISO 8601 timestamp, or null"),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false },
+    scopes: [WRITE_SCOPE],
   })
   createTask(
     input: {
@@ -167,6 +177,7 @@ export class ProjectTools {
       version: z.number().int().positive().describe("The task version returned by get-task"),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false },
+    scopes: [WRITE_SCOPE],
   })
   updateTaskStatus(
     input: { taskId: string; status: string; version: number },
@@ -184,6 +195,7 @@ export class ProjectTools {
     description: "List the sprints of a project with their status and date range.",
     inputSchema: z.object({ projectId: z.uuid().describe("The project id") }),
     annotations: { readOnlyHint: true },
+    scopes: [READ_SCOPE],
   })
   listSprints({ projectId }: { projectId: string }, ctx: McpContext): Promise<unknown> {
     return this.projects.request(ctx, `/projects/${projectId}/sprints`);

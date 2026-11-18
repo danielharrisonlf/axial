@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { importPKCS8, importSPKI, jwtVerify, SignJWT } from "jose";
 import { z } from "zod";
@@ -40,7 +41,8 @@ export async function loadKeys(): Promise<{
   if (!privatePath || !publicPath)
     throw new Error("IDENTITY_PRIVATE_KEY_PATH and IDENTITY_PUBLIC_KEY_PATH are required");
   const privateKey = await importPKCS8(await readFile(privatePath, "utf8"), "RS256");
-  const publicKey = await importSPKI(await readFile(publicPath, "utf8"), "RS256");
+  // Public keys are exportable so the JWKS endpoint can publish them.
+  const publicKey = await importSPKI(await readFile(publicPath, "utf8"), "RS256", { extractable: true });
   const probe = await new SignJWT({})
     .setProtectedHeader({ alg: "RS256" })
     .setIssuedAt()
@@ -50,8 +52,8 @@ export async function loadKeys(): Promise<{
   return { privateKey, publicKey };
 }
 
-export async function signAccessToken(privateKey: CryptoKey, claims: AccessClaims): Promise<string> {
-  return new SignJWT({
+function accessPayload(claims: AccessClaims) {
+  return {
     organizationId: claims.organizationId,
     role: claims.role,
     teamIds: claims.teamIds,
@@ -59,13 +61,47 @@ export async function signAccessToken(privateKey: CryptoKey, claims: AccessClaim
     assignableUserIds: claims.assignableUserIds,
     assignableTeamIds: claims.assignableTeamIds,
     source: claims.source,
-  })
+  };
+}
+
+export async function signAccessToken(privateKey: CryptoKey, claims: AccessClaims): Promise<string> {
+  return new SignJWT(accessPayload(claims))
     .setProtectedHeader({ alg: "RS256", typ: "JWT" })
     .setSubject(claims.userId)
     .setIssuer(issuer)
     .setAudience(audience)
     .setIssuedAt()
     .setExpirationTime("5m")
+    .sign(privateKey);
+}
+
+export interface DelegatedGrant {
+  clientId: string;
+  /** Space-separated granted scopes (RFC 8693 `scope` claim). */
+  scope: string;
+  /** RFC 8707 resource the client asked for: the MCP server URL. */
+  resource: string;
+  expiresInSeconds: number;
+}
+
+/**
+ * Access token issued through OAuth to an MCP client. Same authorization snapshot as
+ * signAccessToken, so ms-projects accepts it when the MCP server forwards it, plus the
+ * granted scope, the client and the MCP resource as a second audience.
+ */
+export async function signDelegatedAccessToken(
+  privateKey: CryptoKey,
+  claims: AccessClaims,
+  grant: DelegatedGrant,
+): Promise<string> {
+  return new SignJWT({ ...accessPayload(claims), scope: grant.scope, client_id: grant.clientId })
+    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+    .setSubject(claims.userId)
+    .setIssuer(issuer)
+    .setAudience([audience, grant.resource])
+    .setJti(randomUUID())
+    .setIssuedAt()
+    .setExpirationTime(`${grant.expiresInSeconds}s`)
     .sign(privateKey);
 }
 
@@ -96,6 +132,11 @@ export async function verifyAccessToken(
     requiredClaims: ["sub", "iat", "exp"],
   });
   return claimsSchema.parse(payload);
+}
+
+/** Tokens delegated to an OAuth client carry a scope and stay out of the identity API. */
+export function isDelegatedToken(payload: Record<string, unknown>): boolean {
+  return payload.scope !== undefined || payload.client_id !== undefined;
 }
 
 export function isPasswordChangeToken(payload: { aud?: unknown; purpose?: unknown }): boolean {

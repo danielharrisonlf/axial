@@ -4,6 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import { McpModule } from "@nestjs/mcp";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { readConfig } from "./config.js";
+import { SUPPORTED_SCOPES } from "./scopes.js";
 import { ProjectsApi, ProjectTools } from "./tools.js";
 import { IdentityTokenVerifier } from "./verifier.js";
 
@@ -59,7 +60,7 @@ class HealthController {
         verifier: IdentityTokenVerifier,
         resource: config.MCP_RESOURCE,
         authorizationServers: [config.MCP_JWT_ISSUER],
-        scopesSupported: ["projects:read", "projects:write"],
+        scopesSupported: SUPPORTED_SCOPES,
         resourceName: "Kairos Projects",
       },
       http: {

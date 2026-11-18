@@ -16,6 +16,10 @@ export const routeTable = [
       "/api/v1/organizations",
       "/api/v1/members",
       "/api/v1/teams",
+      // OAuth authorization server for MCP clients: issuer, endpoints and metadata.
+      "/identity",
+      "/.well-known/oauth-authorization-server",
+      "/.well-known/openid-configuration",
     ],
   },
   {
@@ -31,7 +35,8 @@ export const routeTable = [
   },
   {
     name: "mcp",
-    prefixes: ["/mcp"],
+    // Protected resource metadata (RFC 9728) advertised by the 401 of /mcp.
+    prefixes: ["/mcp", "/.well-known/oauth-protected-resource"],
   },
 ] as const;
 

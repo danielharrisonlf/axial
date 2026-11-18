@@ -97,7 +97,7 @@ try {
     return { status: response.status, body: await response.json() };
   }
 
-  for (const migration of ["001_initial", "002_password_activation", "003_betterauth"]) {
+  for (const migration of ["001_initial", "002_password_activation", "003_betterauth", "004_oauth"]) {
     await db.query("DELETE FROM identity.schema_migrations WHERE id=$1", [migration]);
     assert.equal((await request("health/ready", null, null, "GET")).status, 503);
     assert.equal((await request("health/live", null, null, "GET")).status, 200);

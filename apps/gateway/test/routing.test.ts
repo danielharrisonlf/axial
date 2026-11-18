@@ -15,6 +15,22 @@ describe("gateway routing", () => {
     expect(resolveRoute("/mcp/messages")).toBe("mcp");
   });
 
+  it("routes the OAuth surface of MCP clients", () => {
+    expect(resolveRoute("/.well-known/oauth-protected-resource/mcp")).toBe("mcp");
+    expect(resolveRoute("/.well-known/oauth-protected-resource")).toBe("mcp");
+    expect(resolveRoute("/.well-known/oauth-authorization-server/identity")).toBe("identity");
+    expect(resolveRoute("/.well-known/openid-configuration/identity")).toBe("identity");
+    expect(resolveRoute("/identity/.well-known/oauth-authorization-server")).toBe("identity");
+    expect(resolveRoute("/identity/.well-known/openid-configuration")).toBe("identity");
+    expect(resolveRoute("/identity/.well-known/jwks.json")).toBe("identity");
+    expect(resolveRoute("/identity/oauth/authorize")).toBe("identity");
+    expect(resolveRoute("/identity/oauth/token")).toBe("identity");
+    expect(resolveRoute("/identity/oauth/register")).toBe("identity");
+    expect(resolveRoute("/identity/oauth/revoke")).toBe("identity");
+    expect(resolveRoute("/identityx")).toBeUndefined();
+    expect(resolveRoute("/.well-known/security.txt")).toBeUndefined();
+  });
+
   it("keeps health and unknown paths local", () => {
     expect(resolveRoute("/api/v1/health")).toBeUndefined();
     expect(resolveRoute("/api/v1/health/ready")).toBeUndefined();

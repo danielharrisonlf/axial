@@ -5,6 +5,7 @@ import type { McpTokenVerifier } from "@nestjs/mcp";
 import { type CryptoKey, createRemoteJWKSet, importSPKI, type JWTVerifyGetKey, jwtVerify } from "jose";
 import { z } from "zod";
 import { type McpConfig, readConfig } from "./config.js";
+import { grantedScopes } from "./scopes.js";
 
 const claimsSchema = z.object({
   sub: z.uuid(),
@@ -12,12 +13,16 @@ const claimsSchema = z.object({
   role: z.enum(["ADMIN", "PROJECT_MANAGER", "TEAM_LEAD", "CONTRIBUTOR", "VIEWER"]),
   projectIds: z.array(z.uuid()).default([]),
   exp: z.number().int(),
+  aud: z.union([z.string(), z.array(z.string())]).optional(),
+  scope: z.string().max(1000).optional(),
+  client_id: z.string().max(200).optional(),
 });
 
 export type IdentityClaims = z.infer<typeof claimsSchema>;
 
 /**
- * Accepts the same short-lived RS256 access tokens the rest of Axial uses.
+ * Accepts the same RS256 access tokens the rest of Axial uses, including those ms-identity
+ * issues through OAuth to MCP clients, whose `scope` limits the tools they can call.
  * The MCP server is a resource server: it verifies locally and never issues tokens.
  */
 @Injectable()
@@ -52,10 +57,12 @@ export class IdentityTokenVerifier implements McpTokenVerifier {
     }
     const claims = claimsSchema.safeParse(payload);
     if (!claims.success) return null;
+    const scopes = grantedScopes(claims.data, this.config.MCP_RESOURCE);
+    if (!scopes) return null;
     return {
       token,
-      clientId: claims.data.sub,
-      scopes: ["projects:read", "projects:write"],
+      clientId: claims.data.client_id ?? claims.data.sub,
+      scopes,
       expiresAt: claims.data.exp,
       resource: new URL(this.config.MCP_RESOURCE),
       extra: {

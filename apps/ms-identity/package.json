@@ -11,7 +11,7 @@
     "test:unit": "vitest run",
     "db:migrate": "tsx src/migrate.ts",
     "bootstrap": "tsx src/bootstrap.ts",
-    "test:integration": "node test/integration.mjs",
+    "test:integration": "node test/integration.mjs && node test/oauth-integration.mjs",
     "test:interop": "node test/interop.mjs"
   },
   "dependencies": {

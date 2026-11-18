@@ -85,6 +85,8 @@ services:
       IDENTITY_TRUSTED_ORIGINS: https://${WEB_HOST}
       IDENTITY_ISSUER: https://api.${PUBLIC_HOST}/identity
       IDENTITY_AUDIENCE: axial-projects
+      # OAuth 2.1 para clientes MCP: recurso (RFC 8707) igual ao MCP_RESOURCE do mcp-server
+      IDENTITY_OAUTH_RESOURCE: https://api.${PUBLIC_HOST}/mcp
       IDENTITY_PRIVATE_KEY_PATH: /app/keys/dev-private.pem
       IDENTITY_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
     healthcheck:

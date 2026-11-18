@@ -65,6 +65,7 @@ services:
       IDENTITY_TRUSTED_ORIGINS: http://localhost:5173
       IDENTITY_ISSUER: http://localhost:3000/identity
       IDENTITY_AUDIENCE: axial-projects
+      IDENTITY_OAUTH_RESOURCE: http://localhost:3006/mcp
       IDENTITY_PRIVATE_KEY_PATH: /keys/dev-private.pem
       IDENTITY_PUBLIC_KEY_PATH: /keys/dev-public.pem
     volumes: ["./keys:/keys:ro"]

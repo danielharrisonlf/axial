@@ -100,3 +100,11 @@ A skill global `C:/Users/daniellima/.agents/skills/astra-orchestrator/SKILL.md` 
 ## Referência verificável do escopo
 
 SHA256 do PDF fornecido: `fb425e27798fe02228a327946943e56f36838260362eedb5475cc2a9b225fee5`. A correspondência de requisitos por página está em requirements.md; convenções e revisões dos repositórios recentes estão em architecture.md.
+
+## Atualização 2026-11-18: OAuth 2.1 para clientes MCP
+
+O ms-identity passou a ser servidor de autorização OAuth 2.1 (metadados RFC 8414, registro dinâmico RFC 7591, PKCE S256, `resource` RFC 8707, refresh token rotativo com detecção de reuso; migration `004_oauth`). O gateway roteia `/.well-known/oauth-protected-resource*` ao mcp-server e `/.well-known/oauth-authorization-server/identity`, `/.well-known/openid-configuration/identity` e `/identity/*` ao ms-identity. O mcp-server exige `projects:read` nas ferramentas de leitura e `projects:write` em `create-task`/`update-task-status` para tokens OAuth; tokens sem `scope` (Workspace e script de desenvolvimento) mantêm acesso completo.
+
+Verificação local: `pnpm lint`, `pnpm typecheck`, `pnpm build` e `pnpm test` aprovados; `test:identity:integration` (suíte existente e nova suíte OAuth), `test:mcp:integration`, `test:gateway:integration`, `test:integration` e `test:e2e` aprovados contra PostgreSQL `axial_test` e Redis lógico 15. `test:identity:interop` só passa com `BETTER_AUTH_SECRET` no ambiente (o script não o define, falha anterior a esta mudança). Um teste descartável com o SDK oficial `@modelcontextprotocol/client` 2.4.0 conectou pelo gateway com ms-identity e mcp-server reais: descoberta, registro, login, troca de código com `iss`, chamada de ferramenta e refresh.
+
+Limites: não houve teste com Claude, ChatGPT ou Cursor reais nem no domínio público; o limite de tentativas por IP vê o IP do gateway; access tokens OAuth valem até 1 hora após a revogação do membro; dois refresh concorrentes com o mesmo token revogam a família.
