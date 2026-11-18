@@ -54,6 +54,7 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
       if (!/^[A-Z]{2,4}$/.test(k)) er.key = "Use 2 a 4 letras";
       else if (db.projects.some((p) => p.key === k)) er.key = "Chave já usada por outro projeto";
     }
+    if (!startDate) er.start = "Informe a data de início";
     if (startDate && targetDate && targetDate < startDate)
       er.target = "A entrega não pode ser anterior ao início";
     setErrors(er);
@@ -153,7 +154,7 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
         ) : (
           <span />
         )}
-        <Field label="Início">
+        <Field label="Início" required error={errors.start}>
           <input className="input" type="date" value={startDate} onChange={(e) => setStart(e.target.value)} />
         </Field>
         <Field label="Data de entrega" error={errors.target}>

@@ -172,6 +172,11 @@ function KanbanCard({ t }: { t: Task }) {
           return;
         }
         // Alt+←/→ move para a coluna anterior/seguinte; Alt+↑/↓ não reordena (como no protótipo)
+        if (!canDrag && e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+          e.preventDefault();
+          announce(`Seu perfil não pode mover ${t.ref}.`);
+          return;
+        }
         if (canDrag && e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
           e.preventDefault();
           const to = STATUSES[STATUSES.indexOf(t.status) + (e.key === "ArrowRight" ? 1 : -1)];

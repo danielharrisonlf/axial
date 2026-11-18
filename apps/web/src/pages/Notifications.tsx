@@ -34,19 +34,18 @@ function Status({ item, reason = false }: { item: Notification; reason?: boolean
   );
 }
 
-export function Notifications({ tab = "history" }: { tab?: string }) {
-  const { db, me, can } = useWorkspace();
+export function Notifications({ tab = "history", open }: { tab?: string; open?: string }) {
+  const { visibleNotifications: mine } = useWorkspace();
   const active = TABS.includes(tab) ? tab : "history";
-  const [selected, setSelected] = useState<string | null>(null);
+  // #/notifications/history/<id> (bell menu) opens that delivery, if this profile can see it
+  const [selected, setSelected] = useState<string | null>(() =>
+    open && mine.some((n) => n.id === open) ? open : null,
+  );
+  const closeDrawer = () => {
+    setSelected(null);
+    if (open) history.replaceState(null, "", "#/notifications/history");
+  };
   const [provider, setProvider] = useState<NotificationChannel | null>(null);
-  // own deliveries; whoever manages people or reads the audit also sees the organization's
-  const all = can("user.manage") || can("audit.view");
-  const mine = db.notifications.filter((item) => {
-    if (item.toUserId === me.id) return true;
-    if (!all) return false;
-    const user = db.users.find((u) => u.id === item.toUserId);
-    return !!user && user.orgId === me.orgId;
-  });
   return (
     <>
       <PageHead
@@ -68,7 +67,7 @@ export function Notifications({ tab = "history" }: { tab?: string }) {
       {active === "prefs" && <Preferences />}
       {active === "templates" && <Templates />}
       {active === "providers" && <Providers onConfigure={setProvider} />}
-      {selected && <NotificationDrawer id={selected} onClose={() => setSelected(null)} />}
+      {selected && <NotificationDrawer id={selected} onClose={closeDrawer} />}
       {provider && <ProviderModal channel={provider} onClose={() => setProvider(null)} />}
     </>
   );
@@ -81,7 +80,11 @@ function History({ rows, onOpen }: { rows: Notification[]; onOpen: (id: string) 
       <Empty
         icon="bell"
         title="Nenhuma notificação"
-        sub="Atribua tarefas ou inicie sprints para gerar notificações."
+        sub={
+          can("task.assign") || can("sprint.manage")
+            ? "Atribua tarefas ou inicie sprints para gerar notificações."
+            : "Quando alguém atribuir uma tarefa a você ou mencionar você, o envio aparece aqui."
+        }
       />
     );
   return (
@@ -325,10 +328,7 @@ function NotificationDrawer({ id, onClose }: { id: string; onClose: () => void }
           <button
             type="button"
             className="btn btn-primary btn-sm"
-            onClick={() => {
-              act.resendNotification(item.id);
-              onClose();
-            }}
+            onClick={() => act.resendNotification(item.id)}
           >
             <Icon name="refresh" size={13} />
             Reenviar notificação

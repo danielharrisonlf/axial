@@ -26,6 +26,7 @@ import {
   labelName,
   PRIO_META,
   projectRisk,
+  ROLE_LABEL,
   rel,
   STATUS_META,
   TYPE_META,
@@ -53,13 +54,7 @@ export const UIContext = createContext<{
   confirm: (options: ConfirmOptions) => void;
 }>({ project: () => {}, task: () => {}, openTask: () => {}, openTaskId: null, confirm: () => {} });
 export const useUI = () => useContext(UIContext);
-export const roles: Record<string, string> = {
-  admin: "Administrador da organização",
-  pm: "Gestor de projetos",
-  lead: "Líder de equipe",
-  dev: "Desenvolvedor",
-  viewer: "Visualizador / Auditor",
-};
+export const roles: Record<string, string> = ROLE_LABEL;
 
 /* ==========================================================================
    Live region dedicada (o conteúdo da página nunca é live region)
@@ -259,8 +254,9 @@ export function Overlay({
   /** Confirmation dialog (role=alertdialog). */
   alert?: boolean;
   headActions?: ReactNode;
-  /** "first" focuses the first field or action; "dialog" focuses the dialog itself. */
-  initialFocus?: "first" | "dialog";
+  /** "first" focuses the first field or the primary action; "dialog" the dialog itself;
+   * "cancel" the first footer action (destructive confirmations: Enter never confirms by accident). */
+  initialFocus?: "first" | "dialog" | "cancel";
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -271,6 +267,10 @@ export function Overlay({
     if (!root) return;
     if (drawer || initialFocus === "dialog") {
       root.focus({ preventScroll: true });
+      return;
+    }
+    if (initialFocus === "cancel") {
+      (root.querySelector<HTMLElement>(".modal-foot .btn") ?? root).focus({ preventScroll: true });
       return;
     }
     const first =
@@ -355,6 +355,7 @@ export function ConfirmDialog({ options, onClose }: { options: ConfirmOptions; o
       alert
       title={options.title}
       onClose={onClose}
+      initialFocus={options.danger ? "cancel" : "first"}
       foot={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -688,8 +689,19 @@ export function TabNav({
   active: string;
   base: string;
 }) {
+  const ref = useRef<HTMLElement>(null);
+  // narrow screens: the active tab is scrolled into the visible part of the tab strip
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when the active tab changes
+  useEffect(() => {
+    const nav = ref.current;
+    const tab = nav?.querySelector<HTMLElement>("[aria-current=page]");
+    if (!nav || !tab) return;
+    const left = tab.offsetLeft - nav.offsetLeft;
+    if (left < nav.scrollLeft || left + tab.offsetWidth > nav.scrollLeft + nav.clientWidth)
+      nav.scrollLeft = Math.max(0, left - 16);
+  }, [active]);
   return (
-    <nav className="tabs" aria-label={label}>
+    <nav className="tabs" aria-label={label} ref={ref}>
       {items.map((t) => (
         <a
           key={t.key}
@@ -728,13 +740,14 @@ export function Empty({
     </div>
   );
 }
+/** `what` carries its own preposition and article ("às configurações do projeto", "à Central de auditoria"). */
 export function NoAccess({ what }: { what: string }) {
   const { me } = useWorkspace();
   return (
     <Empty
       icon="block"
       title="Acesso restrito"
-      sub={`O perfil “${roles[me.roleId]}” não tem acesso a ${what}. Troque o perfil no canto superior direito para experimentar.`}
+      sub={`O perfil “${roles[me.roleId]}” não tem acesso ${what}. Troque o perfil no canto superior direito para experimentar.`}
     >
       <a className="btn" href="#/dashboard">
         Voltar ao início

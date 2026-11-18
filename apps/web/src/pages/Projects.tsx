@@ -727,7 +727,7 @@ export function ProjectDetail({ id, tab = "overview" }: { id: string; tab?: stri
             )}
           </div>
         ) : (
-          <NoAccess what="configurações do projeto" />
+          <NoAccess what="às configurações do projeto" />
         ))}
       {epic && <EpicModal project={p} onClose={() => setEpic(false)} />}
     </>

@@ -10,6 +10,7 @@ import {
   Empty,
   LiveRegions,
   MenuButton,
+  NoAccess,
   PageHead,
   roles,
   type TaskDefaults,
@@ -158,6 +159,7 @@ export default function App() {
     act,
     visibleProjects: projects,
     visibleTasks: tasks,
+    visibleNotifications,
     accessibleProjects,
   } = useWorkspace();
   useEffect(() => {
@@ -329,7 +331,7 @@ export default function App() {
   const dark = db.settings.theme === "dark" || (db.settings.theme === "system" && systemDark);
   const myOpen = tasks.filter((t) => !t.parentId && t.assigneeId === me.id && t.status !== "done").length;
   const org = db.orgs.find((o) => o.id === me.orgId);
-  const notifications = db.notifications.filter((n) => me.roleId === "admin" || n.toUserId === me.id);
+  const notifications = visibleNotifications;
   const canAudit = AUDIT_ROLES.has(me.roleId) && can("audit.view");
   const navItem = (it: NavEntry, count?: number) => {
     const on = key === it.route;
@@ -366,9 +368,13 @@ export default function App() {
     ) : route === "timeline" ? (
       <Timeline />
     ) : route === "notifications" ? (
-      <Notifications tab={id} />
+      <Notifications tab={id} open={tab} />
     ) : route === "insights" ? (
-      <Insights view={id === "analytics" || id === "audit" ? id : "executive"} />
+      can("insights.view") ? (
+        <Insights view={id === "analytics" || id === "audit" ? id : "executive"} />
+      ) : (
+        <NoAccess what="ao Insights" />
+      )
     ) : route === "access" ? (
       <Access tab={id} />
     ) : route === "mcp" ? (
@@ -632,7 +638,7 @@ export default function App() {
                       label: n.subject,
                       icon: n.channel === "email" ? "mail" : n.channel === "sms" ? "sms" : "wapp",
                       sub: `${to ? `para ${to.name} · ` : ""}${rel(n.ts)}${n.status === "failed" ? " · falhou" : ""}`,
-                      onClick: () => navigate("/notifications"),
+                      onClick: () => navigate(`/notifications/history/${n.id}`),
                     };
                   }),
                   "sep",

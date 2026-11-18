@@ -1893,3 +1893,7 @@ fieldset.field > legend { margin-bottom: var(--space-1); }
 /* o asterisco de obrigatório é visual: fica fora do nome acessível (aria-required já informa) */
 .field:has(:is([required], [aria-required="true"])) > label::after,
 .field.required > label::after { content: " *" / ""; }
+/* busca no celular: a lista de resultados ocupa a largura da tela, não só a do campo */
+@media (max-width: 860px) {
+  .tb-search .results { position: fixed; top: calc(var(--topbar-h) + var(--space-1)); left: var(--space-2); right: var(--space-2); }
+}

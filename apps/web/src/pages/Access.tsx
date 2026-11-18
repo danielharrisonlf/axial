@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "../components/Icon";
 import { Avatar, Field, FieldGroup, Overlay, PageHead, Select, TabNav } from "../components/ui";
 import type { RoleId } from "../data/types";
@@ -16,6 +16,12 @@ function InviteModal({ onClose }: { onClose: () => void }) {
   const [teamIds, setTeamIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
   const teams = db.teams.filter((team) => team.orgId === me.orgId);
+  // after a failed attempt, focus goes to the first invalid field (as in the other forms)
+  const form = useRef<HTMLFormElement>(null);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (attempt) form.current?.querySelector<HTMLElement>("[aria-invalid=true]")?.focus();
+  }, [attempt]);
 
   const submit = () => {
     const next: { name?: string; email?: string } = {};
@@ -26,7 +32,10 @@ function InviteModal({ onClose }: { onClose: () => void }) {
     else if (db.users.some((user) => user.email.toLowerCase() === cleanEmail))
       next.email = "Já existe uma pessoa com esse e-mail";
     setErrors(next);
-    if (next.name || next.email) return;
+    if (next.name || next.email) {
+      setAttempt((n) => n + 1);
+      return;
+    }
     if (act.inviteUser({ name: cleanName, email: cleanEmail, title: title.trim(), roleId, teamIds }))
       onClose();
   };
@@ -46,7 +55,16 @@ function InviteModal({ onClose }: { onClose: () => void }) {
         </>
       }
     >
-      <div className="form-grid">
+      {/* a real form: Enter in a text field sends the invite (implicit submission) */}
+      <form
+        className="form-grid"
+        ref={form}
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <button type="submit" hidden tabIndex={-1} aria-hidden="true" />
         <Field label="Nome completo" wide required error={errors.name}>
           <input
             className="input"
@@ -107,7 +125,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
             ))}
           </div>
         </FieldGroup>
-      </div>
+      </form>
     </Overlay>
   );
 }

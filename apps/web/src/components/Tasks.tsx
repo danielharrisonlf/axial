@@ -1,6 +1,6 @@
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import type { Sprint, Task, TaskStatus, WorkspaceData } from "../data/types";
-import { useWorkspace } from "../data/workspace";
+import { useWorkspace, workspaceStore } from "../data/workspace";
 import {
   daysLeft,
   fmtDate,
@@ -208,7 +208,14 @@ export function TaskTable({
             </button>
           </Empty>
         ) : (
-          <Empty title="Nenhuma tarefa por aqui" sub="Crie uma tarefa para começar.">
+          <Empty
+            title="Nenhuma tarefa por aqui"
+            sub={
+              can("task.create")
+                ? "Crie uma tarefa para começar."
+                : "Quando houver tarefas para você, elas aparecem aqui."
+            }
+          >
             {can("task.create") && (
               <button type="button" className="btn btn-primary" onClick={() => ui.task({ projectId })}>
                 <Icon name="plus" size={14} />
@@ -407,6 +414,22 @@ export function TaskDrawer({ id, onClose }: { id: string; onClose: () => void })
   // keeps the drafts in sync when the task changes elsewhere (another tab, the board, the store)
   useEffect(() => setTitle(t?.title ?? ""), [t?.title]);
   useEffect(() => setDesc(t?.desc ?? ""), [t?.desc]);
+  // Esc (or any other close) unmounts the drawer before blur fires: commit what was typed
+  const draft = useRef({ title, desc });
+  draft.current = { title, desc };
+  useEffect(
+    () => () => {
+      const current = workspaceStore.getSnapshot().db.tasks.find((x) => x.id === id);
+      if (!current || !workspaceStore.canTouchTask(current)) return;
+      const nextTitle = draft.current.title.trim();
+      const nextDesc = draft.current.desc.trim();
+      const fields: Partial<Task> = {};
+      if (nextTitle && nextTitle !== current.title) fields.title = nextTitle;
+      if (nextDesc !== current.desc) fields.desc = nextDesc;
+      if (Object.keys(fields).length) workspaceStore.act.updateTask(id, fields);
+    },
+    [id],
+  );
   if (!t || !p) return null;
 
   const edit = canTouchTask(t);
@@ -689,7 +712,11 @@ export function TaskDrawer({ id, onClose }: { id: string; onClose: () => void })
               t.dueDate &&
               t.status !== "done" &&
               dl !== null &&
-              dl <= 2 && <span className="chip warn">{dl === 0 ? "Vence hoje" : `Vence em ${dl}d`}</span>
+              dl <= 2 && (
+                <span className="chip warn">
+                  {dl === 0 ? "Vence hoje" : dl === 1 ? "Vence amanhã" : `Vence em ${dl} dias`}
+                </span>
+              )
             )}
           </div>
         </Prop>
@@ -881,7 +908,9 @@ export function TaskDrawer({ id, onClose }: { id: string; onClose: () => void })
                     type: "subtask",
                     title: sub.trim(),
                     epicId: t.epicId,
-                    sprintId: t.sprintId,
+                    sprintId: db.sprints.some((s) => s.id === t.sprintId && s.status !== "done")
+                      ? t.sprintId
+                      : null,
                     teamId: t.teamId,
                     silent: true,
                   });

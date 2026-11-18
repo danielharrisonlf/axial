@@ -23,6 +23,16 @@ interface ToolDef {
 }
 
 const firstProject = (ws: Workspace) => ws.visibleProjects[0];
+/**
+ * Optimistic concurrency, as the real API: the demo store has no version column, so the version is
+ * derived the same way everywhere — 1 plus the recorded changes to the task (comments excluded).
+ */
+const taskVersion = (ws: Pick<Workspace, "db">, taskId: string) =>
+  1 +
+  ws.db.audit.filter(
+    (a) =>
+      a.entityType === "task" && a.entityId === taskId && a.action !== "create" && a.action !== "comment",
+  ).length;
 const firstTask = (ws: Workspace) =>
   ws.visibleTasks.find((t) => !t.parentId && t.status !== "done" && ws.canTouchTask(t)) ??
   ws.visibleTasks.find((t) => !t.parentId);
@@ -101,7 +111,10 @@ const TOOLS: ToolDef[] = [
     desc: "Move uma tarefa para outro status do Kanban. Altera dados e exige a versão atual da tarefa.",
     cap: "task.move",
     params: ["taskId: uuid", "status: backlog|todo|in_progress|in_review|done", "version: inteiro ≥ 1"],
-    example: (ws) => ({ taskId: firstTask(ws)?.id ?? "", status: "in_review", version: 1 }),
+    example: (ws) => {
+      const t = firstTask(ws);
+      return { taskId: t?.id ?? "", status: "in_review", version: t ? taskVersion(ws, t.id) : 1 };
+    },
   },
   {
     name: "list-sprints",
@@ -204,6 +217,7 @@ function execute(ws: Workspace, name: string, args: Args): unknown {
     sprintId: t.sprintId,
     dueDate: t.dueDate,
     updatedAt: t.updatedAt,
+    version: taskVersion(ws, t.id),
   });
 
   switch (tool.name) {
@@ -336,13 +350,24 @@ function execute(ws: Workspace, name: string, args: Args): unknown {
     case "update-task-status": {
       const t = task();
       const status = oneOf<TaskStatus>(args, "status", STATUSES, true) ?? t.status;
-      int(args, "version", { required: true, min: 1 });
+      const version = int(args, "version", { required: true, min: 1 });
       if (!ws.canTouchTask(t)) fail("permission_denied", `O perfil atual não pode alterar ${t.ref}.`);
+      const current = taskVersion(ws, t.id);
+      if (version !== current)
+        fail(
+          "version_conflict",
+          `${t.ref} mudou desde a leitura (versão atual ${current}, enviada ${version}). Leia de novo com get-task.`,
+        );
       act.runAs("mcp", () => act.moveTask(t.id, status));
       const after = workspaceStore.getSnapshot().db.tasks.find((x) => x.id === t.id);
       if (!after || after.status !== status)
         return fail("rejected", "O armazenamento recusou a mudança de status; veja o aviso exibido.");
-      return { ...taskJson(after), previousStatus: t.status };
+      // the version comes from the store after the write (ws is the snapshot before it)
+      return {
+        ...taskJson(after),
+        version: taskVersion({ db: workspaceStore.getSnapshot().db }, after.id),
+        previousStatus: t.status,
+      };
     }
     case "list-sprints": {
       const p = project();
@@ -421,6 +446,10 @@ function Catalog() {
           </tbody>
         </table>
       </div>
+      <p className="page-note mt-3 pager">
+        No servidor real os ids são UUIDs; nesta demonstração o console usa os ids do cenário (ex.: prj-pcl,
+        tsk1).
+      </p>
     </div>
   );
 }
@@ -430,7 +459,7 @@ const PLACEHOLDER = "// Execute uma ferramenta para ver a resposta JSON";
 /** Test console. Mounted with the profile as key: switching profiles clears tool, arguments and response. */
 function Console() {
   const ws = useWorkspace();
-  const { db, me, notify } = ws;
+  const { db, me } = ws;
   const [toolName, setToolName] = useState("list-tasks");
   const tool = toolByName(toolName) ?? TOOLS[0];
   const [args, setArgs] = useState(() => JSON.stringify(tool?.example(ws) ?? {}, null, 2));
@@ -454,7 +483,6 @@ function Console() {
       const message = `JSON inválido${where}: confira aspas duplas, vírgulas e chaves.`;
       setArgsError(message);
       setResult({ isError: true, error: "invalid_json", message });
-      notify("A ferramenta retornou erro", message, "warn");
       return;
     }
     setArgsError(null);
@@ -467,7 +495,6 @@ function Console() {
     } catch (error) {
       if (!(error instanceof ToolError)) throw error;
       setResult({ isError: true, error: error.code, message: error.message });
-      notify("A ferramenta retornou erro", error.message, "warn");
     }
   };
 

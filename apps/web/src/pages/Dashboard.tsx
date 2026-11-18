@@ -77,7 +77,8 @@ export function Dashboard() {
       return x >= b0 && x < b0 + slice;
     }).length;
   });
-  const riskN = projects.filter((p) => projectRisk(db, p).level === "high").length;
+  // "em risco" counts the active projects (the KPI above them), as Insights does
+  const riskN = activeProjects.filter((p) => projectRisk(db, p).level === "high").length;
   const myLate = myOpen.filter(isOverdue).length;
 
   const mine = [...myOpen]
@@ -220,7 +221,12 @@ export function Dashboard() {
             <div className="panel-head">
               <h2>Próximos prazos</h2>
               <span className="spacer" />
-              <span className="chip">{next7.length} em 7 dias</span>
+              {/* the list starts with overdue tasks: the chip says so, not only the next 7 days */}
+              <span className="chip">
+                {tasks.some(isOverdue)
+                  ? `${plural(tasks.filter(isOverdue).length, "atrasada", "atrasadas")} · ${next7.length} em 7 dias`
+                  : `${next7.length} em 7 dias`}
+              </span>
             </div>
             <div className="panel-body flush list">
               {upcoming.length ? (
