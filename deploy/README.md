@@ -80,6 +80,29 @@ curl -s https://api.kairos.noxlabs.tech/.well-known/oauth-authorization-server/i
 curl -si -X POST https://api.kairos.noxlabs.tech/mcp | grep -i www-authenticate
 ```
 
+## Contas: quem cadastra o quê
+
+- **Empresas se cadastram sozinhas**: `POST /api/v1/auth/signup` cria a conta, a empresa e o vínculo de administrador dela (`IDENTITY_SIGNUP_ENABLED=true` no `compose.yaml`).
+- **Administradores convidam por link**: `POST /api/v1/invitations` devolve um link `https://<WEB_HOST>/#/convite/<token>` válido por 7 dias e de uso único. A pessoa convidada cria a senha ou, se já tem conta, confirma a própria senha.
+- **Uma conta, várias empresas**: o login sem empresa devolve a lista para escolher; o Workspace troca a sessão pelo token da empresa escolhida com `X-Organization-Id`.
+- O login pelo Workspace grava o cookie de sessão `kairos_session` (HttpOnly, Secure, SameSite=Lax) no host `api.<PUBLIC_HOST>`; o Workspace em `<WEB_HOST>` é o mesmo site e o usa em `POST /api/v1/auth/session`.
+
+Detalhes, formatos e regras no [README do ms-identity](../apps/ms-identity/README.md#contas-empresas-e-convites).
+
+Variáveis novas no `compose.yaml`, todas derivadas do que já existe (nada novo a configurar no Dokploy):
+
+| Serviço | Variável | Valor |
+| --- | --- | --- |
+| ms-identity | `IDENTITY_TRUST_PROXY` | `1` (o gateway é o único proxy confiável) |
+| ms-identity | `IDENTITY_SIGNUP_ENABLED` | `true` |
+| ms-identity | `IDENTITY_WEB_URL` | `https://${WEB_HOST}` |
+| ms-identity | `IDENTITY_SESSION_COOKIE_SECURE` | `true` |
+| gateway | `GATEWAY_TRUST_PROXY` | `1` (o Traefik do Dokploy fica na frente) |
+
+Endereço do cliente: o Traefik acrescenta o IP do cliente em `X-Forwarded-For`; o gateway confia nesse salto e manda aos serviços só esse endereço; o ms-identity confia no gateway. Assim os limites de tentativa de login, signup e convites contam por cliente, e não mais pelo IP do gateway. Se outro proxy for colocado na frente do Traefik, aumente `GATEWAY_TRUST_PROXY`.
+
+Rota pública nova no gateway: `/api/v1/invitations` (ms-identity). A migration `005_profiles_invitations` é aplicada pelo `setup` no próximo deploy.
+
 ## Tokens de teste (Swagger e MCP)
 
 Os tokens são assinados pela chave do servidor, então são gerados dentro do contêiner:

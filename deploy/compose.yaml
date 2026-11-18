@@ -87,6 +87,14 @@ services:
       IDENTITY_AUDIENCE: axial-projects
       # OAuth 2.1 para clientes MCP: recurso (RFC 8707) igual ao MCP_RESOURCE do mcp-server
       IDENTITY_OAUTH_RESOURCE: https://api.${PUBLIC_HOST}/mcp
+      # o gateway é o único proxy confiável: o último X-Forwarded-For é o cliente (limites por IP)
+      IDENTITY_TRUST_PROXY: "1"
+      # cadastro self-service: cria a empresa e o administrador dela
+      IDENTITY_SIGNUP_ENABLED: "true"
+      # endereço do Workspace nos links de convite (#/convite/<token>)
+      IDENTITY_WEB_URL: https://${WEB_HOST}
+      # cookie de sessão do navegador (HttpOnly, SameSite=Lax) só via HTTPS
+      IDENTITY_SESSION_COOKIE_SECURE: "true"
       IDENTITY_PRIVATE_KEY_PATH: /app/keys/dev-private.pem
       IDENTITY_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
     healthcheck:
@@ -189,6 +197,9 @@ services:
       MCP_API_URL: http://mcp-server:3006
       GATEWAY_CORS_ORIGINS: https://${WEB_HOST}
       GATEWAY_UPSTREAM_KEEPALIVE: "true"
+      # o Traefik do Dokploy fica na frente: o gateway confia em um salto e repassa
+      # aos serviços só o endereço do cliente em X-Forwarded-For
+      GATEWAY_TRUST_PROXY: "1"
     depends_on:
       api: { condition: service_healthy }
       ms-identity: { condition: service_healthy }
