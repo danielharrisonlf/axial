@@ -5,6 +5,7 @@ import { Controller, Get, Inject, Injectable, Module, ServiceUnavailableExceptio
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import compression from "compression";
+import type { Request, Response } from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { type GatewayConfig, readConfig } from "./config.js";
 import { type RouteName, routeTable } from "./routing.js";
@@ -122,10 +123,20 @@ export async function createGateway(): Promise<Gateway> {
     maxFreeSockets: 64,
   });
 
+  // The client address, resolved through GATEWAY_TRUST_PROXY hops, replaces any
+  // X-Forwarded-For chain: upstream services then trust exactly one proxy, the gateway,
+  // and a client cannot add entries of its own (per-client rate limits in ms-identity).
+  app.set("trust proxy", config.GATEWAY_TRUST_PROXY || false);
+  // Resolved before the proxy appends the socket address to the request headers (xfwd).
+  app.use((request: Request, response: Response, next: () => void) => {
+    response.locals.clientAddress = request.ip ?? request.socket.remoteAddress;
+    next();
+  });
+
   for (const route of routeTable) {
     const target = targets[route.name](config);
     app.use(
-      createProxyMiddleware({
+      createProxyMiddleware<Request, Response>({
         target,
         changeOrigin: true,
         xfwd: true,
@@ -135,6 +146,11 @@ export async function createGateway(): Promise<Gateway> {
         pathFilter: (pathname) =>
           route.prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)),
         on: {
+          proxyReq: (proxyRequest, _request, response) => {
+            const client: unknown = response.locals.clientAddress;
+            if (typeof client === "string") proxyRequest.setHeader("x-forwarded-for", client);
+            else proxyRequest.removeHeader("x-forwarded-for");
+          },
           error: (error, _request, response) => {
             console.error(`Gateway upstream error for ${route.name}: ${error.message}`);
             if (response && "writeHead" in response && !response.headersSent) {
