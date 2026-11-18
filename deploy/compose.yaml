@@ -162,6 +162,8 @@ services:
       MCP_JWT_AUDIENCE: axial-projects
       PROJECTS_API_URL: http://api:3001
       MCP_ALLOWED_ORIGINS: https://axial.${PUBLIC_HOST}
+      # o gateway chama o MCP pelo nome do serviço; localhost fica para os health checks
+      MCP_ALLOWED_HOSTS: mcp-server,localhost,127.0.0.1
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3006/health/live"]
       interval: 15s

@@ -24,6 +24,17 @@ const schema = z
           .map((origin) => origin.trim())
           .filter(Boolean),
       ),
+    // DNS rebinding protection: Host names accepted on /mcp. Behind the gateway the request
+    // arrives with the internal service name (e.g. "mcp-server"), so deployments list it here.
+    MCP_ALLOWED_HOSTS: z
+      .string()
+      .default("localhost,127.0.0.1,[::1]")
+      .transform((value) =>
+        value
+          .split(",")
+          .map((host) => host.trim())
+          .filter(Boolean),
+      ),
   })
   .superRefine((value, context) => {
     if (!value.MCP_PUBLIC_KEY_PATH && !value.MCP_JWKS_URL)
