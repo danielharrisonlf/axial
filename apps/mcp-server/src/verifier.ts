@@ -1,20 +1,44 @@
 import { readFile } from "node:fs/promises";
+import { roleSchema, sourceSchema } from "@axial/contracts";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import { Injectable } from "@nestjs/common";
 import type { McpTokenVerifier } from "@nestjs/mcp";
 import { type CryptoKey, createRemoteJWKSet, importSPKI, type JWTVerifyGetKey, jwtVerify } from "jose";
 import { z } from "zod";
 import { type McpConfig, readConfig } from "./config.js";
+import { grantedScopes } from "./scopes.js";
 
+const uuidList = z.array(z.uuid()).max(10_000).default([]);
 const claimsSchema = z.object({
   sub: z.uuid(),
   organizationId: z.uuid(),
-  role: z.enum(["ADMIN", "PROJECT_MANAGER", "TEAM_LEAD", "CONTRIBUTOR", "VIEWER"]),
-  projectIds: z.array(z.uuid()).default([]),
+  role: roleSchema,
+  teamIds: uuidList,
+  projectIds: uuidList,
+  assignableUserIds: uuidList,
+  assignableTeamIds: uuidList,
+  source: sourceSchema.default("api"),
+  scope: z.string().max(2_000).optional(),
+  purpose: z.string().optional(),
   exp: z.number().int(),
 });
 
 export type IdentityClaims = z.infer<typeof claimsSchema>;
+
+/** What the verifier stores in `AuthInfo.extra`; read back through `CallerIdentity`. */
+export interface VerifiedIdentity {
+  token: string;
+  userId: string;
+  organizationId: string;
+  role: IdentityClaims["role"];
+  teamIds: string[];
+  projectIds: string[];
+  assignableUserIds: string[];
+  assignableTeamIds: string[];
+  source: IdentityClaims["source"];
+  scopes: string[];
+  expiresAt: number;
+}
 
 /**
  * Accepts the same short-lived RS256 access tokens the rest of Axial uses.
@@ -37,7 +61,8 @@ export class IdentityTokenVerifier implements McpTokenVerifier {
     return this.key;
   }
 
-  async verifyAccessToken(token: string): Promise<AuthInfo | null> {
+  /** Verifies signature, issuer, audience, lifetime and the identity claims. Null means "reject". */
+  async verify(token: string): Promise<VerifiedIdentity | null> {
     const key = await this.loadKey();
     let payload: unknown;
     try {
@@ -51,19 +76,34 @@ export class IdentityTokenVerifier implements McpTokenVerifier {
       return null;
     }
     const claims = claimsSchema.safeParse(payload);
-    if (!claims.success) return null;
+    // Password-change tokens are single-purpose and never act on business data.
+    if (!claims.success || claims.data.purpose !== undefined) return null;
+    const data = claims.data;
     return {
       token,
-      clientId: claims.data.sub,
-      scopes: ["projects:read", "projects:write"],
-      expiresAt: claims.data.exp,
+      userId: data.sub,
+      organizationId: data.organizationId,
+      role: data.role,
+      teamIds: data.teamIds,
+      projectIds: data.projectIds,
+      assignableUserIds: data.assignableUserIds,
+      assignableTeamIds: data.assignableTeamIds,
+      source: data.source,
+      scopes: grantedScopes(data.role, data.scope),
+      expiresAt: data.exp,
+    };
+  }
+
+  async verifyAccessToken(token: string): Promise<AuthInfo | null> {
+    const identity = await this.verify(token);
+    if (!identity) return null;
+    return {
+      token,
+      clientId: identity.userId,
+      scopes: identity.scopes,
+      expiresAt: identity.expiresAt,
       resource: new URL(this.config.MCP_RESOURCE),
-      extra: {
-        token,
-        organizationId: claims.data.organizationId,
-        role: claims.data.role,
-        projectIds: claims.data.projectIds,
-      },
+      extra: { identity },
     };
   }
 

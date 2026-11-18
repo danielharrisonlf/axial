@@ -230,6 +230,9 @@ importers:
 
   apps/mcp-server:
     dependencies:
+      '@axial/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@modelcontextprotocol/server':
         specifier: 2.4.0
         version: 2.4.0

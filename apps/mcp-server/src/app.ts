@@ -4,7 +4,19 @@ import { NestFactory } from "@nestjs/core";
 import { McpModule } from "@nestjs/mcp";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { readConfig } from "./config.js";
-import { ProjectsApi, ProjectTools } from "./tools.js";
+import { CallerIdentity } from "./identity.js";
+import { SERVER_INSTRUCTIONS } from "./instructions.js";
+import { McpCallLogInterceptor } from "./mcp/call-log.interceptor.js";
+import { McpErrorFilter } from "./mcp/errors.filter.js";
+import { StdioScopeGuard } from "./mcp/scope.guard.js";
+import { AxialPrompts } from "./prompts.js";
+import { AxialResources } from "./resources.js";
+import { ALL_SCOPES } from "./scopes.js";
+import { OrganizationTools } from "./tools/organization.tools.js";
+import { ProjectTools } from "./tools/projects.tools.js";
+import { SprintTools } from "./tools/sprints.tools.js";
+import { TaskTools } from "./tools/tasks.tools.js";
+import { AxialApi } from "./upstream.js";
 import { IdentityTokenVerifier } from "./verifier.js";
 
 const config = readConfig();
@@ -46,38 +58,55 @@ class HealthController {
 @Module({
   imports: [
     McpModule.forRoot({
-      name: "axial-projects",
-      version: "1.0.0",
-      title: "Axial Projects",
-      description: "Projects, tasks and sprints of the Axial delivery workspace.",
-      instructions:
-        "Use list-projects to discover project ids, then list-tasks or project-summary to read delivery state. " +
-        "Read a task with get-task before changing it. create-task and update-task-status change data: confirm " +
-        "the intent with the user first, and send the current task version when moving a task.",
+      name: "axial",
+      version: "2.0.0",
+      title: "Axial",
+      description:
+        "Projects, tasks, Kanban, sprints, epics, milestones and comments of the Axial delivery workspace, plus audit, notifications and teams — always as the signed-in user.",
+      instructions: SERVER_INSTRUCTIONS,
       path: "mcp",
       auth: {
         verifier: IdentityTokenVerifier,
         resource: config.MCP_RESOURCE,
         authorizationServers: [config.MCP_JWT_ISSUER],
-        scopesSupported: ["projects:read", "projects:write"],
-        resourceName: "Axial Projects",
+        scopesSupported: ALL_SCOPES,
+        resourceName: "Axial",
       },
       http: {
         allowedOrigins: config.MCP_ALLOWED_ORIGINS,
-        allowedHosts: ["localhost", "127.0.0.1", "[::1]"],
+        allowedHosts: config.MCP_ALLOWED_HOSTS,
       },
     }),
   ],
   controllers: [HealthController],
-  providers: [IdentityTokenVerifier, ProjectsApi, ProjectTools, HealthService],
+  providers: [
+    IdentityTokenVerifier,
+    CallerIdentity,
+    AxialApi,
+    StdioScopeGuard,
+    McpCallLogInterceptor,
+    McpErrorFilter,
+    ProjectTools,
+    TaskTools,
+    SprintTools,
+    OrganizationTools,
+    AxialResources,
+    AxialPrompts,
+    HealthService,
+  ],
 })
-class AppModule {}
+export class AppModule {}
 
 export async function createApp(): Promise<NestExpressApplication> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: config.NODE_ENV === "test" ? false : undefined,
   });
-  app.enableCors({ origin: config.MCP_ALLOWED_ORIGINS, credentials: false });
+  app.enableCors({
+    origin: config.MCP_ALLOWED_ORIGINS,
+    credentials: false,
+    allowedHeaders: ["Authorization", "Content-Type", "Mcp-Protocol-Version", "Mcp-Method", "Mcp-Name"],
+    exposedHeaders: ["WWW-Authenticate"],
+  });
   app.useBodyParser("json", { limit: "1mb" });
   app.enableShutdownHooks();
   try {
