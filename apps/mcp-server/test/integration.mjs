@@ -88,7 +88,8 @@ try {
         return;
       }
       response.writeHead(200, { "content-type": "application/json" });
-      response.end(JSON.stringify({ data: [{ id: "project-1" }], request: request.url }));
+      // A valid empty page, so tools with an output schema succeed.
+      response.end(JSON.stringify({ items: [], total: 0, page: 1, pageSize: 25, request: request.url }));
     });
   });
   await new Promise((resolve) => stub.listen(projectsPort, "127.0.0.1", resolve));
@@ -175,7 +176,7 @@ try {
         }),
       }),
     );
-    assert.ok(called.result, `tool call failed: ${JSON.stringify(called)}`);
+    assert.ok(called.result && !called.result.isError, `tool call failed: ${JSON.stringify(called)}`);
     const forwarded = seen.find((entry) => entry.url?.includes("/tasks"));
     assert.equal(forwarded.authorization, `Bearer ${token}`);
     assert.match(forwarded.url, /status=todo/);
@@ -211,7 +212,7 @@ try {
     const read = await jsonRpc(
       await call(readOnly, 5, "list-tasks", { projectId: "0190f0f0-0000-7000-8000-000000000002" }),
     );
-    assert.ok(read.result, `read scope call failed: ${JSON.stringify(read)}`);
+    assert.ok(read.result && !read.result.isError, `read scope call failed: ${JSON.stringify(read)}`);
     const write = await call(readOnly, 6, "create-task", {
       projectId: "0190f0f0-0000-7000-8000-000000000002",
       title: "Needs write",
@@ -225,7 +226,22 @@ try {
         title: "With write",
       }),
     );
-    assert.ok(created.result, `write scope call failed: ${JSON.stringify(created)}`);
+    assert.ok(
+      created.result && !created.result.isError,
+      `write scope call failed: ${JSON.stringify(created)}`,
+    );
+    const catalog = await jsonRpc(
+      await fetch(endpoint, {
+        method: "POST",
+        headers: { ...headers, authorization: `Bearer ${writer}` },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 9, method: "tools/list" }),
+      }),
+    );
+    assert.equal(
+      catalog.result.tools.length,
+      names.length,
+      "an OAuth read+write token sees the full catalog",
+    );
     const otherResource = await sign({ scope: "projects:read" }, audience);
     assert.equal(
       (await call(otherResource, 8, "list-tasks", { projectId: "0190f0f0-0000-7000-8000-000000000002" }))
