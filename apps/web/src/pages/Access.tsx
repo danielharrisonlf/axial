@@ -1,35 +1,39 @@
 import { useState } from "react";
 import { Icon } from "../components/Icon";
-import { Avatar, Field, Overlay, PageHead, Select } from "../components/ui";
+import { Avatar, Field, FieldGroup, Overlay, PageHead, Select, TabNav } from "../components/ui";
 import type { RoleId } from "../data/types";
 import { CAPABILITY_MATRIX, roleHasCapability, useWorkspace } from "../data/workspace";
-import { navigate } from "../lib/format";
 
-const TABS = [
-  { id: "users", label: "Usuários" },
-  { id: "roles", label: "Papéis e permissões" },
-];
-const ROLE_IDS: RoleId[] = ["admin", "pm", "lead", "dev", "viewer"];
+const TABS = ["users", "roles"];
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 function InviteModal({ onClose }: { onClose: () => void }) {
-  const { db, act } = useWorkspace();
+  const { db, me, act } = useWorkspace();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [title, setTitle] = useState("");
   const [roleId, setRoleId] = useState<RoleId>("dev");
   const [teamIds, setTeamIds] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const teams = db.teams.filter((team) => team.orgId === me.orgId);
 
   const submit = () => {
-    setError(null);
-    const created = act.inviteUser({ name, email, title, roleId, teamIds });
-    if (created) onClose();
-    else setError("Não foi possível registrar o convite. Confira nome, e-mail e permissão.");
+    const next: { name?: string; email?: string } = {};
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    if (cleanName.split(" ").filter(Boolean).length < 2) next.name = "Informe nome e sobrenome";
+    if (!EMAIL_RE.test(cleanEmail)) next.email = "E-mail inválido";
+    else if (db.users.some((user) => user.email.toLowerCase() === cleanEmail))
+      next.email = "Já existe uma pessoa com esse e-mail";
+    setErrors(next);
+    if (next.name || next.email) return;
+    if (act.inviteUser({ name: cleanName, email: cleanEmail, title: title.trim(), roleId, teamIds }))
+      onClose();
   };
 
   return (
     <Overlay
-      title="Convidar colaborador"
+      title="Convidar pessoa"
       onClose={onClose}
       foot={
         <>
@@ -37,13 +41,13 @@ function InviteModal({ onClose }: { onClose: () => void }) {
             Cancelar
           </button>
           <button type="button" className="btn btn-primary" onClick={submit}>
-            Registrar convite
+            Enviar convite
           </button>
         </>
       }
     >
       <div className="form-grid">
-        <Field label="Nome completo" wide error={error ?? undefined}>
+        <Field label="Nome completo" wide required error={errors.name}>
           <input
             className="input"
             maxLength={60}
@@ -51,7 +55,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
             onChange={(event) => setName(event.target.value)}
           />
         </Field>
-        <Field label="E-mail">
+        <Field label="E-mail" required error={errors.email}>
           <input
             className="input"
             type="email"
@@ -70,16 +74,24 @@ function InviteModal({ onClose }: { onClose: () => void }) {
           />
         </Field>
         <Field label="Papel de acesso" wide>
-          <Select
-            label="Papel de acesso"
-            value={roleId}
-            onChange={(value) => setRoleId(value as RoleId)}
-            options={db.roles.map((role) => ({ value: role.id, label: role.name }))}
-          />
+          {(props) => (
+            <select
+              className="select"
+              {...props}
+              value={roleId}
+              onChange={(event) => setRoleId(event.target.value as RoleId)}
+            >
+              {db.roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
+            </select>
+          )}
         </Field>
-        <Field label="Equipes" wide>
+        <FieldGroup label="Equipes" wide>
           <div>
-            {db.teams.map((team) => (
+            {teams.map((team) => (
               <label className="check" key={team.id}>
                 <input
                   type="checkbox"
@@ -94,7 +106,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
               </label>
             ))}
           </div>
-        </Field>
+        </FieldGroup>
       </div>
     </Overlay>
   );
@@ -102,47 +114,39 @@ function InviteModal({ onClose }: { onClose: () => void }) {
 
 export function Access({ tab = "users" }: { tab?: string }) {
   const { db, me, can, act } = useWorkspace();
-  const active = TABS.some((item) => item.id === tab) ? tab : "users";
+  const active = TABS.includes(tab) ? tab : "users";
   const [invite, setInvite] = useState(false);
+  const manage = can("user.manage");
+  const roleName = (roleId: RoleId) => db.roles.find((role) => role.id === roleId)?.name ?? roleId;
   return (
     <>
       <PageHead
         title="Usuários e permissões"
-        sub="Organização → equipe → cargo → papel de acesso. O papel define capacidades; o cargo descreve a função; a participação em projeto vem das equipes."
+        sub="Organização → Equipe → Cargo → Papel de acesso. O papel define capacidades; o cargo descreve a função; a participação em projeto vem das equipes."
       >
-        {can("user.manage") && (
+        {manage && (
           <button type="button" className="btn btn-primary" onClick={() => setInvite(true)}>
             <Icon name="plus" size={14} />
-            Convidar colaborador
+            Convidar pessoa
           </button>
         )}
       </PageHead>
-      <div className="tabs" role="tablist" aria-label="Seções de acesso">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={active === item.id}
-            className={`tab${active === item.id ? " active" : ""}`}
-            onClick={() => navigate(`/access/${item.id}`)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <TabNav
+        label="Seções de usuários e permissões"
+        items={[
+          { key: "users", label: "Usuários" },
+          { key: "roles", label: "Papéis e permissões" },
+        ]}
+        active={active}
+        base="/access/"
+      />
       {active === "users" ? (
         <div className="panel">
-          <div className="panel-head">
-            <h2>Colaboradores</h2>
-            <span className="spacer" />
-            <span className="chip">{db.users.length}</span>
-          </div>
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>Colaborador</th>
+                  <th>Pessoa</th>
                   <th>Cargo</th>
                   <th>Organização</th>
                   <th>Equipes</th>
@@ -153,52 +157,49 @@ export function Access({ tab = "users" }: { tab?: string }) {
               <tbody>
                 {db.users.map((user) => {
                   const org = db.orgs.find((item) => item.id === user.orgId);
-                  const editable = can("user.manage") && user.id !== me.id;
                   return (
                     <tr key={user.id}>
                       <td>
                         <span className="who-cell">
-                          <Avatar user={user} size="sm" />
+                          <Avatar user={user} decorative />
                           <span>
                             <b>{user.name}</b>
-                            <div className="subtle" style={{ fontSize: 11 }}>
-                              {user.email}
-                            </div>
+                            {manage && <span className="cell-sub">{user.email}</span>}
                           </span>
                         </span>
                       </td>
                       <td>{user.title || "—"}</td>
                       <td>{org?.name ?? "—"}</td>
                       <td>
-                        {user.teamIds.map((teamId) => {
-                          const team = db.teams.find((item) => item.id === teamId);
-                          return team ? (
-                            <span className="chip" style={{ marginRight: 4 }} key={teamId}>
-                              {team.name}
-                            </span>
-                          ) : null;
-                        })}
+                        <div className="cell-chips">
+                          {user.teamIds.map((teamId) => {
+                            const team = db.teams.find((item) => item.id === teamId);
+                            return team ? (
+                              <span className="chip" key={teamId}>
+                                {team.name}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
                       </td>
                       <td>
-                        {editable ? (
+                        {manage && user.id !== me.id ? (
                           <Select
+                            className="select role-select"
                             label={`Papel de ${user.name}`}
                             value={user.roleId}
                             onChange={(value) => act.setUserRole(user.id, value as RoleId)}
                             options={db.roles.map((role) => ({ value: role.id, label: role.name }))}
-                            style={{ minWidth: 200 }}
                           />
                         ) : (
-                          <span className="chip">
-                            {db.roles.find((role) => role.id === user.roleId)?.name}
-                          </span>
+                          <span className="chip">{roleName(user.roleId)}</span>
                         )}
                       </td>
                       <td>
                         {user.invited ? (
-                          <span className="chip warn">convite pendente</span>
+                          <span className="chip warn">Convite pendente</span>
                         ) : (
-                          <span className="chip ok">ativo</span>
+                          <span className="chip ok">Ativo</span>
                         )}
                       </td>
                     </tr>
@@ -210,49 +211,50 @@ export function Access({ tab = "users" }: { tab?: string }) {
         </div>
       ) : (
         <>
-          <p className="muted" style={{ marginBottom: 12 }}>
+          <p className="muted page-lead">
             As operações validam estas capacidades de fato — esconder o botão não é a única barreira.
             Tentativas sem permissão são registradas na auditoria.
           </p>
-          {CAPABILITY_MATRIX.map((group) => (
-            <div className="panel" style={{ marginBottom: 14 }} key={group.group}>
-              <div className="panel-head">
-                <h2>{group.group}</h2>
-              </div>
-              <div className="tbl-wrap">
-                <table className="tbl">
-                  <thead>
-                    <tr>
-                      <th>{group.group}</th>
-                      {ROLE_IDS.map((roleId) => (
-                        <th key={roleId} style={{ textAlign: "center" }}>
-                          {db.roles.find((role) => role.id === roleId)?.name.split(" ")[0]}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.items.map((item) => (
-                      <tr key={item.cap}>
-                        <td>{item.label}</td>
-                        {ROLE_IDS.map((roleId) => (
-                          <td key={roleId} style={{ textAlign: "center" }}>
-                            {roleHasCapability(roleId, item.cap) ? (
-                              <span style={{ color: "var(--ok)", display: "inline-flex" }}>
-                                <Icon name="check" size={14} />
-                              </span>
-                            ) : (
-                              <span className="subtle">—</span>
-                            )}
-                          </td>
+          <div className="stack">
+            {CAPABILITY_MATRIX.map((group) => (
+              <div className="panel" key={group.group}>
+                <div className="tbl-wrap">
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        <th>{group.group}</th>
+                        {db.roles.map((role) => (
+                          <th key={role.id} className="center">
+                            {role.name.split(" ")[0]}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {group.items.map((item) => (
+                        <tr key={item.cap}>
+                          <td>{item.label}</td>
+                          {db.roles.map((role) => (
+                            <td key={role.id} className="center">
+                              {roleHasCapability(role.id, item.cap) ? (
+                                <span className="cap-yes" role="img" aria-label="Sim">
+                                  <Icon name="check" size={14} />
+                                </span>
+                              ) : (
+                                <span className="subtle" role="img" aria-label="Não">
+                                  —
+                                </span>
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </>
       )}
       {invite && <InviteModal onClose={() => setInvite(false)} />}
