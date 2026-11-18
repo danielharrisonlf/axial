@@ -1,23 +1,28 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProjectModal, TaskModal } from "./components/Forms";
 import { Icon } from "./components/Icon";
 import { TaskDrawer, TaskTable } from "./components/Tasks";
 import {
   Avatar,
+  announce,
+  ConfirmDialog,
+  type ConfirmOptions,
   Empty,
+  LiveRegions,
   MenuButton,
-  Overlay,
   PageHead,
   roles,
-  Select,
   type TaskDefaults,
+  Toasts,
+  TypeIcon,
+  topLayerKind,
   UIContext,
+  useLayer,
 } from "./components/ui";
 import type { Project } from "./data/types";
 import { useWorkspace } from "./data/workspace";
-import { navigate, rel } from "./lib/format";
+import { navigate, rel, STATUS_META } from "./lib/format";
 import { Dashboard } from "./pages/Dashboard";
-import "./app.css";
 
 // Route-level code splitting: the initial bundle ships the shell, while each
 // page is fetched on demand.
@@ -34,60 +39,52 @@ const Board = lazy(() => import("./pages/Work").then((module) => ({ default: mod
 const Backlog = lazy(() => import("./pages/Work").then((module) => ({ default: module.Backlog })));
 const Sprints = lazy(() => import("./pages/Work").then((module) => ({ default: module.Sprints })));
 const Timeline = lazy(() => import("./pages/Work").then((module) => ({ default: module.Timeline })));
+const Teams = lazy(() => import("./pages/Teams").then((module) => ({ default: module.Teams })));
+const Settings = lazy(() => import("./pages/Settings").then((module) => ({ default: module.Settings })));
+const Mcp = lazy(() => import("./pages/Mcp").then((module) => ({ default: module.Mcp })));
 
-type ModalState =
-  | { kind: "project"; existing?: Project }
-  | { kind: "task"; defaults?: TaskDefaults }
-  | { kind: "confirm"; title: string; message: string; label: string; action: () => void }
-  | null;
-const nav: { head: string; items: [string, string, string][] }[] = [
+type ModalState = { kind: "project"; existing?: Project } | { kind: "task"; defaults?: TaskDefaults } | null;
+type NavEntry = { route: string; label: string; icon: string };
+const NAV_WORKSPACE: { head: string; items: NavEntry[] }[] = [
   {
     head: "Workspace",
     items: [
-      ["dashboard", "Início", "home"],
-      ["projects", "Meus projetos", "folders"],
-      ["my-tasks", "Minhas tarefas", "tasks"],
-      ["teams", "Equipes", "users"],
+      { route: "dashboard", label: "Início", icon: "home" },
+      { route: "projects", label: "Projetos", icon: "folders" },
+      { route: "my-tasks", label: "Minhas tarefas", icon: "tasks" },
+      { route: "teams", label: "Equipes", icon: "users" },
     ],
   },
   {
     head: "Projetos",
     items: [
-      ["board", "Kanban", "board"],
-      ["backlog", "Backlog", "backlog"],
-      ["sprints", "Sprints", "sprint"],
-      ["timeline", "Cronograma", "calendar"],
+      { route: "board", label: "Kanban", icon: "board" },
+      { route: "backlog", label: "Backlog", icon: "backlog" },
+      { route: "sprints", label: "Sprints", icon: "sprint" },
+      { route: "timeline", label: "Cronograma", icon: "calendar" },
     ],
   },
   {
     head: "Inteligência e integrações",
     items: [
-      ["insights", "Insights", "pulse"],
-      ["notifications", "Notificações", "bell"],
+      { route: "mcp", label: "Agentes MCP", icon: "plug" },
+      { route: "notifications", label: "Notificações", icon: "bell" },
     ],
   },
   {
     head: "Gestão",
     items: [
-      ["access", "Usuários e permissões", "shield"],
-      ["settings", "Configurações", "settings"],
+      { route: "access", label: "Usuários e permissões", icon: "shield" },
+      { route: "settings", label: "Configurações", icon: "settings" },
     ],
   },
 ];
-const enabled = new Set([
-  "dashboard",
-  "projects",
-  "my-tasks",
-  "teams",
-  "board",
-  "backlog",
-  "sprints",
-  "timeline",
-  "notifications",
-  "insights",
-  "access",
-  "settings",
-]);
+const AUDIT_ROLES = new Set(["admin", "pm", "lead"]);
+const NAV_INSIGHTS: NavEntry[] = [
+  { route: "insights", label: "Visão executiva", icon: "pulse" },
+  { route: "insights/analytics", label: "Análise de projetos", icon: "chart" },
+  { route: "insights/audit", label: "Central de auditoria", icon: "scroll" },
+];
 const titles: Record<string, string> = {
   dashboard: "Início",
   projects: "Projetos",
@@ -97,11 +94,17 @@ const titles: Record<string, string> = {
   backlog: "Backlog",
   sprints: "Sprints",
   timeline: "Cronograma",
+  mcp: "Agentes MCP",
   notifications: "Notificações",
-  insights: "Insights",
+  insights: "Visão executiva",
+  "insights/analytics": "Análise de projetos",
+  "insights/audit": "Central de auditoria",
   access: "Usuários e permissões",
   settings: "Configurações",
 };
+const DEMO_PROFILES = ["u1", "u2", "u4", "u8", "u18"];
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || "");
+
 function useHash() {
   const [path, setPath] = useState(() => window.location.hash.slice(1) || "/dashboard");
   useEffect(() => {
@@ -111,8 +114,61 @@ function useHash() {
   }, []);
   return path.split("/").filter(Boolean);
 }
+function useNarrow() {
+  const [narrow, setNarrow] = useState(() => window.matchMedia("(max-width: 860px)").matches);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 860px)");
+    const update = () => setNarrow(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return narrow;
+}
+/** Registers the off-canvas navigation as a layer: Esc closes it and the backdrop dims the page. */
+function NavLayer({
+  sidebar,
+  trigger,
+  onClose,
+}: {
+  sidebar: React.RefObject<HTMLElement | null>;
+  trigger: HTMLElement | null;
+  onClose: () => void;
+}) {
+  // the burger is passed explicitly: .main turns inert in the same commit and drops its focus
+  useLayer("nav", sidebar, onClose, { trigger });
+  useEffect(() => {
+    // after the sidebar becomes visible: focus the current page in the navigation
+    const frame = requestAnimationFrame(() => {
+      const el = sidebar.current;
+      (
+        el?.querySelector<HTMLElement>(".sb-item[aria-current=page]") ??
+        el?.querySelector<HTMLElement>(".sb-item")
+      )?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [sidebar]);
+  return <div className="backdrop nav-backdrop" aria-hidden="true" onClick={onClose} />;
+}
+
 export default function App() {
-  const { db, me, can, act, toasts, notify, accessibleProjects } = useWorkspace();
+  const {
+    db,
+    me,
+    can,
+    act,
+    visibleProjects: projects,
+    visibleTasks: tasks,
+    accessibleProjects,
+  } = useWorkspace();
+  useEffect(() => {
+    // "Sistema" leaves the decision to color-scheme (prefers-color-scheme); light/dark force it
+    const root = document.documentElement;
+    root.classList.add("theme-switching");
+    if (db.settings.theme === "system") delete root.dataset.theme;
+    else root.dataset.theme = db.settings.theme;
+    const t = requestAnimationFrame(() => root.classList.remove("theme-switching"));
+    return () => cancelAnimationFrame(t);
+  }, [db.settings.theme]);
   const [systemDark, setSystemDark] = useState(
     () => window.matchMedia("(prefers-color-scheme: dark)").matches,
   );
@@ -122,86 +178,176 @@ export default function App() {
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
-  useEffect(() => {
-    document.documentElement.dataset.theme =
-      db.settings.theme === "system" ? (systemDark ? "dark" : "light") : db.settings.theme;
-  }, [db.settings.theme, systemDark]);
-  const [route = "dashboard", id, tab] = useHash();
-  const [modal, setModal] = useState<ModalState>(null),
-    [taskId, setTaskId] = useState<string | null>(null),
-    [navOpen, setNavOpen] = useState(false),
-    [search, setSearch] = useState(""),
-    [searchOpen, setSearchOpen] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null),
-    searchWrap = useRef<HTMLDivElement>(null);
+  const parts = useHash();
+  const [route = "dashboard", id, tab] = parts;
+  const key = route === "insights" && id ? `insights/${id}` : route;
+  const app = route === "insights" ? "insights" : "workspace";
+  const [modal, setModal] = useState<ModalState>(null);
+  const [confirm, setConfirm] = useState<ConfirmOptions | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const narrow = useNarrow();
+  const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const searchWrap = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const burgerRef = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => setModal(null), []);
-  const ui = {
-    project: (p?: Project) => {
-      if (can(p ? "project.edit" : "project.create")) {
-        setTaskId(null);
-        setModal({ kind: "project", existing: p });
-      }
-    },
-    task: (defaults?: TaskDefaults) => {
-      if (can("task.create")) {
-        setTaskId(null);
-        setModal({ kind: "task", defaults });
-      }
-    },
-    openTask: (tid: string) => {
-      setModal(null);
-      setTaskId(tid);
-    },
-    confirm: (title: string, message: string, action: () => void, label = "Confirmar") =>
-      setModal({ kind: "confirm", title, message, action, label }),
-  };
+  const ui = useMemo(
+    () => ({
+      project: (p?: Project) => {
+        if (can(p ? "project.edit" : "project.create")) {
+          setTaskId(null);
+          setModal({ kind: "project", existing: p });
+        }
+      },
+      task: (defaults?: TaskDefaults) => {
+        if (can("task.create")) {
+          setTaskId(null);
+          setModal({ kind: "task", defaults });
+        }
+      },
+      openTask: (tid: string) => {
+        setModal(null);
+        setTaskId(tid);
+      },
+      openTaskId: taskId,
+      confirm: (options: ConfirmOptions) => setConfirm(options),
+    }),
+    [can, taskId],
+  );
+  // global shortcuts: Ctrl/⌘+K focuses search (not over a dialog); "n" opens a new task
   useEffect(() => {
     const keyboard = (e: KeyboardEvent) => {
+      const layer = topLayerKind();
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
+        if (layer === "modal" || layer === "drawer") return;
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+        return;
+      }
       if (
         e.target instanceof HTMLElement &&
         (e.target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName))
       )
         return;
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if (e.key === "n" && !e.ctrlKey && !e.metaKey && !e.altKey && !layer && can("task.create")) {
         e.preventDefault();
-        searchRef.current?.focus();
-      }
-      if (e.key === "n" && !modal && !taskId && can("task.create")) {
-        e.preventDefault();
+        setTaskId(null);
         setModal({ kind: "task" });
       }
     };
     document.addEventListener("keydown", keyboard);
     return () => document.removeEventListener("keydown", keyboard);
-  }, [can, modal, taskId]);
+  }, [can]);
   useEffect(() => {
-    const outside = (e: PointerEvent) => {
+    const outside = (e: MouseEvent) => {
       if (!searchWrap.current?.contains(e.target as Node)) setSearchOpen(false);
     };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
+    document.addEventListener("click", outside);
+    return () => document.removeEventListener("click", outside);
   }, []);
+  // route change: close overlays, focus the page title and announce it (not on the first load;
+  // comparing with the previous route also survives StrictMode's double effect run)
+  const routeKey = parts.join("/");
+  const lastRoute = useRef(routeKey);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once per route
   useEffect(() => {
+    if (lastRoute.current === routeKey) return;
+    lastRoute.current = routeKey;
     setNavOpen(false);
-    setTaskId(null);
     setModal(null);
-  }, []);
-  const matches = search.trim().toLowerCase(),
-    projects = useWorkspace().visibleProjects,
-    tasks = useWorkspace().visibleTasks;
-  const foundP =
-      matches.length >= 2
-        ? projects.filter((p) => `${p.name} ${p.key}`.toLowerCase().includes(matches)).slice(0, 3)
-        : [],
-    foundT =
-      matches.length >= 2
-        ? tasks.filter((t) => `${t.title} ${t.ref}`.toLowerCase().includes(matches)).slice(0, 6)
-        : [];
+    setTaskId(null);
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    // pages load lazily: wait (briefly) for the new h1 before moving focus
+    const focusTitle = () => {
+      const h1 = document.querySelector<HTMLElement>("#conteudo h1");
+      if (!h1 && tries++ < 20) {
+        timer = setTimeout(focusTitle, 50);
+        return;
+      }
+      (h1 ?? document.getElementById("conteudo"))?.focus({ preventScroll: true });
+      announce(`Página: ${h1?.textContent ?? titles[key] ?? "Axial"}`);
+    };
+    timer = setTimeout(focusTitle, 30);
+    return () => clearTimeout(timer);
+  }, [routeKey]);
   const p =
     route === "projects" && id
-      ? accessibleProjects.find((p) => p.id === id && (!p.archived || can("project.archive")))
+      ? accessibleProjects.find((x) => x.id === id && (!x.archived || can("project.archive")))
       : undefined;
+  const pageTitle = p?.name ?? titles[key] ?? "Workspace";
+  useEffect(() => {
+    document.title = `${pageTitle} · Axial`;
+  }, [pageTitle]);
+  useEffect(() => {
+    if (!narrow) setNavOpen(false);
+  }, [narrow]);
+
+  const q = search.trim().toLowerCase();
+  const foundP =
+    q.length >= 2 ? projects.filter((x) => `${x.name} ${x.key}`.toLowerCase().includes(q)).slice(0, 3) : [];
+  const foundT =
+    q.length >= 2 ? tasks.filter((t) => `${t.title} ${t.ref}`.toLowerCase().includes(q)).slice(0, 6) : [];
+  const resultCount = foundP.length + foundT.length;
+  useEffect(() => {
+    if (q.length < 2) return;
+    const t = setTimeout(
+      () =>
+        announce(resultCount ? `${resultCount} resultados. Use as setas para navegar.` : "Nenhum resultado"),
+      300,
+    );
+    return () => clearTimeout(t);
+  }, [q, resultCount]);
+  // arrows move between results; Esc returns to the field
+  const resultKeys = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const list = Array.from(
+      searchWrap.current?.querySelectorAll<HTMLButtonElement>(".results .menu-item") ?? [],
+    );
+    const i = list.indexOf(e.currentTarget);
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      list[i + 1]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (i > 0) list[i - 1]?.focus();
+      else searchRef.current?.focus();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      setSearchOpen(false);
+      searchRef.current?.focus();
+    }
+  };
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearch("");
+  };
   const dark = db.settings.theme === "dark" || (db.settings.theme === "system" && systemDark);
+  const myOpen = tasks.filter((t) => !t.parentId && t.assigneeId === me.id && t.status !== "done").length;
+  const org = db.orgs.find((o) => o.id === me.orgId);
+  const notifications = db.notifications.filter((n) => me.roleId === "admin" || n.toUserId === me.id);
+  const canAudit = AUDIT_ROLES.has(me.roleId) && can("audit.view");
+  const navItem = (it: NavEntry, count?: number) => {
+    const on = key === it.route;
+    return (
+      <a
+        key={it.route}
+        className={`sb-item${on ? " active" : ""}`}
+        href={`#/${it.route}`}
+        aria-current={on ? "page" : undefined}
+        onClick={() => setNavOpen(false)}
+      >
+        <Icon name={it.icon} size={16} />
+        <span className="grow">{it.label}</span>
+        {!!count && <span className="cnt">{count}</span>}
+      </a>
+    );
+  };
+
   const page =
     route === "projects" ? (
       id ? (
@@ -222,9 +368,11 @@ export default function App() {
     ) : route === "notifications" ? (
       <Notifications tab={id} />
     ) : route === "insights" ? (
-      <Insights />
+      <Insights view={id === "analytics" || id === "audit" ? id : "executive"} />
     ) : route === "access" ? (
       <Access tab={id} />
+    ) : route === "mcp" ? (
+      <Mcp tab={id} />
     ) : route === "my-tasks" ? (
       <>
         <PageHead title="Minhas tarefas" sub={`Tudo o que está atribuído a ${me.name}.`}>
@@ -240,117 +388,143 @@ export default function App() {
     ) : route === "teams" ? (
       <Teams />
     ) : route === "settings" ? (
-      <Settings />
+      <Settings tab={id} />
     ) : (
-      <Empty icon="folders" title="Página não encontrada" sub="Escolha uma seção na navegação lateral." />
+      <Empty icon="folders" title="Página não encontrada" sub="Escolha uma seção na navegação lateral.">
+        <a className="btn" href="#/dashboard">
+          Voltar ao início
+        </a>
+      </Empty>
     );
   return (
     <UIContext.Provider value={ui}>
-      <div className={`shell${navOpen ? " nav-open" : ""}`} data-app="workspace">
-        <aside className="sidebar">
+      {/* biome-ignore lint/a11y/useValidAnchor: hash routing; the skip link moves focus without changing the route */}
+      <a
+        className="skip-link"
+        href="#conteudo"
+        onClick={(e) => {
+          // hash routing: move focus without touching the route
+          e.preventDefault();
+          document.getElementById("conteudo")?.focus();
+        }}
+      >
+        Pular para o conteúdo
+      </a>
+      <div id="app-shell" className={`shell${navOpen ? " nav-open" : ""}`} data-app={app}>
+        <aside className="sidebar" id="sidebar" aria-label="Menu lateral" ref={sidebarRef}>
           <div className="sb-brand">
             <span className="sb-logo" aria-hidden="true">
-              A
+              <Icon name="logo" size={18} />
             </span>
-            <span>
+            <span className="sb-brand-txt">
               <b>Axial</b>
-              <span className="env">Workspace</span>
+              <span className="env">
+                {org ? `${org.name} · ` : ""}
+                {app === "insights" ? "Insights" : "Workspace"}
+              </span>
             </span>
+            {navOpen && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-icon sb-close"
+                aria-label="Fechar menu"
+                onClick={() => setNavOpen(false)}
+              >
+                <Icon name="x" />
+              </button>
+            )}
           </div>
-          <div className="app-switch" role="tablist" aria-label="Alternar aplicação">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={route !== "insights"}
-              className={route !== "insights" ? "active" : ""}
-              onClick={() => navigate("/dashboard")}
+          <nav className="app-switch" aria-label="Alternar aplicação">
+            <a
+              href="#/dashboard"
+              aria-current={app === "workspace" ? "page" : undefined}
+              className={app === "workspace" ? "active" : ""}
             >
               Workspace
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={route === "insights"}
-              className={route === "insights" ? "active" : ""}
-              onClick={() => navigate("/insights")}
+            </a>
+            <a
+              href="#/insights"
+              aria-current={app === "insights" ? "page" : undefined}
+              className={app === "insights" ? "active" : ""}
             >
               Insights
-            </button>
-          </div>
-          <nav className="sb-nav" aria-label="Navegação principal">
-            {nav.map((section) => (
-              <div className="sb-section" key={section.head}>
-                <div className="sb-section-title">{section.head}</div>
-                {section.items.map(([key, label, icon]) => (
-                  <button
-                    type="button"
-                    className={`sb-item${route === key ? " active" : ""}`}
-                    key={key}
-                    aria-current={route === key ? "page" : undefined}
-                    aria-disabled={!enabled.has(key) || undefined}
-                    title={!enabled.has(key) ? "Disponível em uma próxima etapa" : undefined}
-                    onClick={() => {
-                      if (enabled.has(key)) {
-                        navigate(`/${key}`);
-                        setNavOpen(false);
-                      }
-                    }}
-                  >
-                    <Icon name={icon} size={16} />
-                    <span className="grow">{label}</span>
-                    {key === "my-tasks" &&
-                      tasks.filter((t) => t.assigneeId === me.id && t.status !== "done").length > 0 && (
-                        <span className="cnt num">
-                          {tasks.filter((t) => t.assigneeId === me.id && t.status !== "done").length}
-                        </span>
-                      )}
-                  </button>
-                ))}
-              </div>
-            ))}
+            </a>
           </nav>
-          <div className="sb-footer">
-            <button
-              type="button"
-              className="sb-item"
-              onClick={() =>
-                ui.confirm(
-                  "Restaurar demonstração",
-                  "Os dados e alterações desta demonstração local serão substituídos pelos dados de exemplo originais.",
-                  act.resetDemo,
-                  "Restaurar demonstração",
-                )
-              }
-            >
-              <Icon name="refresh" size={16} />
-              <span className="grow">Restaurar demonstração</span>
-            </button>
-          </div>
+          <nav className="sb-nav" aria-label="Navegação principal">
+            {app === "insights" ? (
+              <div className="sb-section">
+                <div className="sb-section-title">Insights</div>
+                {NAV_INSIGHTS.filter((it) => it.route !== "insights/audit" || canAudit).map((it) =>
+                  navItem(it),
+                )}
+              </div>
+            ) : (
+              NAV_WORKSPACE.map((section) => (
+                <div className="sb-section" key={section.head}>
+                  <div className="sb-section-title">{section.head}</div>
+                  {section.items.map((it) => navItem(it, it.route === "my-tasks" ? myOpen : undefined))}
+                </div>
+              ))
+            )}
+          </nav>
+          {can("user.manage") && (
+            <div className="sb-footer">
+              <button
+                type="button"
+                className="sb-item"
+                onClick={() =>
+                  setConfirm({
+                    title: "Restaurar dados de demonstração",
+                    message: "Todas as alterações feitas serão descartadas e o cenário inicial volta.",
+                    label: "Restaurar",
+                    danger: true,
+                    action: act.resetDemo,
+                  })
+                }
+              >
+                <Icon name="refresh" size={16} />
+                <span className="grow">Restaurar dados de demonstração</span>
+              </button>
+            </div>
+          )}
         </aside>
-        <div className="main">
-          <div className="topbar">
+        {navOpen && narrow && (
+          <NavLayer sidebar={sidebarRef} trigger={burgerRef.current} onClose={() => setNavOpen(false)} />
+        )}
+        <div className="main" inert={navOpen && narrow ? true : undefined}>
+          <header className="topbar">
             <button
+              ref={burgerRef}
               type="button"
               className="btn btn-ghost btn-icon tb-burger"
-              aria-label="Abrir menu"
+              aria-label="Abrir menu de navegação"
+              aria-expanded={navOpen}
+              aria-controls="sidebar"
               onClick={() => setNavOpen((v) => !v)}
             >
               <Icon name="menu" />
             </button>
-            <div className="crumbs">
-              <a href="#/dashboard">Workspace</a>
-              <span className="sep">/</span>
-              {p ? (
+            <nav className="crumbs" aria-label="Você está em">
+              <a href={app === "insights" ? "#/insights" : "#/dashboard"}>
+                <Icon name={app === "insights" ? "pulse" : "layers"} size={14} />
+                {app === "insights" ? "Insights" : "Workspace"}
+              </a>
+              <span className="sep" aria-hidden="true">
+                <Icon name="chevR" size={12} />
+              </span>
+              {p && (
                 <>
                   <a href="#/projects">Projetos</a>
-                  <span className="sep">/</span>
-                  <span className="cur">{p.name}</span>
+                  <span className="sep" aria-hidden="true">
+                    <Icon name="chevR" size={12} />
+                  </span>
                 </>
-              ) : (
-                <span className="cur">{titles[route] || "Workspace"}</span>
               )}
-            </div>
-            <div className="tb-search" ref={searchWrap}>
+              <span className="cur" aria-current="page">
+                {pageTitle}
+              </span>
+            </nav>
+            <search className="tb-search" ref={searchWrap}>
               <span className="ic">
                 <Icon name="search" size={14} />
               </span>
@@ -359,7 +533,9 @@ export default function App() {
                 className="input"
                 type="search"
                 placeholder="Buscar tarefas e projetos…"
-                aria-label="Buscar"
+                aria-label="Buscar tarefas e projetos"
+                aria-controls="busca-resultados"
+                aria-keyshortcuts={isMac ? "Meta+K" : "Control+K"}
                 value={search}
                 onFocus={() => setSearchOpen(true)}
                 onChange={(e) => {
@@ -368,59 +544,44 @@ export default function App() {
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Escape") {
+                    e.stopPropagation();
                     setSearchOpen(false);
                     searchRef.current?.blur();
                   }
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
-                    searchWrap.current?.querySelector<HTMLButtonElement>(".menu-item")?.focus();
+                    searchWrap.current?.querySelector<HTMLButtonElement>(".results .menu-item")?.focus();
                   }
-                  if (e.key === "Enter") {
-                    if (foundP[0]) navigate(`/projects/${foundP[0].id}`);
-                    else if (foundT[0]) ui.openTask(foundT[0].id);
-                    setSearchOpen(false);
-                    setSearch("");
-                  }
+                  if (e.key === "Enter")
+                    searchWrap.current?.querySelector<HTMLButtonElement>(".results .menu-item")?.click();
                 }}
               />
-              {searchOpen && matches.length >= 2 && (
-                <div
-                  className="results"
-                  role="menu"
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") {
-                      setSearchOpen(false);
-                      searchRef.current?.focus();
-                    }
-                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                      e.preventDefault();
-                      const buttons = Array.from(
-                          searchWrap.current?.querySelectorAll<HTMLButtonElement>(".menu-item") || [],
-                        ),
-                        i = buttons.indexOf(document.activeElement as HTMLButtonElement);
-                      buttons[
-                        (i + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length
-                      ]?.focus();
-                    }
-                  }}
-                >
-                  {!foundP.length && !foundT.length && <div className="menu-head">Nenhum resultado</div>}
-                  {foundP.map((p) => (
+              <span className="tb-kbd" aria-hidden="true">
+                <kbd>{isMac ? "⌘" : "Ctrl"}</kbd>
+                <kbd>K</kbd>
+              </span>
+              {searchOpen && q.length >= 2 && (
+                <div className="results" id="busca-resultados">
+                  {!resultCount && (
+                    <div className="menu-head" role="status">
+                      Nenhum resultado
+                    </div>
+                  )}
+                  {foundP.map((x) => (
                     <button
                       type="button"
                       className="menu-item"
-                      role="menuitem"
-                      key={p.id}
+                      key={x.id}
+                      onKeyDown={resultKeys}
                       onClick={() => {
-                        navigate(`/projects/${p.id}`);
-                        setSearch("");
-                        setSearchOpen(false);
+                        closeSearch();
+                        navigate(`/projects/${x.id}`);
                       }}
                     >
                       <Icon name="folders" size={14} />
                       <span className="grow">
-                        {p.name}
-                        <span className="mi-sub">Projeto · {p.key}</span>
+                        {x.name}
+                        <span className="mi-sub">Projeto · {x.key}</span>
                       </span>
                     </button>
                   ))}
@@ -428,24 +589,25 @@ export default function App() {
                     <button
                       type="button"
                       className="menu-item"
-                      role="menuitem"
                       key={t.id}
+                      onKeyDown={resultKeys}
                       onClick={() => {
+                        closeSearch();
                         ui.openTask(t.id);
-                        setSearch("");
-                        setSearchOpen(false);
                       }}
                     >
-                      <Icon name="tasks" size={14} />
+                      <TypeIcon type={t.type} decorative />
                       <span className="grow">
                         {t.title}
-                        <span className="mi-sub">{t.ref}</span>
+                        <span className="mi-sub">
+                          {t.ref} · {STATUS_META[t.status].label}
+                        </span>
                       </span>
                     </button>
                   ))}
                 </div>
               )}
-            </div>
+            </search>
             <button
               type="button"
               className="btn btn-ghost btn-icon"
@@ -458,73 +620,79 @@ export default function App() {
             <MenuButton
               className="btn btn-ghost btn-icon bell-wrap"
               label="Notificações"
-              items={[
-                "Notificações recentes",
-                ...db.notifications
-                  .filter((n) => me.roleId === "admin" || n.toUserId === me.id)
-                  .slice(0, 5)
-                  .map((n) => ({
-                    label: n.subject,
-                    icon: n.channel === "email" ? "mail" : n.channel === "sms" ? "sms" : "wapp",
-                    sub: `${rel(n.ts)}${n.status === "failed" ? " · FALHOU" : ""}`,
-                    onClick: () => notify(n.subject, n.body, n.status === "failed" ? "warn" : "info"),
-                  })),
-                "sep",
-                {
-                  label: "Ver todas as notificações",
-                  icon: "bell",
-                  onClick: () => navigate("/notifications"),
-                },
-              ]}
+              tip="Notificações"
+              items={() => {
+                const recent = notifications.slice(0, 5);
+                return [
+                  "Notificações recentes",
+                  ...(recent.length ? [] : ["Nenhuma notificação"]),
+                  ...recent.map((n) => {
+                    const to = db.users.find((u) => u.id === n.toUserId);
+                    return {
+                      label: n.subject,
+                      icon: n.channel === "email" ? "mail" : n.channel === "sms" ? "sms" : "wapp",
+                      sub: `${to ? `para ${to.name} · ` : ""}${rel(n.ts)}${n.status === "failed" ? " · falhou" : ""}`,
+                      onClick: () => navigate("/notifications"),
+                    };
+                  }),
+                  "sep",
+                  {
+                    label: "Ver todas as notificações",
+                    icon: "bell",
+                    onClick: () => navigate("/notifications"),
+                  },
+                ];
+              }}
             >
               <Icon name="bell" />
-              {db.notifications.some((n) => n.status === "failed") && <span className="notif-dot" />}
+              {notifications.some((n) => n.status === "failed") && <span className="notif-dot" />}
             </MenuButton>
             <MenuButton
               label="Trocar perfil de demonstração"
               className="profile-btn"
-              items={[
+              items={() => [
                 "Perfis de demonstração",
-                ...["u1", "u2", "u4", "u8", "u18"]
-                  .map((uid) => db.users.find((u) => u.id === uid))
+                ...DEMO_PROFILES.map((uid) => db.users.find((u) => u.id === uid))
                   .filter((u): u is NonNullable<typeof u> => !!u)
                   .map((u) => ({
                     label: u.name,
                     sub: `${roles[u.roleId]} · ${u.title}`,
-                    node: <Avatar user={u} size="sm" />,
+                    node: <Avatar user={u} size="sm" decorative />,
+                    radio: true,
                     checked: u.id === me.id,
                     onClick: () => act.setUser(u.id),
                   })),
                 "sep",
                 "Outros usuários",
                 ...db.users
-                  .filter((u) => !["u1", "u2", "u4", "u8", "u18"].includes(u.id) && !u.invited)
+                  .filter((u) => !DEMO_PROFILES.includes(u.id) && !u.invited)
                   .slice(0, 5)
                   .map((u) => ({
                     label: u.name,
                     sub: roles[u.roleId],
-                    node: <Avatar user={u} size="sm" />,
+                    node: <Avatar user={u} size="sm" decorative />,
+                    radio: true,
                     checked: u.id === me.id,
                     onClick: () => act.setUser(u.id),
                   })),
               ]}
             >
-              <Avatar user={me} />
+              <span className="chip demo-tag" aria-hidden="true">
+                Demonstração
+              </span>
+              <Avatar user={me} decorative />
               <span className="who">
                 <b>{me.name}</b>
                 <span>{roles[me.roleId]}</span>
               </span>
               <Icon name="chevD" size={13} />
             </MenuButton>
-          </div>
-          <main className="content">
-            <div
-              className={`page${route === "board" || route === "timeline" ? " wide" : ""}`}
-              key={`${route}/${id || ""}`}
-            >
+          </header>
+          <main className="content" id="conteudo" tabIndex={-1}>
+            <div className={`page${route === "board" || route === "timeline" ? " wide" : ""}`} key={routeKey}>
               <Suspense
                 fallback={
-                  <div className="empty" role="status">
+                  <div className="empty" role="status" aria-busy="true">
                     <b>Carregando…</b>
                   </div>
                 }
@@ -537,146 +705,10 @@ export default function App() {
       </div>
       {modal?.kind === "project" && <ProjectModal existing={modal.existing} onClose={close} />}
       {modal?.kind === "task" && <TaskModal defaults={modal.defaults} onClose={close} />}
-      {modal?.kind === "confirm" && (
-        <Overlay
-          title={modal.title}
-          onClose={close}
-          foot={
-            <>
-              <button type="button" className="btn" onClick={close}>
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  modal.action();
-                  close();
-                }}
-              >
-                {modal.label}
-              </button>
-            </>
-          }
-        >
-          <p>{modal.message}</p>
-        </Overlay>
-      )}
       {taskId && <TaskDrawer key={taskId} id={taskId} onClose={() => setTaskId(null)} />}
-      <div id="toasts" aria-live="polite">
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.tone}`}>
-            <span className="t-ic">
-              <Icon name={t.tone === "ok" ? "check" : "info"} />
-            </span>
-            <div className="grow">
-              <b>{t.title}</b>
-              <span>{t.message}</span>
-            </div>
-            <button
-              type="button"
-              className="btn btn-ghost btn-icon btn-sm"
-              aria-label="Fechar notificação"
-              onClick={() => act.dismissToast(t.id)}
-            >
-              <Icon name="x" size={12} />
-            </button>
-          </div>
-        ))}
-      </div>
+      {confirm && <ConfirmDialog options={confirm} onClose={() => setConfirm(null)} />}
+      <Toasts />
+      <LiveRegions />
     </UIContext.Provider>
-  );
-}
-function Teams() {
-  const { db, visibleTasks } = useWorkspace();
-  return (
-    <>
-      <PageHead
-        title="Equipes"
-        sub="Organização, liderança e integrantes. Uma pessoa pode estar em várias equipes."
-      />
-      <div className="grid c3">
-        {db.teams.map((tm) => {
-          const open = visibleTasks.filter((t) => t.teamId === tm.id && t.status !== "done" && !t.parentId);
-          return (
-            <div className="panel" key={tm.id}>
-              <div className="panel-head">
-                <h2>{tm.name}</h2>
-                <span className="spacer" />
-                <span className="chip">{db.orgs.find((o) => o.id === tm.orgId)?.name}</span>
-              </div>
-              <div className="panel-body">
-                <p className="muted" style={{ fontSize: 12 }}>
-                  {tm.desc}
-                </p>
-                <div className="inline-row" style={{ marginBottom: 10 }}>
-                  <span className="avatar-stack">
-                    {tm.memberIds.slice(0, 6).map((id) => (
-                      <Avatar key={id} user={db.users.find((u) => u.id === id)} size="sm" />
-                    ))}
-                  </span>
-                  <span className="subtle" style={{ fontSize: 11.5 }}>
-                    {tm.memberIds.length} integrantes
-                  </span>
-                </div>
-                <div className="muted" style={{ fontSize: 12 }}>
-                  <b className="num">{open.length}</b> abertas
-                </div>
-                <details style={{ marginTop: 12 }}>
-                  <summary className="btn btn-sm">Ver integrantes</summary>
-                  {tm.memberIds.map((id) => {
-                    const u = db.users.find((u) => u.id === id);
-                    return (
-                      u && (
-                        <div className="hist-item" key={id}>
-                          <Avatar user={u} size="sm" />
-                          <span className="grow">{u.name}</span>
-                          {tm.leadId === id && <span className="chip accent">líder</span>}
-                        </div>
-                      )
-                    );
-                  })}
-                </details>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-function Settings() {
-  const { db, act } = useWorkspace();
-  return (
-    <>
-      <PageHead title="Configurações" sub="Preferências da aplicação e dados da demonstração." />
-      <div className="panel" style={{ maxWidth: 720 }}>
-        <div className="panel-head">
-          <h2>Aparência</h2>
-        </div>
-        <div className="panel-body">
-          <Select
-            label="Tema"
-            value={db.settings.theme}
-            onChange={(v) => act.setTheme(v as "light" | "dark" | "system")}
-            options={[
-              { value: "light", label: "Claro" },
-              { value: "dark", label: "Escuro" },
-              { value: "system", label: "Sistema" },
-            ]}
-          />
-        </div>
-      </div>
-      <div className="panel" style={{ maxWidth: 720, marginTop: 14 }}>
-        <div className="panel-head">
-          <h2>Ambiente de demonstração</h2>
-        </div>
-        <div className="panel-body">
-          <p className="muted">
-            Os projetos e pessoas são exemplos fictícios. Alterações ficam salvas neste navegador.
-          </p>
-        </div>
-      </div>
-    </>
   );
 }
