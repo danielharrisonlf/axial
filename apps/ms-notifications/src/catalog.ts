@@ -11,36 +11,31 @@ export interface NotificationTemplate {
 
 /**
  * The worker creates deliveries for task.* events (except task.deleted) that carry an
- * assignee UUID. The catalog lists the task events used by the rest of the platform.
+ * assignee UUID. Event names must match the `type` emitted by ms-projects (see `eventTypes`
+ * in @axial/contracts) because opt-outs are matched against `event.type`.
  */
 export const notificationTemplates: readonly NotificationTemplate[] = [
   {
-    event: "task.assigned.v1",
+    event: "task.assigned",
     name: "Tarefa atribuída",
     subject: "Atualização de tarefa no Axial",
     body: "Há uma atualização em uma tarefa atribuída a você. Acesse o Axial para conferir.",
   },
   {
-    event: "task.updated.v1",
+    event: "task.updated",
     name: "Tarefa atualizada",
     subject: "Atualização de tarefa no Axial",
     body: "Há uma atualização em uma tarefa atribuída a você. Acesse o Axial para conferir.",
   },
   {
-    event: "task.status_changed.v1",
+    event: "task.status_changed",
     name: "Status da tarefa alterado",
     subject: "Atualização de tarefa no Axial",
     body: "Há uma atualização em uma tarefa atribuída a você. Acesse o Axial para conferir.",
   },
   {
-    event: "task.completed.v1",
+    event: "task.completed",
     name: "Tarefa concluída",
-    subject: "Atualização de tarefa no Axial",
-    body: "Há uma atualização em uma tarefa atribuída a você. Acesse o Axial para conferir.",
-  },
-  {
-    event: "task.blocked.v1",
-    name: "Tarefa bloqueada",
     subject: "Atualização de tarefa no Axial",
     body: "Há uma atualização em uma tarefa atribuída a você. Acesse o Axial para conferir.",
   },

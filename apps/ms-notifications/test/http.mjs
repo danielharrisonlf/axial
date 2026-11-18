@@ -143,7 +143,7 @@ try {
   assert.ok(matrix.body.every((item) => item.enabled === true));
   assert.equal(
     (
-      await request(base, "notification-event-preferences/task.assigned.v1/email", "PATCH", a, {
+      await request(base, "notification-event-preferences/task.assigned/email", "PATCH", a, {
         enabled: false,
       })
     ).status,
@@ -151,7 +151,7 @@ try {
   );
   assert.equal(
     (await request(base, "notification-event-preferences", "GET", a)).body.find(
-      (item) => item.event === "task.assigned.v1" && item.channel === "email",
+      (item) => item.event === "task.assigned" && item.channel === "email",
     ).enabled,
     false,
   );
@@ -170,7 +170,7 @@ try {
   );
   assert.equal(
     (
-      await request(base, "notification-event-preferences/task.assigned.v1/letter", "PATCH", a, {
+      await request(base, "notification-event-preferences/task.assigned/letter", "PATCH", a, {
         enabled: false,
       })
     ).status,

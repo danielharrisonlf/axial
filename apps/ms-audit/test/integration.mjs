@@ -149,6 +149,10 @@ try {
   assert.equal(filtered.body.total, 1);
   assert.equal(filtered.body.items[0].eventType, "project.updated");
   assert.equal((await request("audit?eventType=task.completed", adminToken)).body.total, 1);
+  const byAggregate = await request(`audit?aggregateId=${second.aggregate.id}`, adminToken);
+  assert.equal(byAggregate.body.total, 1);
+  assert.equal(byAggregate.body.items[0].aggregateId, second.aggregate.id);
+  assert.equal((await request("audit?aggregateId=not-a-uuid", adminToken)).status, 400);
   assert.equal((await request("audit?search=project", adminToken)).body.total, 1);
   assert.equal((await request("audit?from=2026-11-10T00:00:00.000Z", adminToken)).body.total, 1);
 

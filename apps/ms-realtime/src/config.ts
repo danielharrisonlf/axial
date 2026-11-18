@@ -32,6 +32,9 @@ const configSchema = z
       (value.NODE_ENV === "production" && url.protocol !== "https:")
     )
       context.addIssue({ code: "custom", message: "Invalid projects URL; HTTPS required in production" });
+    // ms-projects serves under the /api/v1 prefix; a bare host would make every subscription 404.
+    if (!/\/api\/v1\/?$/.test(url.pathname))
+      context.addIssue({ code: "custom", message: "PROJECTS_API_URL must include the /api/v1 prefix" });
   });
 export type Config = z.infer<typeof configSchema>;
 export function readConfig(env: NodeJS.ProcessEnv): Config {

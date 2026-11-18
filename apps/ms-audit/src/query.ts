@@ -12,6 +12,7 @@ export interface AuditFilter {
   actorId?: string;
   eventType?: string;
   aggregateType?: string;
+  aggregateId?: string;
   from?: string;
   to?: string;
   search?: string;
@@ -61,6 +62,10 @@ export function buildWhere(scope: AuditScope, filter: Omit<AuditFilter, "page" |
   if (filter.aggregateType) {
     values.push(filter.aggregateType);
     clauses.push(`aggregate_type=$${values.length}`);
+  }
+  if (filter.aggregateId) {
+    values.push(filter.aggregateId);
+    clauses.push(`aggregate_id=$${values.length}`);
   }
   if (filter.from) {
     values.push(filter.from);

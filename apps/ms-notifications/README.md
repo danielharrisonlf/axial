@@ -29,13 +29,13 @@ Porta padrão 3003 (`NOTIFICATIONS_PORT`); prefixo `/api/v1`. O serviço verific
 - `GET /notifications`: até 100 entregas próprias recentes, com tipo do evento e estado.
 - `GET /notifications/:id`: detalhe de uma entrega própria; entregas de outro usuário ou organização retornam 404.
 - `POST /notifications/:id/retry`: antecipa tentativa própria pendente/falha; não reinicia envio em andamento, aceito ou com resultado desconhecido.
-- `GET /health/live`: verifica o processo. `GET /health/ready`: verifica a migration 004, se o worker está ativo e a conexão com o Redis por ping com prazo limitado; não valida o provedor.
+- `GET /health/live`: verifica o processo. `GET /health/ready`: verifica a migration 005, se o worker está ativo e a conexão com o Redis por ping com prazo limitado; não valida o provedor.
 
 ## Eventos e provedores
 
 Valida envelope v1 do outbox. Para eventos `task.*`, exceto `task.deleted`, apenas `data.after.assigneeId` UUID é elegível. Eventos sem responsável ou sem preferência ativa são registrados sem criar entrega; habilitar uma preferência depois não retroage. Outros tipos são registrados, mas não geram entregas. O evento armazenado retém apenas ID, organização e tipo, não os dados completos.
 
-Preferências por evento são opcionais e nascem habilitadas: uma linha desabilitada em `notifications.event_preferences` impede a criação da entrega daquele evento/canal e é conferida novamente antes da chamada externa. A migration 004 adiciona a tabela sem alterar envios existentes.
+Preferências por evento são opcionais e nascem habilitadas: uma linha desabilitada em `notifications.event_preferences` impede a criação da entrega daquele evento/canal e é conferida novamente antes da chamada externa. A migration 004 adiciona a tabela sem alterar envios existentes. Os nomes do catálogo são exatamente os `type` emitidos pelo ms-projects (`task.assigned`, `task.updated`, `task.status_changed`, `task.completed`), pois a desativação é comparada com o tipo do evento recebido. A migration 005 renomeia linhas antigas com sufixo `.v1` para esses nomes e remove `task.blocked.v1`, que nunca é emitido.
 
 Para provedores diretos, configure cada canal independentemente: `RESEND_API_KEY` e `RESEND_FROM` para email; `SMSGO_API_KEY` e `SMSGO_SMS_TYPE_ID` para SMS; `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_TEMPLATE_NAME`, `META_LANGUAGE_CODE` e `META_GRAPH_VERSION` para WhatsApp. O tipo de SMS deve ser um ID positivo adequado ao uso transacional, obtido no catálogo da conta SMSGo; não é inferido automaticamente. O remetente Resend precisa de domínio autorizado; o template Meta deve estar aprovado e não ter parâmetros. Dados secretos devem vir do gerenciador de segredos do ambiente, nunca do Git. Canais sem configuração permanecem pendentes. As mensagens usam texto genérico sem dados privados de projeto.
 

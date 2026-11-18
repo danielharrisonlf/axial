@@ -70,7 +70,7 @@ class ControllerImpl {
   @Get("health/ready") async ready() {
     try {
       const result = await db.query(
-        "SELECT id FROM notifications.schema_migrations WHERE id='004_event_preferences'",
+        "SELECT id FROM notifications.schema_migrations WHERE id='005_event_type_names'",
       );
       if (!result.rowCount || !(await consumer.ready())) throw new Error();
       return { status: "ok" };

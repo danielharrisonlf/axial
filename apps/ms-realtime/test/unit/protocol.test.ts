@@ -26,6 +26,13 @@ describe("configuration", () => {
         .NODE_ENV,
     ).toBe("production");
   });
+  it("requires the ms-projects /api/v1 prefix in the projects API URL", () => {
+    expect(() => readConfig({ ...base, PROJECTS_API_URL: "http://localhost:3001" })).toThrow(/api\/v1/);
+    expect(() => readConfig({ ...base, PROJECTS_API_URL: "http://api:3001/" })).toThrow(/api\/v1/);
+    expect(readConfig({ ...base, PROJECTS_API_URL: "http://api:3001/api/v1/" }).PROJECTS_API_URL).toBe(
+      "http://api:3001/api/v1/",
+    );
+  });
 });
 
 describe("protocol", () => {

@@ -1,16 +1,16 @@
-import type { AuthContext, DomainEventType } from "@axial/contracts";
+import { type AuthContext, type DomainEventType, isManager } from "@axial/contracts";
 import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { Project } from "../generated/prisma/client.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { PrismaService } from "../infra/database/prisma.service.js";
 
 export type Transaction = Prisma.TransactionClient;
-export const isManager = (actor: AuthContext) => actor.role === "ADMIN" || actor.role === "PROJECT_MANAGER";
 
 @Injectable()
 export class ProjectsRepository {
   constructor(@Inject(PrismaService) readonly db: PrismaService) {}
 
+  /** Database form of the shared `canReadProject` policy, always bound to the organization. */
   scope(actor: AuthContext): Prisma.ProjectWhereInput {
     return {
       organizationId: actor.organizationId,

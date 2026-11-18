@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+// Relative source import: ms-notifications does not depend on @axial/contracts at runtime.
+import { eventTypes } from "../../../packages/contracts/src/index.js";
 import { notificationEvents, notificationTemplates, providerStatus } from "../src/catalog.js";
 
 const empty = {} as NodeJS.ProcessEnv;
@@ -13,6 +15,11 @@ describe("notification catalog", () => {
       expect(template.subject).not.toContain("{");
       expect(template.body).not.toContain("{");
     }
+  });
+
+  it("uses the event types emitted by ms-projects so opt-outs match event.type", () => {
+    const emitted = new Set<string>(eventTypes);
+    for (const template of notificationTemplates) expect(emitted.has(template.event)).toBe(true);
   });
 
   it("reports only complete channel configurations and never exposes secrets", () => {

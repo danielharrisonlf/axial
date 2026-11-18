@@ -125,7 +125,7 @@ services:
       REALTIME_NAMESPACE: axial
       REDIS_URL: ${REDIS_URL}
       JWT_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
-      PROJECTS_API_URL: http://api:3001
+      PROJECTS_API_URL: http://api:3001/api/v1
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3004/health/live"]
       interval: 15s
