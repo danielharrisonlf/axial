@@ -9,7 +9,6 @@ import "@fontsource/ibm-plex-mono/latin-500.css";
 import "@fontsource/ibm-plex-mono/latin-600.css";
 import App from "./App";
 import "./styles/prototype.css";
-import "./app.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Application root is missing");
