@@ -28,7 +28,6 @@ const project = z.looseObject({
   status: z.enum(["active", "paused", "done"]),
   startDate: z.string(),
   targetDate: z.string().nullable(),
-  favorite: z.boolean(),
   archived: z.boolean(),
   createdAt: z.string(),
   color: z.string(),
@@ -53,10 +52,11 @@ const task = z.looseObject({
   createdAt: z.string(),
   updatedAt: z.string(),
   dueDate: z.string().nullable(),
+  doneAt: z.string().nullable().optional(),
   createdBy: id,
 });
 export const workspaceDataSchema = z.looseObject({
-  meta: z.object({ seedVersion: z.literal(8), seededAt: z.string() }),
+  meta: z.object({ seedVersion: z.union([z.literal(8), z.literal(9)]), seededAt: z.string() }),
   settings: z.object({
     theme: z.enum(["light", "dark", "system"]),
     activeApp: z.string(),
@@ -78,6 +78,7 @@ export const workspaceDataSchema = z.looseObject({
       orgId: id,
       teamIds: z.array(id),
       active: z.boolean(),
+      favoriteProjectIds: z.array(id).optional(),
     }),
   ),
   teams: z.array(z.object({ id, orgId: id, name: id, desc: z.string(), leadId: id, memberIds: z.array(id) })),

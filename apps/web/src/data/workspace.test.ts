@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createDemoData } from "./seed";
+import { daysLeft, todayLocal } from "../lib/format";
+import demoSeed from "./demo-seed.json";
+import { createDemoData, SEED_VERSION } from "./seed";
 import { createWorkspaceStore, STORAGE_KEY } from "./workspace";
 
 const instant = new Date("2026-11-05T12:00:00.000Z");
@@ -222,7 +224,10 @@ describe("local workspace behavior", () => {
       configured: true,
     });
     expect(store.getSnapshot().db).toEqual(before);
-    expect(store.getSnapshot().toasts.filter((toast) => toast.tone === "err")).toHaveLength(2);
+    // identical denials are grouped in one toast with a counter
+    const denied = store.getSnapshot().toasts.filter((toast) => toast.tone === "err");
+    expect(denied).toHaveLength(1);
+    expect(denied[0]).toMatchObject({ title: "Sem permissão", count: 2 });
   });
 
   it.each(["{invalid JSON", JSON.stringify({ settings: { currentUserId: "missing" } })])(
@@ -254,5 +259,94 @@ describe("local workspace behavior", () => {
     store.act.setTheme("light");
     expect(store.getSnapshot().db.settings.theme).toBe("light");
     expect(store.getSnapshot().toasts.filter((toast) => toast.tone === "warn")).toHaveLength(1);
+  });
+
+  it("keeps at most three toasts visible, the oldest leaving first", () => {
+    const { store } = fixture();
+    for (const n of [1, 2, 3, 4]) store.notify(`Aviso ${n}`, "", "info");
+    expect(store.getSnapshot().toasts.map((t) => t.title)).toEqual(["Aviso 2", "Aviso 3", "Aviso 4"]);
+  });
+
+  it("records the completion moment when a task enters and leaves done", () => {
+    const { store } = fixture();
+    const task = required(store.act.createTask({ projectId: "prj-pcl", title: "Concluir" }));
+    expect(task.doneAt).toBeNull();
+    store.act.moveTask(task.id, "done");
+    expect(store.getSnapshot().db.tasks.find((t) => t.id === task.id)?.doneAt).toBe(instant.toISOString());
+    store.act.moveTask(task.id, "in_progress");
+    expect(store.getSnapshot().db.tasks.find((t) => t.id === task.id)?.doneAt).toBeNull();
+  });
+
+  it("keeps favorites per profile", () => {
+    const { store } = fixture();
+    const favorites = () => store.currentUser().favoriteProjectIds;
+    expect(favorites()).toEqual(["prj-pcl", "prj-pag"]);
+    store.act.toggleFavorite("prj-pcl");
+    expect(favorites()).toEqual(["prj-pag"]);
+    store.act.setUser("u2");
+    expect(favorites()).toContain("prj-pcl");
+  });
+
+  it("records actions run as the MCP console with the mcp origin", () => {
+    const { store } = fixture();
+    store.act.runAs("mcp", () => store.act.createTask({ projectId: "prj-pcl", title: "Via MCP" }));
+    store.act.createTask({ projectId: "prj-pcl", title: "Via interface" });
+    const [ui, mcp] = store.getSnapshot().db.audit;
+    expect(mcp).toMatchObject({ source: "mcp", summary: expect.stringContaining("criou a tarefa") });
+    expect(ui).toMatchObject({ source: "ui" });
+  });
+});
+
+describe("seed 9", () => {
+  it("starts with a lean, varied notification history", () => {
+    const db = createDemoData(instant);
+    expect(db.meta.seedVersion).toBe(SEED_VERSION);
+    expect(db.notifications).toHaveLength(8);
+    expect(new Set(db.notifications.map((n) => n.eventType)).size).toBe(6);
+    expect(new Set(db.notifications.map((n) => n.channel))).toEqual(new Set(["email", "whatsapp", "sms"]));
+    const failed = db.notifications.filter((n) => n.status === "failed");
+    expect(failed.map((n) => n.channel).sort()).toEqual(["email", "sms"]);
+    expect(failed.every((n) => !!n.failReason)).toBe(true);
+    expect(db.notifications.map((n) => n.ts)).toEqual(
+      [...db.notifications.map((n) => n.ts)].sort().reverse(),
+    );
+    expect(db.notificationTemplates.find((t) => t.id === "nt-sprint-start")?.subject).toBe(
+      "{sprint} iniciada",
+    );
+  });
+
+  it("migrates a saved version 8 state, keeping the person's changes", () => {
+    const { storage } = fixture();
+    const legacy = structuredClone(demoSeed) as unknown as {
+      meta: { seedVersion: number };
+      projects: { id: string; favorite?: boolean; name: string }[];
+      notifications: { id: string }[];
+    };
+    const renamed = required(legacy.projects[0]);
+    renamed.name = "Nome alterado pela pessoa";
+    const own = { ...required(legacy.notifications[0]), id: "nf-own-delivery" };
+    legacy.notifications.unshift(own);
+    storage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+    const store = createWorkspaceStore({ storage, now: () => instant });
+    const db = store.getSnapshot().db;
+    expect(store.getSnapshot().toasts).toEqual([]);
+    expect(db.meta.seedVersion).toBe(SEED_VERSION);
+    expect(db.projects[0]?.name).toBe("Nome alterado pela pessoa");
+    expect(db.projects.some((p) => "favorite" in p)).toBe(false);
+    expect(store.currentUser().favoriteProjectIds).toEqual(["prj-pcl", "prj-pag"]);
+    expect(db.notifications.filter((n) => n.id === "nf-own-delivery")).toHaveLength(1);
+    expect(db.notifications.filter((n) => /^nf\d+$/.test(n.id))).toHaveLength(8);
+    expect(db.tasks.filter((t) => t.status === "done").every((t) => t.doneAt === t.updatedAt)).toBe(true);
+    expect(JSON.parse(required(storage.getItem(STORAGE_KEY))).meta.seedVersion).toBe(SEED_VERSION);
+  });
+});
+
+describe("due dates on the local calendar", () => {
+  it("counts yesterday as overdue and today as zero days left", () => {
+    const now = new Date(2026, 10, 18, 23, 30);
+    expect(daysLeft(todayLocal(0, now), now)).toBe(0);
+    expect(daysLeft(todayLocal(-1, now), now)).toBe(-1);
+    expect(daysLeft(todayLocal(1, now), now)).toBe(1);
+    expect(todayLocal(0, now)).toBe("2026-11-18");
   });
 });

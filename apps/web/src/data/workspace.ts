@@ -1,7 +1,7 @@
 import { useMemo, useSyncExternalStore } from "react";
-import { STATUS_META } from "../lib/format";
+import { STATUS_META, todayLocal } from "../lib/format";
 import { workspaceDataSchema } from "./schema";
-import { createDemoData } from "./seed";
+import { createDemoData, type LegacyData, migrateToCurrent } from "./seed";
 import type {
   AuditEntry,
   Epic,
@@ -154,9 +154,14 @@ export function createWorkspaceStore(
       const raw = storage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = workspaceDataSchema.safeParse(JSON.parse(raw));
-        if (parsed.success && parsed.data.users.some((u) => u.id === parsed.data.settings.currentUserId))
-          initial = parsed.data as WorkspaceData;
-        else recovery = true;
+        if (parsed.success && parsed.data.users.some((u) => u.id === parsed.data.settings.currentUserId)) {
+          const saved = parsed.data as unknown as LegacyData;
+          const previousVersion = saved.meta.seedVersion;
+          initial = migrateToCurrent(saved, now());
+          // the upgrade is written back at once, so a reload does not migrate again
+          if (initial.meta.seedVersion !== previousVersion)
+            storage.setItem(STORAGE_KEY, JSON.stringify(initial));
+        } else recovery = true;
       }
     } catch {
       recovery = true;
@@ -198,9 +203,14 @@ export function createWorkspaceStore(
       return (task.teamId !== null && me.teamIds.includes(task.teamId)) || task.assigneeId === me.id;
     return task.assigneeId === me.id || task.createdBy === me.id || !task.assigneeId;
   };
+  /** Toasts: identical ones are grouped with a counter; at most three stay visible (oldest leaves). */
+  const MAX_TOASTS = 3;
   const notify = (title: string, message = "", tone: ToastTone = "info") => {
-    const toast: Toast = { id: uid("toast"), title, message, tone };
-    snapshot = { ...snapshot, toasts: [...snapshot.toasts.slice(-3), toast] };
+    const same = snapshot.toasts.find((t) => t.title === title && t.message === message && t.tone === tone);
+    const toasts = same
+      ? snapshot.toasts.map((t) => (t === same ? { ...t, count: t.count + 1 } : t))
+      : [...snapshot.toasts, { id: uid("toast"), title, message, tone, count: 1 }].slice(-MAX_TOASTS);
+    snapshot = { ...snapshot, toasts };
     emit();
   };
   const dismissToast = (id: string) => {
@@ -222,6 +232,8 @@ export function createWorkspaceStore(
     }
     emit();
   };
+  /** Origin written to audit entries; actions run through `act.runAs` record another origin (e.g. "mcp"). */
+  let auditSource = "ui";
   const audit = (
     db: WorkspaceData,
     action: string,
@@ -243,7 +255,7 @@ export function createWorkspaceStore(
       before: structuredClone(before),
       after: structuredClone(after),
       summary,
-      source: "ui",
+      source: auditSource,
     };
     db.audit.unshift(entry);
   };
@@ -385,6 +397,16 @@ export function createWorkspaceStore(
   };
   const act = {
     dismissToast,
+    /** Runs actions as another origin (the MCP test console records "mcp" in the audit trail). */
+    runAs<T>(source: "ui" | "mcp" | "api" | "automation", operation: () => T): T {
+      const previous = auditSource;
+      auditSource = source;
+      try {
+        return operation();
+      } finally {
+        auditSource = previous;
+      }
+    },
     setTheme(theme: Theme) {
       write((db) => {
         db.settings.theme = theme;
@@ -428,9 +450,8 @@ export function createWorkspaceStore(
           leadId: input.leadId || currentUser().id,
           priority: input.priority ?? "medium",
           status: "active",
-          startDate: input.startDate || now().toISOString().slice(0, 10),
+          startDate: input.startDate || todayLocal(0, now()),
           targetDate: input.targetDate || null,
-          favorite: false,
           archived: false,
           createdAt: now().toISOString(),
           color: "#2B5FD9",
@@ -497,9 +518,12 @@ export function createWorkspaceStore(
     },
     toggleFavorite(id: string) {
       write((db) => {
-        const p = db.projects.find((p) => p.id === id);
-        if (!p || !canSee(id)) throw new Error("Projeto não disponível");
-        p.favorite = !p.favorite;
+        if (!db.projects.some((p) => p.id === id) || !canSee(id)) throw new Error("Projeto não disponível");
+        const me = db.users.find((u) => u.id === db.settings.currentUserId);
+        if (!me) throw new Error("Perfil da demonstração não encontrado");
+        me.favoriteProjectIds = me.favoriteProjectIds.includes(id)
+          ? me.favoriteProjectIds.filter((x) => x !== id)
+          : [...me.favoriteProjectIds, id];
       });
     },
     createEpic(projectId: string, input: { name: string; desc?: string; ownerId?: string }): Epic | null {
@@ -560,6 +584,7 @@ export function createWorkspaceStore(
           createdAt: now().toISOString(),
           updatedAt: now().toISOString(),
           dueDate: input.dueDate ?? null,
+          doneAt: input.status === "done" ? now().toISOString() : null,
           createdBy: currentUser().id,
         };
         db.tasks.push(task);
@@ -619,6 +644,7 @@ export function createWorkspaceStore(
         for (const field of allowed)
           if (fields[field] !== undefined) Object.assign(task, { [field]: fields[field] });
         task.updatedAt = now().toISOString();
+        if (task.status !== before.status) task.doneAt = task.status === "done" ? task.updatedAt : null;
         const summary =
           fields.status && fields.status !== before.status
             ? `moveu ${task.ref} de ${STATUS_META[before.status].label} para ${STATUS_META[task.status].label}`
@@ -803,7 +829,7 @@ export function createWorkspaceStore(
         );
         return provider.configured;
       });
-      if (delivered === true) notify("Notificação reenviada", "Entrega concluída na demonstração.", "ok");
+      if (delivered === true) notify("Notificação reenviada", "O provedor confirmou a entrega.", "ok");
       else if (delivered === false)
         notify("Reenvio falhou", "O provedor deste canal segue não configurado.", "err");
     },
@@ -885,6 +911,7 @@ export function createWorkspaceStore(
           teamIds: input.teamIds,
           active: true,
           invited: true,
+          favoriteProjectIds: [],
         };
         db.users.push(user);
         audit(db, "create", "user", user.id, null, `convidou ${user.name} como ${user.roleId}`);
@@ -928,9 +955,12 @@ export function useWorkspace() {
     [snapshot.db.tasks, projectIds],
   );
   const me = useMemo(() => workspaceStore.currentUser(snapshot.db), [snapshot.db]);
+  const favoriteIds = useMemo(() => new Set(me.favoriteProjectIds), [me]);
   return {
     ...snapshot,
     me,
+    /** Favorites of the current profile (seed 9 keeps them per person). */
+    isFavorite: (projectId: string) => favoriteIds.has(projectId),
     visibleProjects,
     accessibleProjects,
     visibleTasks,

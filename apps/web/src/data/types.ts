@@ -26,6 +26,8 @@ export interface User {
   teamIds: string[];
   active: boolean;
   invited?: boolean;
+  /** Favorites belong to each person (seed 9); they used to be global per project. */
+  favoriteProjectIds: string[];
 }
 export interface Team {
   id: string;
@@ -47,7 +49,6 @@ export interface Project {
   status: "active" | "paused" | "done";
   startDate: string;
   targetDate: string | null;
-  favorite: boolean;
   archived: boolean;
   createdAt: string;
   color: string;
@@ -102,6 +103,8 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   dueDate: string | null;
+  /** Moment the task entered "done"; null while open. Insights and KPIs use it instead of updatedAt. */
+  doneAt: string | null;
   createdBy: string;
 }
 export interface Comment {
@@ -182,7 +185,9 @@ export interface WorkspaceData {
 export type ProjectInput = Pick<Project, "key" | "name"> &
   Partial<Pick<Project, "desc" | "teamIds" | "leadId" | "priority" | "startDate" | "targetDate">>;
 export type TaskInput = Pick<Task, "projectId" | "title"> &
-  Partial<Omit<Task, "id" | "ref" | "projectId" | "title" | "createdAt" | "updatedAt" | "createdBy">> & {
+  Partial<
+    Omit<Task, "id" | "ref" | "projectId" | "title" | "createdAt" | "updatedAt" | "createdBy" | "doneAt">
+  > & {
     silent?: boolean;
   };
 export type SprintInput = Pick<Sprint, "name" | "startDate" | "endDate"> & Partial<Pick<Sprint, "goal">>;
@@ -192,4 +197,6 @@ export interface Toast {
   title: string;
   message: string;
   tone: ToastTone;
+  /** Identical toasts are grouped; the counter shows how many times it happened. */
+  count: number;
 }
