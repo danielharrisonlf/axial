@@ -1897,3 +1897,5 @@ fieldset.field > legend { margin-bottom: var(--space-1); }
 @media (max-width: 860px) {
   .tb-search .results { position: fixed; top: calc(var(--topbar-h) + var(--space-1)); left: var(--space-2); right: var(--space-2); }
 }
+/* card do Kanban: com prioridade, "Bloqueada", prazo e subtarefas o rodapé quebra em vez de cortar o contador */
+.kcard .kc-foot { flex-wrap: wrap; row-gap: var(--space-1); }
