@@ -1,22 +1,36 @@
-import type {
-  AuthContext,
-  CreateComment,
-  CreateEpic,
-  CreateMilestone,
-  CreateProject,
-  CreateSprint,
-  CreateTask,
-  DomainEventType,
-  MoveTask,
-  Pagination,
-  ProjectList,
-  TaskList,
-  UpdateComment,
-  UpdateEpic,
-  UpdateMilestone,
-  UpdateProject,
-  UpdateSprint,
-  UpdateTask,
+import {
+  type AuthContext,
+  type CreateComment,
+  type CreateEpic,
+  type CreateMilestone,
+  type CreateProject,
+  type CreateSprint,
+  type CreateTask,
+  canArchiveProject,
+  canAssign,
+  canAssignTeams,
+  canChangeProjectMembership,
+  canComment,
+  canCreateProject,
+  canCreateTask,
+  canDeleteTask,
+  canEditTaskFields,
+  canManageProject,
+  canModifyComment,
+  type DomainEventType,
+  editableTaskFields,
+  type MoveTask,
+  type OrgResourceList,
+  type OrgTaskList,
+  type Pagination,
+  type ProjectList,
+  type TaskList,
+  type UpdateComment,
+  type UpdateEpic,
+  type UpdateMilestone,
+  type UpdateProject,
+  type UpdateSprint,
+  type UpdateTask,
 } from "@axial/contracts";
 import {
   BadRequestException,
@@ -27,7 +41,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import type { Prisma, Project, Task } from "../generated/prisma/client.js";
-import { isManager, ProjectsRepository, type Transaction } from "./projects.repository.js";
+import { ProjectsRepository, type Transaction } from "./projects.repository.js";
 
 const pageArgs = ({ page, pageSize }: Pagination) => ({ skip: (page - 1) * pageSize, take: pageSize });
 const paged = <T>(items: T[], total: number, query: Pagination) => ({
@@ -53,36 +67,30 @@ const taskInclude = { dependencies: { select: { dependsOnId: true } } } satisfie
 export class ProjectsService {
   constructor(@Inject(ProjectsRepository) private readonly repo: ProjectsRepository) {}
 
+  // Authorization decisions come from the shared @axial/contracts policy; these helpers map them to HTTP errors.
   private manage(actor: AuthContext, project: Project) {
-    if (
-      !isManager(actor) &&
-      !(actor.role === "TEAM_LEAD" && project.teamIds.some((id) => actor.teamIds.includes(id)))
-    )
+    if (!canManageProject(actor, project))
       throw new ForbiddenException("Project management permission required");
   }
   private member(actor: AuthContext) {
-    if (actor.role === "VIEWER") throw new ForbiddenException("Read only role");
+    if (!canComment(actor)) throw new ForbiddenException("Read only role");
   }
   private user(actor: AuthContext, id: string | null | undefined) {
-    if (id && id !== actor.userId && !actor.assignableUserIds.includes(id))
-      throw new BadRequestException("User is not assignable in this organization");
+    if (!canAssign(actor, id)) throw new BadRequestException("User is not assignable in this organization");
   }
   private teams(actor: AuthContext, ids: string[] | undefined) {
-    if (ids?.some((id) => !actor.assignableTeamIds.includes(id)))
+    if (!canAssignTeams(actor, ids))
       throw new BadRequestException("Team is not assignable in this organization");
   }
   private taskPermission(actor: AuthContext, task: Task, changes: object) {
     this.member(actor);
-    if (isManager(actor)) return;
-    if (actor.role === "TEAM_LEAD") {
-      if (!task.teamId || !actor.teamIds.includes(task.teamId))
-        throw new ForbiddenException("Task is outside your teams");
-      return;
-    }
-    if (actor.role !== "CONTRIBUTOR" || task.assigneeId !== actor.userId)
-      throw new ForbiddenException("Only assigned tasks can be edited");
-    const allowed = new Set(["version", "title", "description", "status", "acceptanceCriteria"]);
-    if (Object.keys(changes).some((key) => !allowed.has(key)))
+    const editable = editableTaskFields(actor, task);
+    if (editable === "all") return;
+    if (!editable.length)
+      throw new ForbiddenException(
+        actor.role === "TEAM_LEAD" ? "Task is outside your teams" : "Only assigned tasks can be edited",
+      );
+    if (!canEditTaskFields(actor, task, Object.keys(changes)))
       throw new ForbiddenException("Contributors cannot change assignment or planning");
   }
   private async task(actor: AuthContext, id: string, tx: Transaction = this.repo.db) {
@@ -138,6 +146,81 @@ export class ProjectsService {
     );
   }
 
+  /**
+   * Organization-wide lists read only rows of projects the actor can read (same scope as the
+   * per-project routes, archived projects included). A projectId filter must itself be readable (404).
+   */
+  private async orgScope(actor: AuthContext, projectId: string | undefined) {
+    if (projectId) await this.repo.project(actor, projectId);
+    return {
+      organizationId: actor.organizationId,
+      project: this.repo.scope(actor),
+      ...(projectId ? { projectId } : {}),
+    };
+  }
+  async listOrgTasks(actor: AuthContext, query: OrgTaskList) {
+    const where: Prisma.TaskWhereInput = {
+      ...(await this.orgScope(actor, query.projectId)),
+      ...(query.search
+        ? {
+            OR: [
+              { title: { contains: query.search, mode: "insensitive" } },
+              { ref: { contains: query.search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.assigneeId ? { assigneeId: query.assigneeId } : {}),
+      ...(query.dueBefore ? { dueDate: { lt: new Date(query.dueBefore) } } : {}),
+    };
+    const [items, total] = await Promise.all([
+      this.repo.db.task.findMany({
+        where,
+        include: taskInclude,
+        ...pageArgs(query),
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      }),
+      this.repo.db.task.count({ where }),
+    ]);
+    return paged(items, total, query);
+  }
+  async listOrgEpics(actor: AuthContext, query: OrgResourceList) {
+    const where: Prisma.EpicWhereInput = await this.orgScope(actor, query.projectId);
+    const [items, total] = await Promise.all([
+      this.repo.db.epic.findMany({
+        where,
+        ...pageArgs(query),
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      }),
+      this.repo.db.epic.count({ where }),
+    ]);
+    return paged(items, total, query);
+  }
+  async listOrgSprints(actor: AuthContext, query: OrgResourceList) {
+    const where: Prisma.SprintWhereInput = await this.orgScope(actor, query.projectId);
+    const [items, total] = await Promise.all([
+      this.repo.db.sprint.findMany({
+        where,
+        ...pageArgs(query),
+        orderBy: [{ startDate: "asc" }, { id: "asc" }],
+      }),
+      this.repo.db.sprint.count({ where }),
+    ]);
+    return paged(items, total, query);
+  }
+  async listOrgMilestones(actor: AuthContext, query: OrgResourceList) {
+    const where: Prisma.MilestoneWhereInput = await this.orgScope(actor, query.projectId);
+    const [items, total] = await Promise.all([
+      this.repo.db.milestone.findMany({
+        where,
+        ...pageArgs(query),
+        orderBy: [{ date: "asc" }, { id: "asc" }],
+      }),
+      this.repo.db.milestone.count({ where }),
+    ]);
+    return paged(items, total, query);
+  }
+
   async listProjects(actor: AuthContext, query: ProjectList) {
     const where: Prisma.ProjectWhereInput = {
       ...this.repo.scope(actor),
@@ -167,7 +250,7 @@ export class ProjectsService {
     return this.repo.project(actor, id);
   }
   async createProject(actor: AuthContext, input: CreateProject) {
-    if (!isManager(actor)) throw new ForbiddenException("Only managers can create projects");
+    if (!canCreateProject(actor)) throw new ForbiddenException("Only managers can create projects");
     this.user(actor, input.leadId);
     this.teams(actor, input.teamIds);
     dates(input.startDate, input.endDate);
@@ -188,7 +271,7 @@ export class ProjectsService {
     return this.repo.mutate(actor, id, async (tx, before) => {
       this.manage(actor, before);
       version(before, input.version);
-      if (!isManager(actor) && ("teamIds" in input || "leadId" in input))
+      if (!canChangeProjectMembership(actor) && ("teamIds" in input || "leadId" in input))
         throw new ForbiddenException("Only managers can change project membership");
       this.user(actor, input.leadId);
       this.teams(actor, input.teamIds);
@@ -217,7 +300,8 @@ export class ProjectsService {
       actor,
       id,
       async (tx, before) => {
-        if (!isManager(actor)) throw new ForbiddenException("Only managers can archive or restore projects");
+        if (!canArchiveProject(actor))
+          throw new ForbiddenException("Only managers can archive or restore projects");
         version(before, expected);
         if (restore ? !before.archivedAt : !!before.archivedAt)
           throw new ConflictException(restore ? "Project is not archived" : "Project is already archived");
@@ -458,7 +542,7 @@ export class ProjectsService {
       this.manage(actor, project);
       if ((input.type === "subtask") !== !!input.parentId)
         throw new BadRequestException("Subtask type and parentId must be supplied together");
-      if (actor.role === "TEAM_LEAD" && (!input.teamId || !actor.teamIds.includes(input.teamId)))
+      if (!canCreateTask(actor, project, input.teamId))
         throw new ForbiddenException("Team leads must create tasks in their teams");
       await this.taskReferences(tx, actor, project, input);
       await this.completion(tx, actor, projectId, undefined, input.status, input.blockedByIds);
@@ -560,8 +644,7 @@ export class ProjectsService {
     return this.repo.mutate(actor, initial.task.projectId, async (tx, project) => {
       const { task: before } = await this.task(actor, id, tx);
       this.manage(actor, project);
-      if (actor.role === "TEAM_LEAD" && (!before.teamId || !actor.teamIds.includes(before.teamId)))
-        throw new ForbiddenException("Task is outside your teams");
+      if (!canDeleteTask(actor, project, before)) throw new ForbiddenException("Task is outside your teams");
       version(before, expected);
       await this.taskReferences(tx, actor, project, {}, before);
       const [children, comments, dependents] = await Promise.all([
@@ -807,7 +890,7 @@ export class ProjectsService {
       this.member(actor);
       const { comment: before } = await this.comment(actor, id, tx);
       version(before, input.version);
-      if (before.authorId !== actor.userId && !isManager(actor))
+      if (!canModifyComment(actor, before))
         throw new ForbiddenException("Only the author or a manager can edit a comment");
       const after = await tx.comment.update({
         where: { id },
@@ -823,7 +906,7 @@ export class ProjectsService {
       this.member(actor);
       const { comment: before } = await this.comment(actor, id, tx);
       version(before, expected);
-      if (before.authorId !== actor.userId && !isManager(actor))
+      if (!canModifyComment(actor, before))
         throw new ForbiddenException("Only the author or a manager can delete a comment");
       await tx.comment.delete({ where: { id } });
       await this.emit(tx, actor, project.id, "comment", "comment.deleted", before, null);

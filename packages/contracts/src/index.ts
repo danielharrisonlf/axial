@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export * from "./policy.js";
+
 export const idSchema = z.uuid();
 export const roleSchema = z.enum(["ADMIN", "PROJECT_MANAGER", "TEAM_LEAD", "CONTRIBUTOR", "VIEWER"]);
 export const taskStatusSchema = z.enum(["backlog", "todo", "in_progress", "in_review", "done"]);
@@ -42,6 +44,8 @@ export const projectListSchema = paginationSchema
     archived: z.enum(["true", "false"]).default("false"),
   })
   .strict();
+/** Project color as a six digit hex value, for example `#3b82f6`. */
+export const projectColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 export const createProjectSchema = z
   .object({
     key: z
@@ -50,6 +54,7 @@ export const createProjectSchema = z
       .regex(/^[A-Z][A-Z0-9]{1,11}$/),
     name: text(160),
     description: description.default(""),
+    color: projectColorSchema.nullable().optional(),
     priority: prioritySchema.default("medium"),
     leadId: nullableId,
     teamIds: z.array(idSchema).max(100).default([]),
@@ -85,6 +90,17 @@ export const updateEpicSchema = createEpicSchema
     status: taskStatusSchema.optional(),
   })
   .strict();
+/** Stored and returned form of an acceptance criterion. */
+export const acceptanceCriterionSchema = z
+  .object({ text: text(1000), done: z.boolean().default(false) })
+  .strict();
+export type AcceptanceCriterion = z.output<typeof acceptanceCriterionSchema>;
+/** Input form: the legacy plain string is still accepted and becomes `{ text, done: false }`. */
+export const acceptanceCriterionInputSchema = z
+  .union([text(1000), acceptanceCriterionSchema])
+  .transform(
+    (value): AcceptanceCriterion => (typeof value === "string" ? { text: value, done: false } : value),
+  );
 export const createTaskSchema = z
   .object({
     title: text(240),
@@ -98,7 +114,7 @@ export const createTaskSchema = z
     sprintId: nullableId,
     parentId: nullableId,
     labels: z.array(text(40)).max(30).default([]),
-    acceptanceCriteria: z.array(text(1000)).max(50).default([]),
+    acceptanceCriteria: z.array(acceptanceCriterionInputSchema).max(50).default([]),
     estimate: z.number().int().min(0).max(1000).nullable().optional(),
     position: z.number().int().min(0).max(100000000).default(0),
     startDate: nullableDate,
@@ -142,6 +158,18 @@ export const taskListSchema = paginationSchema
     label: z.string().max(40).optional(),
   })
   .strict();
+/** Organization-wide task list, limited to the projects the actor can read. */
+export const orgTaskListSchema = paginationSchema
+  .extend({
+    search: z.string().max(240).optional(),
+    status: taskStatusSchema.optional(),
+    assigneeId: idSchema.optional(),
+    projectId: idSchema.optional(),
+    dueBefore: date.optional(),
+  })
+  .strict();
+/** Organization-wide epic, sprint and milestone lists, limited to readable projects. */
+export const orgResourceListSchema = paginationSchema.extend({ projectId: idSchema.optional() }).strict();
 export const createSprintSchema = z
   .object({
     name: text(160),
@@ -180,6 +208,8 @@ export type CreateTask = z.infer<typeof createTaskSchema>;
 export type UpdateTask = z.infer<typeof updateTaskSchema>;
 export type MoveTask = z.infer<typeof moveTaskSchema>;
 export type TaskList = z.infer<typeof taskListSchema>;
+export type OrgTaskList = z.infer<typeof orgTaskListSchema>;
+export type OrgResourceList = z.infer<typeof orgResourceListSchema>;
 export type CreateSprint = z.infer<typeof createSprintSchema>;
 export type UpdateSprint = z.infer<typeof updateSprintSchema>;
 export type CreateComment = z.infer<typeof createCommentSchema>;
@@ -193,6 +223,7 @@ export const auditListSchema = paginationSchema
     actorId: idSchema.optional(),
     eventType: z.string().trim().min(1).max(100).optional(),
     aggregateType: z.string().trim().min(1).max(60).optional(),
+    aggregateId: idSchema.optional(),
     from: date.optional(),
     to: date.optional(),
     search: z.string().trim().max(160).optional(),

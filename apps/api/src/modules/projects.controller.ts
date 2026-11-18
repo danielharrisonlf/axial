@@ -7,6 +7,8 @@ import type {
   CreateSprint,
   CreateTask,
   MoveTask,
+  OrgResourceList,
+  OrgTaskList,
   Pagination,
   ProjectList,
   TaskList,
@@ -25,6 +27,8 @@ import {
   createSprintSchema,
   createTaskSchema,
   moveTaskSchema,
+  orgResourceListSchema,
+  orgTaskListSchema,
   paginationSchema,
   projectListSchema,
   taskListSchema,
@@ -56,7 +60,9 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { ProjectsService } from "./projects.service.js";
 
 type BodySchema = Extract<Parameters<typeof ApiBody>[0], { schema: unknown }>["schema"];
-const input = (schema: z.ZodType) => ApiBody({ schema: z.toJSONSchema(schema) as BodySchema });
+// Request bodies are documented in their input form (e.g. legacy string acceptance criteria).
+const input = (schema: z.ZodType) =>
+  ApiBody({ schema: z.toJSONSchema(schema, { io: "input" }) as BodySchema });
 const filters = (schema: z.ZodObject) => {
   const properties = z.toJSONSchema(schema).properties ?? {};
   return applyDecorators(
@@ -131,6 +137,46 @@ export class ProjectsController {
     @Body(new ZodValidationPipe(versionSchema)) body: Version,
   ) {
     return this.service.archiveProject(actor, id, body.version, true);
+  }
+
+  @Get("tasks")
+  @filters(orgTaskListSchema)
+  @ApiOperation({ summary: "List tasks across the accessible projects of the organization" })
+  listOrgTasks(
+    @CurrentActor() actor: AuthContext,
+    @Query(new ZodValidationPipe(orgTaskListSchema)) query: OrgTaskList,
+  ) {
+    return this.service.listOrgTasks(actor, query);
+  }
+
+  @Get("epics")
+  @filters(orgResourceListSchema)
+  @ApiOperation({ summary: "List epics across the accessible projects of the organization" })
+  listOrgEpics(
+    @CurrentActor() actor: AuthContext,
+    @Query(new ZodValidationPipe(orgResourceListSchema)) query: OrgResourceList,
+  ) {
+    return this.service.listOrgEpics(actor, query);
+  }
+
+  @Get("sprints")
+  @filters(orgResourceListSchema)
+  @ApiOperation({ summary: "List sprints across the accessible projects of the organization" })
+  listOrgSprints(
+    @CurrentActor() actor: AuthContext,
+    @Query(new ZodValidationPipe(orgResourceListSchema)) query: OrgResourceList,
+  ) {
+    return this.service.listOrgSprints(actor, query);
+  }
+
+  @Get("milestones")
+  @filters(orgResourceListSchema)
+  @ApiOperation({ summary: "List milestones across the accessible projects of the organization" })
+  listOrgMilestones(
+    @CurrentActor() actor: AuthContext,
+    @Query(new ZodValidationPipe(orgResourceListSchema)) query: OrgResourceList,
+  ) {
+    return this.service.listOrgMilestones(actor, query);
   }
 
   @Get("projects/:projectId/epics")

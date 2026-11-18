@@ -14,6 +14,7 @@ model Project {
   key            String    @db.VarChar(12)
   name           String    @db.VarChar(160)
   description    String    @default("")
+  color          String?   @db.VarChar(7)
   status         String    @default("active")
   priority       String    @default("medium")
   leadId         String?   @db.Uuid
@@ -95,7 +96,8 @@ model Task {
   sprintId           String?  @db.Uuid
   parentId           String?  @db.Uuid
   labels             String[] @default([])
-  acceptanceCriteria String[] @default([])
+  /// Array of { text, done } objects; validated by @axial/contracts acceptanceCriterionSchema.
+  acceptanceCriteria Json     @default("[]")
   estimate           Int?
   position           Int      @default(0)
   startDate          DateTime? @db.Timestamptz(3)

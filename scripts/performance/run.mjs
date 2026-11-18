@@ -148,7 +148,7 @@ const services = [
       JWT_ISSUER: "http://localhost:3000/identity",
       JWT_AUDIENCE: "axial-projects",
       JWT_PUBLIC_KEY_PATH: `${keys}/dev-public.pem`,
-      PROJECTS_API_URL: "http://localhost:3001",
+      PROJECTS_API_URL: "http://localhost:3001/api/v1",
     },
   },
   {

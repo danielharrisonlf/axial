@@ -100,3 +100,13 @@ A skill global `C:/Users/daniellima/.agents/skills/astra-orchestrator/SKILL.md` 
 ## Referência verificável do escopo
 
 SHA256 do PDF fornecido: `fb425e27798fe02228a327946943e56f36838260362eedb5475cc2a9b225fee5`. A correspondência de requisitos por página está em requirements.md; convenções e revisões dos repositórios recentes estão em architecture.md.
+
+## Atualização de 18/11/2026: política compartilhada, listas da organização e correções de integração
+
+- **Política compartilhada:** `packages/contracts/src/policy.ts` exporta as regras de autorização do ms-projects como funções puras; o serviço e o escopo do repositório passaram a usá-las. A matriz dos cinco papéis tem testes unitários.
+- **Novos campos:** `Project.color` opcional (`#RRGGBB`, com CHECK no banco) e critérios de aceite como `[{text, done}]` em JSONB. A migration `202611180002_acceptance_criteria_objects` converte arrays de texto existentes em `{text, done: false}` preservando a ordem; a entrada ainda aceita strings.
+- **Listas da organização:** `GET tasks`, `epics`, `sprints` e `milestones`, paginadas e limitadas aos projetos legíveis pelo ator (incluindo arquivados, como nas rotas por projeto). OpenAPI regenerado; os corpos de requisição passaram a ser documentados na forma de entrada, por isso campos com padrão deixaram de aparecer como obrigatórios.
+- **ms-audit:** filtro `aggregateId` na listagem.
+- **Correções:** o ms-realtime exige `PROJECTS_API_URL` com `/api/v1` (Compose e script de performance corrigidos); o catálogo do ms-notifications usa os nomes emitidos (`task.assigned` etc.), a migration 005 renomeia preferências `.v1` e remove `task.blocked.v1`, que nunca era emitido.
+
+Validação local (Windows, PostgreSQL/Redis do Compose, banco isolado com sufixo `_test`): lint, typecheck, build e testes unitários aprovados; e2e do ms-projects (15), integração do ms-projects (3), integrações do ms-audit, ms-notifications, ms-realtime e mcp-server aprovadas; `prisma migrate status` e `prisma migrate diff` sem diferença; conversão de dados legados conferida em banco descartável. `test:web:e2e` não foi executado nesta etapa. Os dados fictícios do web ainda usam nomes `.v1` em `apps/web/src/data/demo-seed.json`.

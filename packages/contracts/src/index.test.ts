@@ -9,6 +9,8 @@ import {
   createSprintSchema,
   createTaskSchema,
   moveTaskSchema,
+  orgResourceListSchema,
+  orgTaskListSchema,
   paginationSchema,
   projectListSchema,
   taskListSchema,
@@ -151,10 +153,62 @@ describe("shared request contracts", () => {
     expect(taskListSchema.safeParse({ status: "blocked" }).success).toBe(false);
   });
 
+  it("bounds organization-wide list filters", () => {
+    expect(
+      orgTaskListSchema.parse({ assigneeId: id, status: "todo", projectId: id, dueBefore: validDate }),
+    ).toEqual({ assigneeId: id, status: "todo", projectId: id, dueBefore: validDate, page: 1, pageSize: 25 });
+    expect(orgTaskListSchema.safeParse({ dueBefore: "2026-11-05" }).success).toBe(false);
+    expect(orgTaskListSchema.safeParse({ sprintId: id }).success).toBe(false);
+    expect(orgResourceListSchema.parse({ projectId: id, page: "2" })).toEqual({
+      projectId: id,
+      page: 2,
+      pageSize: 25,
+    });
+    expect(orgResourceListSchema.safeParse({ organizationId: id }).success).toBe(false);
+  });
+
+  it("accepts an optional hex project color that can be cleared", () => {
+    expect(createProjectSchema.parse({ key: "AX", name: "Alpha", color: "#3B82f6" }).color).toBe("#3B82f6");
+    expect(createProjectSchema.parse({ key: "AX", name: "Alpha" })).not.toHaveProperty("color");
+    for (const color of ["3b82f6", "#3b8", "#3b82f6ff", "#zzzzzz", "red"])
+      expect(createProjectSchema.safeParse({ key: "AX", name: "Alpha", color }).success).toBe(false);
+    expect(updateProjectSchema.parse({ version: 1, color: null })).toEqual({ version: 1, color: null });
+  });
+
+  it("stores acceptance criteria as objects while accepting the legacy string form", () => {
+    expect(
+      createTaskSchema.parse({
+        title: "T",
+        acceptanceCriteria: ["  Legacy  ", { text: "Checked", done: true }, { text: "Default" }],
+      }).acceptanceCriteria,
+    ).toEqual([
+      { text: "Legacy", done: false },
+      { text: "Checked", done: true },
+      { text: "Default", done: false },
+    ]);
+    expect(updateTaskSchema.parse({ version: 1, acceptanceCriteria: ["A"] }).acceptanceCriteria).toEqual([
+      { text: "A", done: false },
+    ]);
+    expect(
+      createTaskSchema.safeParse({ title: "T", acceptanceCriteria: [{ text: "A", done: "yes" }] }).success,
+    ).toBe(false);
+    expect(
+      createTaskSchema.safeParse({ title: "T", acceptanceCriteria: [{ text: "A", done: true, id }] }).success,
+    ).toBe(false);
+    expect(createTaskSchema.safeParse({ title: "T", acceptanceCriteria: [{ text: " " }] }).success).toBe(
+      false,
+    );
+    expect(createTaskSchema.safeParse({ title: "T", acceptanceCriteria: Array(51).fill("A") }).success).toBe(
+      false,
+    );
+  });
+
   it("validates audit filters and rejects unbounded or unknown input", () => {
     expect(
       auditListSchema.parse({ projectId: id, eventType: "task.completed", page: "2", pageSize: "50" }),
     ).toMatchObject({ projectId: id, eventType: "task.completed", page: 2, pageSize: 50 });
+    expect(auditListSchema.parse({ aggregateId: id })).toMatchObject({ aggregateId: id });
+    expect(auditListSchema.safeParse({ aggregateId: "not-a-uuid" }).success).toBe(false);
     expect(auditListSchema.safeParse({ actorId: "not-a-uuid" }).success).toBe(false);
     expect(auditListSchema.safeParse({ from: "2026-11-05" }).success).toBe(false);
     expect(auditListSchema.safeParse({ organizationId: id }).success).toBe(false);

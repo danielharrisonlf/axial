@@ -46,6 +46,7 @@ describe("audit visibility", () => {
         actorId: other,
         eventType: "task.completed",
         aggregateType: "task",
+        aggregateId: project,
         from: "2026-11-01T00:00:00.000Z",
         to: "2026-11-30T23:59:59.000Z",
         search: "task_%",
@@ -57,12 +58,14 @@ describe("audit visibility", () => {
     expect(query.where).toContain("actor_id=$3");
     expect(query.where).toContain("event_type=$4");
     expect(query.where).toContain("aggregate_type=$5");
-    expect(query.where).toContain("occurred_at>=$6");
-    expect(query.where).toContain("occurred_at<=$7");
-    expect(query.where).toContain("ILIKE $8 ESCAPE");
+    expect(query.where).toContain("aggregate_id=$6");
+    expect(query.values[5]).toBe(project);
+    expect(query.where).toContain("occurred_at>=$7");
+    expect(query.where).toContain("occurred_at<=$8");
+    expect(query.where).toContain("ILIKE $9 ESCAPE");
     expect(query.values.at(-2)).toBe(25);
     expect(query.values.at(-1)).toBe(50);
-    expect(query.limit).toBe(9);
-    expect(query.offset).toBe(10);
+    expect(query.limit).toBe(10);
+    expect(query.offset).toBe(11);
   });
 });

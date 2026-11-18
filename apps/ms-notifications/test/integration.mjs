@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
 
@@ -318,6 +319,25 @@ try {
     (await db.query("SELECT status FROM notifications.deliveries WHERE id=$1", [optedInDelivery.id])).rows[0]
       .status,
     "accepted",
+  );
+  // Migration 005 renames legacy ".v1" preference rows to the emitted event names.
+  const legacyUser = randomUUID();
+  await db.query(
+    "INSERT INTO notifications.event_preferences(organization_id,user_id,event_type,channel,enabled) VALUES($1,$2,'task.completed.v1','email',false),($1,$2,'task.blocked.v1','email',false),($1,$2,'task.assigned.v1','sms',false),($1,$2,'task.assigned','sms',true)",
+    [org, legacyUser],
+  );
+  await db.query(await readFile(new URL("../migrations/005_event_type_names.sql", import.meta.url), "utf8"));
+  assert.deepEqual(
+    (
+      await db.query(
+        "SELECT event_type,channel,enabled FROM notifications.event_preferences WHERE organization_id=$1 AND user_id=$2 ORDER BY event_type,channel",
+        [org, legacyUser],
+      )
+    ).rows,
+    [
+      { event_type: "task.assigned", channel: "sms", enabled: true },
+      { event_type: "task.completed", channel: "email", enabled: false },
+    ],
   );
   await job.remove();
   console.log(

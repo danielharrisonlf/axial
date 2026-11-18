@@ -697,4 +697,120 @@ describe("projects HTTP acceptance with PostgreSQL", () => {
       await prisma.outboxEvent.count({ where: { aggregateId: child.id, eventType: "task.updated" } }),
     ).toBe(0);
   });
+
+  it("stores an optional project color and acceptance criteria objects from legacy string input", async () => {
+    const project = (
+      await api()
+        .post(`${base}/projects`)
+        .auth(token, { type: "bearer" })
+        .send({ key: "COLOR", name: "Colored", color: "#3b82f6" })
+        .expect(201)
+    ).body;
+    expect(project.color).toBe("#3b82f6");
+    await api()
+      .patch(`${base}/projects/${project.id}`)
+      .auth(token, { type: "bearer" })
+      .send({ version: 1, color: "blue" })
+      .expect(400);
+    expect(
+      (
+        await api()
+          .patch(`${base}/projects/${project.id}`)
+          .auth(token, { type: "bearer" })
+          .send({ version: 1, color: null })
+          .expect(200)
+      ).body.color,
+    ).toBeNull();
+    const task = await createTask(project.id, {
+      assigneeId: userId,
+      acceptanceCriteria: ["Legacy text", { text: "Already checked", done: true }],
+    });
+    expect(task.acceptanceCriteria).toEqual([
+      { text: "Legacy text", done: false },
+      { text: "Already checked", done: true },
+    ]);
+    const contributor = await harness.token({
+      organizationId,
+      userId,
+      role: "CONTRIBUTOR",
+      projectIds: [project.id],
+    });
+    const updated = (
+      await api()
+        .patch(`${base}/tasks/${task.id}`)
+        .auth(contributor, { type: "bearer" })
+        .send({ version: 1, acceptanceCriteria: [{ text: "Legacy text", done: true }] })
+        .expect(200)
+    ).body;
+    expect(updated.acceptanceCriteria).toEqual([{ text: "Legacy text", done: true }]);
+    expect(
+      (await api().get(`${base}/tasks/${task.id}`).auth(token, { type: "bearer" }).expect(200)).body
+        .acceptanceCriteria,
+    ).toEqual([{ text: "Legacy text", done: true }]);
+  });
+
+  it("lists tasks, epics, sprints and milestones organization-wide within readable projects", async () => {
+    const teamId = uuid();
+    const manager = await harness.token({ organizationId, userId, assignableTeamIds: [teamId] });
+    const visible = (
+      await api()
+        .post(`${base}/projects`)
+        .auth(manager, { type: "bearer" })
+        .send({ key: "SEEN", name: "Visible", teamIds: [teamId] })
+        .expect(201)
+    ).body;
+    const hidden = await createProject("HIDDEN");
+    const otherOrganizationId = uuid();
+    organizations.push(otherOrganizationId);
+    const otherToken = await harness.token({ organizationId: otherOrganizationId, userId });
+    const foreign = await createProject("FOREIGN", otherToken);
+    for (const project of [visible, hidden]) {
+      await createTask(project.id, { title: `${project.key} due`, assigneeId: userId, dueDate: startDate });
+      await createTask(project.id, { title: `${project.key} later`, status: "todo", dueDate: endDate });
+      for (const [path, body] of [
+        ["epics", { title: "Epic" }],
+        ["sprints", { name: "Sprint", startDate, endDate }],
+        ["milestones", { name: "Milestone", date: endDate }],
+      ] as const)
+        await api()
+          .post(`${base}/projects/${project.id}/${path}`)
+          .auth(token, { type: "bearer" })
+          .send(body)
+          .expect(201);
+    }
+    await api()
+      .post(`${base}/projects/${foreign.id}/tasks`)
+      .auth(otherToken, { type: "bearer" })
+      .send({ title: "Foreign", assigneeId: userId })
+      .expect(201);
+
+    const list = async (path: string, bearer = token) =>
+      (await api().get(`${base}/${path}`).auth(bearer, { type: "bearer" }).expect(200)).body;
+    expect((await list("tasks")).total).toBe(4);
+    expect((await list("tasks?pageSize=1&page=2")).items).toHaveLength(1);
+    expect((await list(`tasks?assigneeId=${userId}`)).total).toBe(2);
+    expect((await list("tasks?status=todo")).total).toBe(2);
+    expect((await list("tasks?search=SEEN")).total).toBe(2);
+    expect((await list(`tasks?dueBefore=${encodeURIComponent(endDate)}`)).total).toBe(2);
+    expect(
+      (await list(`tasks?projectId=${visible.id}&status=todo`)).items.map((t: { ref: string }) => t.ref),
+    ).toEqual(["SEEN-2"]);
+    for (const path of ["epics", "sprints", "milestones"]) {
+      expect((await list(path)).total).toBe(2);
+      expect((await list(`${path}?projectId=${hidden.id}`)).items[0].projectId).toBe(hidden.id);
+    }
+    await api().get(`${base}/tasks?projectId=${foreign.id}`).auth(token, { type: "bearer" }).expect(404);
+    await api().get(`${base}/tasks?dueBefore=2026-11-01`).auth(token, { type: "bearer" }).expect(400);
+    await api().get(`${base}/epics?status=todo`).auth(token, { type: "bearer" }).expect(400);
+
+    const viewer = await harness.token({ organizationId, role: "VIEWER", teamIds: [teamId] });
+    const viewerTasks = await list("tasks", viewer);
+    expect(viewerTasks.total).toBe(2);
+    expect(viewerTasks.items.every((t: { projectId: string }) => t.projectId === visible.id)).toBe(true);
+    for (const path of ["epics", "sprints", "milestones"]) expect((await list(path, viewer)).total).toBe(1);
+    await api().get(`${base}/tasks?projectId=${hidden.id}`).auth(viewer, { type: "bearer" }).expect(404);
+    const outsider = await harness.token({ organizationId, role: "CONTRIBUTOR" });
+    expect((await list("tasks", outsider)).total).toBe(0);
+    expect((await list("tasks", otherToken)).total).toBe(1);
+  });
 });
