@@ -14,12 +14,12 @@ import type { PoolClient } from "pg";
 import { z } from "zod";
 import {
   type Actor,
-  chosenPassword,
   email,
   isUniqueViolation,
   type LoginResult,
   type Membership,
   name,
+  PASSWORD_MAX_LENGTH,
   parse,
   password,
   pathUuid,
@@ -362,7 +362,7 @@ export class IdentityService {
 
   async login(req: Request, data: unknown): Promise<LoginResult> {
     const input = parse(
-      strict({ email, password: z.string().max(128), organizationId: uuid.optional() }),
+      strict({ email, password: z.string().max(PASSWORD_MAX_LENGTH), organizationId: uuid.optional() }),
       data,
     );
     let signedIn: Awaited<ReturnType<typeof auth.api.signInEmail>>;
@@ -384,7 +384,7 @@ export class IdentityService {
    */
   async signup(req: Request, data: unknown): Promise<LoginResult> {
     if (!settings.IDENTITY_SIGNUP_ENABLED) throw new NotFoundException();
-    const input = parse(strict({ name, email, password: chosenPassword, organizationName: name }), data);
+    const input = parse(strict({ name, email, password, organizationName: name }), data);
     const refused = () => new HttpException("Signup could not be completed", 409);
     const organizationId = randomUUID();
     const createOrganization = async (client: PoolClient, userId: string) => {
@@ -494,7 +494,10 @@ export class IdentityService {
 
   async changePassword(req: Request, data: unknown): Promise<{ changed: boolean }> {
     const actor = await this.actor(req, { passwordChange: true });
-    const input = parse(strict({ currentPassword: z.string().max(128), newPassword: password }), data);
+    const input = parse(
+      strict({ currentPassword: z.string().max(PASSWORD_MAX_LENGTH), newPassword: password }),
+      data,
+    );
     if (input.currentPassword === input.newPassword)
       throw new BadRequestException("New password must differ");
     const current = await db.query<{ password: string | null }>(

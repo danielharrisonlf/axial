@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { bearer } from "better-auth/plugins";
 import type { Pool } from "pg";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "./common.js";
 
 export const BETTER_AUTH_BASE_PATH = "/api/v1/session";
 
@@ -26,8 +27,8 @@ export function createAuth(database: Pool) {
     trustedOrigins,
     emailAndPassword: {
       enabled: true,
-      minPasswordLength: 14,
-      maxPasswordLength: 128,
+      minPasswordLength: PASSWORD_MIN_LENGTH,
+      maxPasswordLength: PASSWORD_MAX_LENGTH,
     },
     session: {
       expiresIn: 60 * 60 * 24 * 7,

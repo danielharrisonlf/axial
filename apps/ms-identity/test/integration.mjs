@@ -145,15 +145,26 @@ try {
   assert.equal(exchanged.status, 201);
   assert.ok(exchanged.body.accessToken);
 
+  // One password policy everywhere: 10 to 128 characters.
+  assert.equal(
+    (
+      await request(
+        "members",
+        { email: "short@example.test", password: "nine-char", role: "VIEWER" },
+        login.body.accessToken,
+      )
+    ).status,
+    400,
+  );
   const member = await request(
     "members",
-    { email: "second@example.test", password: "another-secure-password", role: "ADMIN" },
+    { email: "second@example.test", password: "temporary1", role: "ADMIN" },
     login.body.accessToken,
   );
   assert.equal(member.status, 201);
   const temporary = await request("auth/login", {
     email: "second@example.test",
-    password: "another-secure-password",
+    password: "temporary1",
     organizationId: organization,
   });
   assert.equal(temporary.status, 201);
@@ -170,7 +181,7 @@ try {
     (
       await request(
         "auth/password",
-        { currentPassword: "another-secure-password", newPassword: "another-secure-password" },
+        { currentPassword: "temporary1", newPassword: "temporary1" },
         temporary.body.accessToken,
       )
     ).status,
@@ -180,7 +191,17 @@ try {
     (
       await request(
         "auth/password",
-        { currentPassword: "wrong", newPassword: "second-private-password" },
+        { currentPassword: "temporary1", newPassword: "nine-char" },
+        temporary.body.accessToken,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request(
+        "auth/password",
+        { currentPassword: "wrong", newPassword: "changed-10" },
         temporary.body.accessToken,
       )
     ).status,
@@ -190,7 +211,7 @@ try {
     (
       await request(
         "auth/password",
-        { currentPassword: "another-secure-password", newPassword: "second-private-password" },
+        { currentPassword: "temporary1", newPassword: "changed-10" },
         temporary.body.accessToken,
       )
     ).status,
@@ -198,7 +219,7 @@ try {
   );
   const second = await request("auth/login", {
     email: "second@example.test",
-    password: "second-private-password",
+    password: "changed-10",
     organizationId: organization,
   });
   assert.equal(second.status, 201);
@@ -213,9 +234,19 @@ try {
   assert.equal(changed.status, 200);
   assert.equal((await request("members", null, second.body.accessToken, "GET")).status, 403);
 
+  assert.equal(
+    (
+      await request(
+        `members/${member.body.id}/password`,
+        { newPassword: "nine-char" },
+        login.body.accessToken,
+      )
+    ).status,
+    400,
+  );
   const reset = await request(
     `members/${member.body.id}/password`,
-    { newPassword: "reset-private-password" },
+    { newPassword: "reset-pass" },
     login.body.accessToken,
   );
   assert.equal(reset.status, 201);
@@ -223,7 +254,7 @@ try {
     (
       await request("auth/login", {
         email: "second@example.test",
-        password: "second-private-password",
+        password: "changed-10",
         organizationId: organization,
       })
     ).status,
@@ -231,7 +262,7 @@ try {
   );
   const resetLogin = await request("auth/login", {
     email: "second@example.test",
-    password: "reset-private-password",
+    password: "reset-pass",
     organizationId: organization,
   });
   assert.equal(resetLogin.status, 201);

@@ -33,6 +33,7 @@ import {
   email,
   isDuplicateEmail,
   name,
+  PASSWORD_MAX_LENGTH,
   parse,
   password,
   pathUuid,
@@ -302,7 +303,7 @@ class OAuthService {
       }
   > {
     const address = email.safeParse(rawEmail);
-    if (!address.success || !password || password.length > 128) return { kind: "invalid" };
+    if (!address.success || !password || password.length > PASSWORD_MAX_LENGTH) return { kind: "invalid" };
     let signedIn: Awaited<ReturnType<typeof auth.api.signInEmail>>;
     try {
       signedIn = await auth.api.signInEmail({

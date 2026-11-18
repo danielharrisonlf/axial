@@ -15,7 +15,7 @@ Serviço NestJS independente, com PostgreSQL no schema `identity`. Não lê o sc
 - `IDENTITY_WEB_URL`: endereço do Workspace usado nos links de convite (padrão `http://localhost:5173`).
 - `IDENTITY_SESSION_COOKIE_SECURE`: `false` só em desenvolvimento HTTP (padrão `true`).
 
-Execute `pnpm --filter @axial/ms-identity db:migrate`, depois configure `IDENTITY_BOOTSTRAP_EMAIL`, `IDENTITY_BOOTSTRAP_PASSWORD` (14 a 128 caracteres) e `IDENTITY_BOOTSTRAP_ORGANIZATION` e execute `pnpm --filter @axial/ms-identity bootstrap`. A inicialização é transacional, serializada e recusada se já existir qualquer organização. Forneça a senha com um canal de segredos apropriado, remova-a do ambiente após o comando e não a registre em logs. O comando imprime o UUID da organização; o login exige esse UUID. Em seguida rode `pnpm --filter @axial/ms-identity dev` ou `build` e `start`. Não existem senhas, chaves ou usuários padrão.
+Execute `pnpm --filter @axial/ms-identity db:migrate`, depois configure `IDENTITY_BOOTSTRAP_EMAIL`, `IDENTITY_BOOTSTRAP_PASSWORD` (10 a 128 caracteres) e `IDENTITY_BOOTSTRAP_ORGANIZATION` e execute `pnpm --filter @axial/ms-identity bootstrap`. A inicialização é transacional, serializada e recusada se já existir qualquer organização. Forneça a senha com um canal de segredos apropriado, remova-a do ambiente após o comando e não a registre em logs. O comando imprime o UUID da organização; o login exige esse UUID. Em seguida rode `pnpm --filter @axial/ms-identity dev` ou `build` e `start`. Não existem senhas, chaves ou usuários padrão.
 
 ## HTTP
 
@@ -50,7 +50,7 @@ Regras:
 - Signup com e-mail já cadastrado: só com a senha correta da conta, e então a empresa nova é criada para essa conta (o nome e a senha dela não mudam). Senha errada ou corrida de cadastro respondem 409 `Signup could not be completed`, sem criar nada. A conta nova não precisa trocar a senha.
 - Convite: token de 32 bytes aleatórios em base64url; só o hash SHA-256 fica em `identity.invitations`, então o link não pode ser mostrado de novo (crie outro convite). Validade de 7 dias, uso único. O convite recusa equipes inativas ou de outra empresa (400) e e-mail que já é membro ativo (409). Na aceitação, numa transação com o convite travado: conta nova exige senha de 10 a 128 caracteres; conta existente exige a própria senha (401 se errada, e o convite continua pendente); membro desativado volta com o papel e o cargo do convite; equipes desativadas desde o convite são ignoradas. Convites não geram eventos de outbox; o vínculo criado gera os eventos de membro e equipe de sempre.
 - Conta com senha provisória em várias empresas recebe direto o token de troca de senha (da primeira empresa por nome), sem escolha de organização.
-- As senhas escolhidas no signup e no convite têm mínimo de 10 caracteres; `POST auth/password`, `POST members` e o reset administrativo continuam exigindo 14.
+- Política única de senha (`PASSWORD_MIN_LENGTH`/`PASSWORD_MAX_LENGTH` em `src/common.ts`, também aplicada ao BetterAuth): de 10 a 128 caracteres no signup, na aceitação de convite, em `POST auth/password`, em `POST members`, no reset administrativo e no `bootstrap`.
 
 ### Sessão do navegador
 

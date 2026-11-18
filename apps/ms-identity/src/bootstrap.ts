@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 import { z } from "zod";
 import { createAuth } from "./auth.js";
+import { password } from "./common.js";
 import { pool } from "./db.js";
 
 loadEnv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet: true });
@@ -10,7 +11,7 @@ loadEnv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet:
 const input = z
   .object({
     IDENTITY_BOOTSTRAP_EMAIL: z.email().max(254),
-    IDENTITY_BOOTSTRAP_PASSWORD: z.string().min(14).max(128),
+    IDENTITY_BOOTSTRAP_PASSWORD: password,
     IDENTITY_BOOTSTRAP_ORGANIZATION: z.string().trim().min(1).max(120),
   })
   .parse(process.env);

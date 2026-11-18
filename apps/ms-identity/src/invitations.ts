@@ -20,11 +20,12 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import {
   type Actor,
-  chosenPassword,
   email,
   type LoginResult,
   name,
+  PASSWORD_MAX_LENGTH,
   parse,
+  password,
   pathUuid,
   type Role,
   roles,
@@ -180,7 +181,10 @@ export class InvitationsService {
 
   async accept(req: Request, token: string, data: unknown): Promise<LoginResult> {
     const hash = tokenHash(token);
-    const input = parse(strict({ name: name.optional(), password: z.string().min(1).max(128) }), data);
+    const input = parse(
+      strict({ name: name.optional(), password: z.string().min(1).max(PASSWORD_MAX_LENGTH) }),
+      data,
+    );
     const accepted = await transaction(async (client) => {
       const found = await client.query<{
         id: string;
@@ -218,8 +222,7 @@ export class InvitationsService {
           throw new UnauthorizedException("Invalid credentials");
         userId = existing.id;
       } else {
-        if (!chosenPassword.safeParse(input.password).success)
-          throw new BadRequestException("Invalid request");
+        if (!password.safeParse(input.password).success) throw new BadRequestException("Invalid request");
         userId = randomUUID();
         await this.identity.createAccount(
           client,

@@ -8,10 +8,13 @@ export const email = z
   .email()
   .max(254)
   .transform((value) => value.toLowerCase());
-/** Passwords set by an administrator or changed by the user. */
-export const password = z.string().min(14).max(128);
-/** Passwords chosen by the user on self-service signup or invitation acceptance. */
-export const chosenPassword = z.string().min(10).max(128);
+export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MAX_LENGTH = 128;
+/**
+ * The one password policy: signup, invitation acceptance, password change, member creation,
+ * administrative reset, bootstrap and BetterAuth itself all accept 10 to 128 characters.
+ */
+export const password = z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH);
 export const name = z.string().trim().min(1).max(120);
 export const title = z.string().trim().min(1).max(120);
 export const strict = <T extends z.ZodRawShape>(shape: T) => z.strictObject(shape);
