@@ -75,6 +75,10 @@ describe("durable outbox relay", () => {
         source: "api",
         correlationId: uuid(),
         payload: { before: null, after: { id: aggregateId, title: "relay acceptance event" } },
+        // The relay claims the 20 oldest eligible events. The test database is shared with other
+        // suites and checkouts, which may leave unpublished events behind; the oldest timestamp keeps
+        // this event in the first batch without deleting rows the test did not create.
+        occurredAt: new Date("2000-01-01T00:00:00.000Z"),
       },
     });
 
