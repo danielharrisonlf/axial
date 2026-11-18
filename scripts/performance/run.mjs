@@ -539,7 +539,9 @@ async function prepareData({ skipInfra = false } = {}) {
   if (!skipInfra) {
     // sem o daemon, o docker compose falha com uma mensagem técnica: explica o que fazer
     if (spawnSync("docker", ["info"], { stdio: "ignore" }).status !== 0)
-      throw new Error("O Docker não está rodando. Abra o Docker Desktop, espere ele iniciar e tente de novo.");
+      throw new Error(
+        "O Docker não está rodando. Abra o Docker Desktop, espere ele iniciar e tente de novo.",
+      );
     console.log("[infra] docker compose up");
     await run("docker", ["compose", "up", "-d", "--wait"]);
   }
