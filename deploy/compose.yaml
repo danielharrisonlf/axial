@@ -1,0 +1,232 @@
+# Axial no Dokploy (serviço do tipo Compose, composePath: ./deploy/compose.yaml).
+# PostgreSQL e Redis são serviços de banco gerenciados pelo próprio Dokploy, na rede
+# dokploy-network; os domínios (HTTPS via Let's Encrypt) são configurados no Dokploy.
+#
+# Variáveis definidas na aba Environment do Dokploy (nunca no Git):
+#   PUBLIC_HOST            domínio base, ex.: 179-66-152-186.sslip.io
+#   POSTGRES_URL           postgresql://usuario:senha@host:5432/axial_dev (o seed exige banco *_dev)
+#   REDIS_URL              redis://default:senha@host:6379
+#   BETTER_AUTH_SECRET     segredo aleatório com 32+ caracteres
+#   AXIAL_SEED             true (padrão) popula a organização de demonstração
+
+x-build: &build
+  context: ..
+  dockerfile: deploy/Dockerfile
+  args:
+    INSIGHTS_REMOTE_ENTRY: https://insights.${PUBLIC_HOST}/remoteEntry.js
+
+# os sete serviços usam a mesma imagem, construída pelo serviço "setup"
+x-backend: &backend
+  image: axial-backend:prod
+  pull_policy: never
+  restart: unless-stopped
+  init: true
+  networks: [default, dokploy-network]
+  volumes:
+    - axial-keys:/app/keys:ro
+  depends_on:
+    setup:
+      condition: service_completed_successfully
+
+x-jwt: &jwt
+  NODE_ENV: development
+  JWT_ISSUER: https://api.${PUBLIC_HOST}/identity
+  JWT_AUDIENCE: axial-projects
+
+services:
+  setup:
+    build:
+      <<: *build
+      target: backend
+    image: axial-backend:prod
+    restart: "no"
+    command: ["/app/deploy/setup.sh"]
+    networks: [default, dokploy-network]
+    volumes:
+      - axial-keys:/app/keys
+    environment:
+      <<: *jwt
+      POSTGRES_URL: ${POSTGRES_URL}
+      REDIS_URL: ${REDIS_URL}
+      CORS_ORIGINS: https://axial.${PUBLIC_HOST}
+      AXIAL_SEED: ${AXIAL_SEED:-true}
+
+  api:
+    <<: *backend
+    working_dir: /app/apps/api
+    command: ["node", "dist/main.js"]
+    environment:
+      <<: *jwt
+      PORT: "3001"
+      DATABASE_URL: ${POSTGRES_URL}?schema=projects
+      REDIS_URL: ${REDIS_URL}
+      JWT_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
+      RELAY_ENABLED: "true"
+      RELAY_POLL_MS: "1000"
+      CORS_ORIGINS: https://axial.${PUBLIC_HOST}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/api/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  ms-identity:
+    <<: *backend
+    working_dir: /app/apps/ms-identity
+    command: ["node", "dist/main.js"]
+    environment:
+      NODE_ENV: development
+      IDENTITY_PORT: "3002"
+      IDENTITY_DATABASE_URL: ${POSTGRES_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: https://api.${PUBLIC_HOST}
+      IDENTITY_TRUSTED_ORIGINS: https://axial.${PUBLIC_HOST}
+      IDENTITY_ISSUER: https://api.${PUBLIC_HOST}/identity
+      IDENTITY_AUDIENCE: axial-projects
+      IDENTITY_PRIVATE_KEY_PATH: /app/keys/dev-private.pem
+      IDENTITY_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3002/api/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  ms-notifications:
+    <<: *backend
+    working_dir: /app/apps/ms-notifications
+    command: ["node", "dist/main.js"]
+    environment:
+      NODE_ENV: development
+      NOTIFICATIONS_PORT: "3003"
+      NOTIFICATIONS_DATABASE_URL: ${POSTGRES_URL}
+      NOTIFICATIONS_REDIS_URL: ${REDIS_URL}
+      NOTIFICATIONS_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
+      NOTIFICATIONS_JWT_ISSUER: https://api.${PUBLIC_HOST}/identity
+      NOTIFICATIONS_JWT_AUDIENCE: axial-projects
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3003/api/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  ms-realtime:
+    <<: *backend
+    working_dir: /app/apps/ms-realtime
+    command: ["node", "dist/main.js"]
+    environment:
+      <<: *jwt
+      REALTIME_PORT: "3004"
+      REALTIME_NAMESPACE: axial
+      REDIS_URL: ${REDIS_URL}
+      JWT_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
+      PROJECTS_API_URL: http://api:3001
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3004/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  ms-audit:
+    <<: *backend
+    working_dir: /app/apps/ms-audit
+    command: ["node", "dist/main.js"]
+    environment:
+      NODE_ENV: development
+      AUDIT_PORT: "3005"
+      AUDIT_DATABASE_URL: ${POSTGRES_URL}
+      AUDIT_REDIS_URL: ${REDIS_URL}
+      AUDIT_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
+      AUDIT_JWT_ISSUER: https://api.${PUBLIC_HOST}/identity
+      AUDIT_JWT_AUDIENCE: axial-projects
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3005/api/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  mcp-server:
+    <<: *backend
+    working_dir: /app/apps/mcp-server
+    command: ["node", "dist/main.js"]
+    environment:
+      NODE_ENV: development
+      MCP_PORT: "3006"
+      MCP_RESOURCE: https://api.${PUBLIC_HOST}/mcp
+      MCP_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
+      MCP_JWT_ISSUER: https://api.${PUBLIC_HOST}/identity
+      MCP_JWT_AUDIENCE: axial-projects
+      PROJECTS_API_URL: http://api:3001
+      MCP_ALLOWED_ORIGINS: https://axial.${PUBLIC_HOST}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3006/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  gateway:
+    <<: *backend
+    working_dir: /app/apps/gateway
+    command: ["node", "dist/main.js"]
+    environment:
+      NODE_ENV: development
+      GATEWAY_PORT: "3000"
+      PROJECTS_API_URL: http://api:3001
+      IDENTITY_API_URL: http://ms-identity:3002
+      NOTIFICATIONS_API_URL: http://ms-notifications:3003
+      REALTIME_API_URL: http://ms-realtime:3004
+      AUDIT_API_URL: http://ms-audit:3005
+      MCP_API_URL: http://mcp-server:3006
+      GATEWAY_CORS_ORIGINS: https://axial.${PUBLIC_HOST}
+      GATEWAY_UPSTREAM_KEEPALIVE: "true"
+    depends_on:
+      api: { condition: service_healthy }
+      ms-identity: { condition: service_healthy }
+      ms-notifications: { condition: service_healthy }
+      ms-realtime: { condition: service_healthy }
+      ms-audit: { condition: service_healthy }
+      mcp-server: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  web:
+    build:
+      <<: *build
+      target: web
+    image: axial-web:prod
+    restart: unless-stopped
+    networks: [default, dokploy-network]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  insights:
+    build:
+      <<: *build
+      target: insights
+    image: axial-insights:prod
+    restart: unless-stopped
+    networks: [default, dokploy-network]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/remoteEntry.js"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  axial-keys:
+
+networks:
+  dokploy-network:
+    external: true

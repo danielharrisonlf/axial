@@ -9,3 +9,9 @@ tmp
 output
 coverage
 .turbo
+docs/screenshots
+docs/design-reference
+docs/performance/evidencias
+**/test-results
+**/playwright-report
+**/*.log

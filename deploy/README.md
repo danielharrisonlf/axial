@@ -1,0 +1,59 @@
+# Deploy no Dokploy
+
+Configuração usada na VPS de demonstração. O Dokploy clona este repositório e sobe `deploy/compose.yaml`.
+
+## Peças no Dokploy (projeto **Axial**)
+
+| Serviço Dokploy | Tipo | Observação |
+| --- | --- | --- |
+| `axial-db` | PostgreSQL 16 | banco `axial_dev` (o seed de demonstração exige o sufixo `_dev`); cada microsserviço usa o próprio schema |
+| `axial-redis` | Redis 7 | filas BullMQ e invalidações de tempo real |
+| `axial` | Compose (Git: este repositório, branch `dev`, `./deploy/compose.yaml`) | setup + 7 serviços NestJS + Workspace + Insights |
+
+## Imagens (`deploy/Dockerfile`)
+
+Um build do monorepo, três imagens finais:
+
+- `backend`: os sete serviços NestJS usam a mesma imagem; o `command` e o `working_dir` escolhem o serviço;
+- `web` e `insights`: arquivos estáticos em nginx com gzip, cache de um ano para `/assets` (nomes com hash) e `no-cache` para `index.html` e `remoteEntry.js`. O Insights responde com CORS porque o Workspace o carrega de outro domínio (Module Federation).
+
+O endereço do remote do Insights entra no build do Workspace pelo argumento `INSIGHTS_REMOTE_ENTRY`.
+
+## Primeiro passo de cada deploy
+
+O serviço `setup` roda `deploy/setup.sh` uma vez, antes dos demais (`service_completed_successfully`):
+
+1. gera o par de chaves RS256 no volume `axial-keys` se ele não existir (as chaves nunca entram na imagem nem no Git);
+2. aplica as migrations de projects, identity, notifications e audit;
+3. roda o seed de demonstração (idempotente; desligue com `AXIAL_SEED=false`).
+
+## Variáveis (aba Environment do Compose no Dokploy)
+
+```
+PUBLIC_HOST=179-66-152-186.sslip.io
+POSTGRES_URL=postgresql://axial:<senha>@<host interno do axial-db>:5432/axial_dev
+REDIS_URL=redis://default:<senha>@<host interno do axial-redis>:6379
+BETTER_AUTH_SECRET=<32+ caracteres aleatórios>
+AXIAL_SEED=true
+```
+
+## Domínios (HTTPS com Let's Encrypt)
+
+| Endereço | Serviço | Porta |
+| --- | --- | --- |
+| `https://axial.<PUBLIC_HOST>` | web (Workspace) | 80 |
+| `https://insights.<PUBLIC_HOST>` | insights | 80 |
+| `https://api.<PUBLIC_HOST>` | gateway (REST, `/mcp`, `/ws`) | 3000 |
+| `https://docs.<PUBLIC_HOST>` | api (Swagger em `/docs`) | 3001 |
+
+`sslip.io` resolve `<nome>.179-66-152-186.sslip.io` para o IP da VPS, o que permite HTTPS sem domínio próprio. Com um domínio próprio, troque `PUBLIC_HOST` e os domínios no Dokploy e faça um novo deploy (o Workspace precisa ser recompilado com o novo endereço do Insights).
+
+## Tokens de teste (Swagger e MCP)
+
+Os tokens são assinados pela chave do servidor, então são gerados dentro do contêiner:
+
+```bash
+docker exec $(docker ps -qf name=-api-) sh -c 'cd /app && node scripts/dev-identity.mjs token PROJECT_MANAGER'
+```
+
+Os serviços rodam com `NODE_ENV=development` de propósito (Swagger e seed disponíveis). É um ambiente de demonstração: não use para dados reais.
