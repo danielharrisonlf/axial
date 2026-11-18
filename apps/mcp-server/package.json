@@ -10,8 +10,9 @@
     "start:stdio": "node dist/stdio.js",
     "typecheck": "tsc --noEmit -p tsconfig.check.json",
     "test:unit": "vitest run",
-    "test:integration": "node test/integration.mjs && node test/e2e.mjs",
-    "test:e2e": "node test/e2e.mjs"
+    "test:integration": "node test/integration.mjs && node test/e2e.mjs && node test/oauth-e2e.mjs",
+    "test:e2e": "node test/e2e.mjs",
+    "test:oauth:browser": "node test/oauth-browser.mjs"
   },
   "dependencies": {
     "@axial/contracts": "workspace:*",
