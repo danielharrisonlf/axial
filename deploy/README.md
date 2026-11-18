@@ -30,7 +30,8 @@ O serviço `setup` roda `deploy/setup.sh` uma vez, antes dos demais (`service_co
 ## Variáveis (aba Environment do Compose no Dokploy)
 
 ```
-PUBLIC_HOST=179-66-152-186.sslip.io
+PUBLIC_HOST=kairos.noxlabs.tech
+WEB_HOST=kairos.noxlabs.tech
 POSTGRES_URL=postgresql://axial:<senha>@<host interno do axial-db>:5432/axial_dev
 REDIS_URL=redis://default:<senha>@<host interno do axial-redis>:6379
 BETTER_AUTH_SECRET=<32+ caracteres aleatórios>
@@ -41,7 +42,7 @@ AXIAL_SEED=true
 
 | Endereço | Serviço | Porta |
 | --- | --- | --- |
-| `https://axial.<PUBLIC_HOST>` | web (Workspace) | 80 |
+| `https://<WEB_HOST>` | web (Workspace) | 80 |
 | `https://insights.<PUBLIC_HOST>` | insights | 80 |
 | `https://api.<PUBLIC_HOST>` | gateway (REST, `/mcp`, `/ws`) | 3000 |
 | `https://docs.<PUBLIC_HOST>` | api (Swagger em `/docs`) | 3001 |

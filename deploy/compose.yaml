@@ -3,7 +3,8 @@
 # dokploy-network; os domínios (HTTPS via Let's Encrypt) são configurados no Dokploy.
 #
 # Variáveis definidas na aba Environment do Dokploy (nunca no Git):
-#   PUBLIC_HOST            domínio base, ex.: 179-66-152-186.sslip.io
+#   PUBLIC_HOST            domínio base, ex.: kairos.noxlabs.tech (insights., api. e docs. ficam abaixo dele)
+#   WEB_HOST               endereço do Workspace, ex.: kairos.noxlabs.tech
 #   POSTGRES_URL           postgresql://usuario:senha@host:5432/axial_dev (o seed exige banco *_dev)
 #   REDIS_URL              redis://default:senha@host:6379
 #   BETTER_AUTH_SECRET     segredo aleatório com 32+ caracteres
@@ -48,7 +49,7 @@ services:
       <<: *jwt
       POSTGRES_URL: ${POSTGRES_URL}
       REDIS_URL: ${REDIS_URL}
-      CORS_ORIGINS: https://axial.${PUBLIC_HOST}
+      CORS_ORIGINS: https://${WEB_HOST}
       AXIAL_SEED: ${AXIAL_SEED:-true}
 
   api:
@@ -63,7 +64,7 @@ services:
       JWT_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
       RELAY_ENABLED: "true"
       RELAY_POLL_MS: "1000"
-      CORS_ORIGINS: https://axial.${PUBLIC_HOST}
+      CORS_ORIGINS: https://${WEB_HOST}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/api/v1/health/live"]
       interval: 15s
@@ -81,7 +82,7 @@ services:
       IDENTITY_DATABASE_URL: ${POSTGRES_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: https://api.${PUBLIC_HOST}
-      IDENTITY_TRUSTED_ORIGINS: https://axial.${PUBLIC_HOST}
+      IDENTITY_TRUSTED_ORIGINS: https://${WEB_HOST}
       IDENTITY_ISSUER: https://api.${PUBLIC_HOST}/identity
       IDENTITY_AUDIENCE: axial-projects
       IDENTITY_PRIVATE_KEY_PATH: /app/keys/dev-private.pem
@@ -161,7 +162,7 @@ services:
       MCP_JWT_ISSUER: https://api.${PUBLIC_HOST}/identity
       MCP_JWT_AUDIENCE: axial-projects
       PROJECTS_API_URL: http://api:3001
-      MCP_ALLOWED_ORIGINS: https://axial.${PUBLIC_HOST}
+      MCP_ALLOWED_ORIGINS: https://${WEB_HOST}
       # o gateway chama o MCP pelo nome do serviço; localhost fica para os health checks
       MCP_ALLOWED_HOSTS: mcp-server,localhost,127.0.0.1
     healthcheck:
@@ -184,7 +185,7 @@ services:
       REALTIME_API_URL: http://ms-realtime:3004
       AUDIT_API_URL: http://ms-audit:3005
       MCP_API_URL: http://mcp-server:3006
-      GATEWAY_CORS_ORIGINS: https://axial.${PUBLIC_HOST}
+      GATEWAY_CORS_ORIGINS: https://${WEB_HOST}
       GATEWAY_UPSTREAM_KEEPALIVE: "true"
     depends_on:
       api: { condition: service_healthy }
