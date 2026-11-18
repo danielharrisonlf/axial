@@ -64,7 +64,7 @@ export async function sendSmsGo(input: Input, config: Config): Promise<string> {
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({
         phone: input.destination,
-        message: "Axial: voce tem uma atualizacao de tarefa. Acesse o aplicativo para conferir.",
+        message: "Kairos: voce tem uma atualizacao de tarefa. Acesse o aplicativo para conferir.",
         reference: input.id,
         sms_type_id: config.smsTypeId,
       }),

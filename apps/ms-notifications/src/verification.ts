@@ -85,7 +85,7 @@ async function send(channel: Channel, destination: string, code: string): Promis
       headers: { authorization: `Bearer ${result.token}`, "content-type": "application/json" },
       body: JSON.stringify({
         phone: destination,
-        message: `Axial: seu codigo de verificacao e ${code}. Valido por 10 minutos.`,
+        message: `Kairos: seu codigo de verificacao e ${code}. Valido por 10 minutos.`,
         reference: randomUUID(),
         sms_type_id: Number(e.SMSGO_VERIFICATION_SMS_TYPE_ID),
       }),

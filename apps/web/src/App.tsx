@@ -271,7 +271,7 @@ export default function App() {
         return;
       }
       (h1 ?? document.getElementById("conteudo"))?.focus({ preventScroll: true });
-      announce(`Página: ${h1?.textContent ?? titles[key] ?? "Axial"}`);
+      announce(`Página: ${h1?.textContent ?? titles[key] ?? "Kairos"}`);
     };
     timer = setTimeout(focusTitle, 30);
     return () => clearTimeout(timer);
@@ -282,7 +282,7 @@ export default function App() {
       : undefined;
   const pageTitle = p?.name ?? titles[key] ?? "Workspace";
   useEffect(() => {
-    document.title = `${pageTitle} · Axial`;
+    document.title = `${pageTitle} · Kairos`;
   }, [pageTitle]);
   useEffect(() => {
     if (!narrow) setNavOpen(false);
@@ -422,7 +422,7 @@ export default function App() {
               <Icon name="logo" size={18} />
             </span>
             <span className="sb-brand-txt">
-              <b>Axial</b>
+              <b>Kairos</b>
               <span className="env">
                 {org ? `${org.name} · ` : ""}
                 {app === "insights" ? "Insights" : "Workspace"}

@@ -48,8 +48,8 @@ class HealthController {
     McpModule.forRoot({
       name: "axial-projects",
       version: "1.0.0",
-      title: "Axial Projects",
-      description: "Projects, tasks and sprints of the Axial delivery workspace.",
+      title: "Kairos Projects",
+      description: "Projects, tasks and sprints of the Kairos delivery workspace.",
       instructions:
         "Use list-projects to discover project ids, then list-tasks or project-summary to read delivery state. " +
         "Read a task with get-task before changing it. create-task and update-task-status change data: confirm " +
@@ -60,7 +60,7 @@ class HealthController {
         resource: config.MCP_RESOURCE,
         authorizationServers: [config.MCP_JWT_ISSUER],
         scopesSupported: ["projects:read", "projects:write"],
-        resourceName: "Axial Projects",
+        resourceName: "Kairos Projects",
       },
       http: {
         allowedOrigins: config.MCP_ALLOWED_ORIGINS,

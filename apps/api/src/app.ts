@@ -14,7 +14,7 @@ export function createOpenApi(app: INestApplication) {
   return SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
-      .setTitle("Axial - ms-projects")
+      .setTitle("Kairos - ms-projects")
       .setDescription("Projetos, epicos, tarefas, sprints e cronogramas. Identidade externa via JWT RS256.")
       .setVersion("1.0.0")
       .addBearerAuth()

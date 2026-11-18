@@ -18,7 +18,7 @@ export function createAuth(database: Pool) {
     .map((origin) => origin.trim())
     .filter(Boolean);
   return betterAuth({
-    appName: "Axial",
+    appName: "Kairos",
     baseURL,
     basePath: BETTER_AUTH_BASE_PATH,
     secret,
