@@ -486,6 +486,16 @@ try {
     401,
     "delegated tokens are refused by the identity API",
   );
+  // ...except the read-only organization directory, with projects:read (MCP list-members/list-teams).
+  const directory = await api("organization/members", null, issued.body.access_token, "GET");
+  assert.equal(directory.status, 200, "delegated tokens with projects:read read the directory");
+  assert.ok(directory.body.some((row) => row.id === member.body.id));
+  assert.equal((await api("organization/teams", null, issued.body.access_token, "GET")).status, 200);
+  assert.equal(
+    (await api("members", null, issued.body.access_token, "GET")).status,
+    401,
+    "administrator routes keep refusing delegated tokens",
+  );
   const stored = await db.query("SELECT token_hash FROM identity.oauth_refresh_tokens");
   assert.ok(
     stored.rows.every((row) => row.token_hash !== issued.body.refresh_token),
@@ -611,6 +621,20 @@ try {
   ).payload;
   assert.equal(multiClaims.organizationId, beta);
   assert.equal(multiClaims.role, "ADMIN");
+  // The directory needs projects:read even for an administrator's delegated token.
+  const writeOnly = await token({
+    grant_type: "refresh_token",
+    client_id: clientId,
+    refresh_token: multiTokens.body.refresh_token,
+    scope: "projects:write",
+  });
+  assert.equal(writeOnly.body.scope, "projects:write");
+  assert.equal((await api("organization/teams", null, writeOnly.body.access_token, "GET")).status, 403);
+  assert.equal(
+    (await api("organization/teams", null, multiTokens.body.access_token, "GET")).status,
+    200,
+    "the full grant still reads the directory",
+  );
 
   // A revoked membership loses access on the next refresh.
   const before = await authorize(clientId, "member@example.test", "member-private-password");

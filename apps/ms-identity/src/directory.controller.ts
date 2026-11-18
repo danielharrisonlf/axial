@@ -1,8 +1,16 @@
 import { Controller, Get, Inject, Req } from "@nestjs/common";
 import type { Request } from "express";
 import type { Role } from "./common.js";
-import { IdentityService } from "./identity.service.js";
+import { type ActorOptions, IdentityService } from "./identity.service.js";
+import type { OAuthScope } from "./oauth.js";
 import { db } from "./runtime.js";
+
+const directoryScope: OAuthScope = "projects:read";
+/**
+ * Tokens delegated to MCP clients may read the directory with projects:read: the MCP server
+ * resolves user ids to names with it. Nothing on this controller changes data.
+ */
+const directoryAccess: ActorOptions = { delegatedScope: directoryScope };
 
 /**
  * Organization directory readable by every active member: people and teams of the
@@ -13,7 +21,7 @@ export class DirectoryController {
   constructor(@Inject(IdentityService) private readonly identity: IdentityService) {}
 
   @Get("members") async members(@Req() req: Request) {
-    const actor = await this.identity.actor(req);
+    const actor = await this.identity.actor(req, directoryAccess);
     const result = await db.query<{
       id: string;
       name: string;
@@ -37,7 +45,7 @@ export class DirectoryController {
   }
 
   @Get("teams") async teams(@Req() req: Request) {
-    const actor = await this.identity.actor(req);
+    const actor = await this.identity.actor(req, directoryAccess);
     const result = await db.query<{
       id: string;
       name: string;

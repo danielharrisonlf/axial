@@ -47,4 +47,13 @@ describe("identity access tokens", () => {
     expect(verified.sub).toBe(claims.userId);
     expect(tokens.isPasswordChangeToken({ purpose: "password_change" })).toBe(true);
   });
+
+  it("matches a delegated token's scope claim word by word", () => {
+    expect(tokens.delegatedTokenGrants({ scope: "projects:read projects:write" }, "projects:read")).toBe(
+      true,
+    );
+    expect(tokens.delegatedTokenGrants({ scope: "projects:write" }, "projects:read")).toBe(false);
+    expect(tokens.delegatedTokenGrants({ scope: "projects:readonly" }, "projects:read")).toBe(false);
+    expect(tokens.delegatedTokenGrants({ client_id: "claude" }, "projects:read")).toBe(false);
+  });
 });

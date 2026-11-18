@@ -38,12 +38,23 @@ import {
   sessionTokenFromCookie,
 } from "./settings.js";
 import {
+  delegatedTokenGrants,
   isDelegatedToken,
   isPasswordChangeToken,
   signAccessToken,
   signPasswordChangeToken,
   verifyAccessToken,
 } from "./tokens.js";
+
+export interface ActorOptions {
+  admin?: boolean;
+  passwordChange?: boolean;
+  /**
+   * Accepts a token delegated to an OAuth client when it carries this scope. Only for
+   * read-only routes; ignored together with `admin` or `passwordChange`.
+   */
+  delegatedScope?: string;
+}
 
 export interface OrganizationMembership {
   organizationId: string;
@@ -188,10 +199,7 @@ export class IdentityService {
     return accessToken;
   }
 
-  private async jwtActor(
-    token: string,
-    options: { admin?: boolean; passwordChange?: boolean },
-  ): Promise<Actor> {
+  private async jwtActor(token: string, options: ActorOptions): Promise<Actor> {
     let claims: Awaited<ReturnType<typeof verifyAccessToken>>;
     try {
       claims = await verifyAccessToken(publicKey, token, {
@@ -200,8 +208,13 @@ export class IdentityService {
     } catch {
       throw new UnauthorizedException();
     }
-    // Tokens delegated to an MCP client are limited to their scopes on the projects API.
-    if (isDelegatedToken(claims)) throw new UnauthorizedException();
+    // Tokens delegated to an MCP client are limited to their scopes: refused here unless the
+    // route is a read-only one that accepts them, and then only with the scope it names.
+    if (isDelegatedToken(claims)) {
+      if (!options.delegatedScope || options.admin || options.passwordChange)
+        throw new UnauthorizedException();
+      if (!delegatedTokenGrants(claims, options.delegatedScope)) throw new ForbiddenException();
+    }
     const temporary = isPasswordChangeToken(claims);
     if (options.passwordChange ? !temporary : temporary) throw new UnauthorizedException();
     const membership = await this.membership(claims.sub, claims.organizationId);
@@ -270,7 +283,7 @@ export class IdentityService {
     };
   }
 
-  async actor(req: Request, options: { admin?: boolean; passwordChange?: boolean } = {}): Promise<Actor> {
+  async actor(req: Request, options: ActorOptions = {}): Promise<Actor> {
     const authorization = req.headers.authorization;
     if (authorization && /^Bearer \S+$/i.test(authorization)) {
       const token = authorization.slice(7);

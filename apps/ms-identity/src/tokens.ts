@@ -134,9 +134,17 @@ export async function verifyAccessToken(
   return claimsSchema.parse(payload);
 }
 
-/** Tokens delegated to an OAuth client carry a scope and stay out of the identity API. */
+/**
+ * Tokens delegated to an OAuth client carry a scope and stay out of the identity API, except
+ * the read-only routes that opt in with the scope they need (see `delegatedTokenGrants`).
+ */
 export function isDelegatedToken(payload: Record<string, unknown>): boolean {
   return payload.scope !== undefined || payload.client_id !== undefined;
+}
+
+/** True when a delegated token's space-separated `scope` claim includes `scope`. */
+export function delegatedTokenGrants(payload: Record<string, unknown>, scope: string): boolean {
+  return typeof payload.scope === "string" && payload.scope.split(" ").includes(scope);
 }
 
 export function isPasswordChangeToken(payload: { aud?: unknown; purpose?: unknown }): boolean {
