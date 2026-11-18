@@ -2,6 +2,9 @@
 // user has CREATEDB. A disposable database is created and dropped for this run. Seeds the demo
 // directory twice, then logs in as seeded people and compares the access-token claims with
 // claimsFor from @axial/demo-fixtures (compile it first: pnpm --filter "@axial/demo-fixtures..." build).
+// Then changes a seeded e-mail and removes a membership: the next run writes nothing, restores
+// nothing and reports both as warnings. A second disposable database checks the first run with a
+// scenario e-mail already taken by another account: that user is skipped with a warning.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
@@ -32,6 +35,11 @@ const testUrl = new URL(url);
 testUrl.pathname = `/${databaseName}`;
 const db = new pg.Pool({ connectionString: testUrl.toString() });
 db.on("error", (error) => poolErrors.push(error));
+const foreignName = `axial_identity_seed_${randomUUID().replaceAll("-", "")}_foreign_test`;
+const foreignUrl = new URL(url);
+foreignUrl.pathname = `/${foreignName}`;
+const foreignDb = new pg.Pool({ connectionString: foreignUrl.toString() });
+foreignDb.on("error", (error) => poolErrors.push(error));
 const dir = mkdtempSync(join(tmpdir(), "identity-seed-test-"));
 const { privateKey, publicKey } = generateKeyPairSync("rsa", {
   modulusLength: 2048,
@@ -62,13 +70,14 @@ const env = {
 let server;
 let serverClosed;
 let created = false;
+let foreignCreated = false;
 let failure;
 const cleanupErrors = [];
 
 const tsx = (args, extra = {}) =>
   spawnSync(process.execPath, ["--import", "tsx", ...args], { env: { ...env, ...extra }, encoding: "utf8" });
-const run = (args) => {
-  const result = tsx(args);
+const run = (args, extra = {}) => {
+  const result = tsx(args, extra);
   if (result.status !== 0) throw new Error(result.stderr || result.stdout);
   return result.stdout;
 };
@@ -136,11 +145,15 @@ try {
     projectAssignments: projectAssignments.length,
   };
   const first = report(run(["src/seed-demo.ts", "--test"]));
+  assert.equal(first.status, "seeded");
   assert.deepEqual(first.inserted, counts);
   assert.deepEqual(first.present, counts);
+  assert.deepEqual(first.warnings, []);
   const hashes = await db.query(`SELECT password FROM identity.account ORDER BY "userId"`);
   const outbox = Number((await db.query("SELECT count(*) FROM identity.outbox_events")).rows[0].count);
   const second = report(run(["src/seed-demo.ts", "--test"]));
+  assert.equal(second.status, "already seeded");
+  assert.deepEqual(second.warnings, []);
   assert.deepEqual(second.inserted, {
     organizations: 0,
     users: 0,
@@ -233,8 +246,98 @@ try {
   assert.ok(claimsFor(ricardo.id).projectIds.length > 0);
 
   assert.equal((await login({ email: ricardo.email, password: "wrong-password" })).status, 401);
+
+  // Divergence after the first run: a seeded user changes e-mail and another membership is removed
+  // (with its team memberships and project assignments, as removing a member does).
+  const leads = new Set(teams.map((team) => team.leadId));
+  const plain = users.filter(
+    (user) => !leads.has(user.id) && user.id !== helena.id && user.id !== ricardo.id,
+  );
+  const renamed = plain[0];
+  const removed = memberships.find((item) => item.userId === plain[1].id);
+  assert.ok(renamed && removed);
+  await db.query('UPDATE identity."user" SET email=$2 WHERE id=$1', [renamed.id, `changed-${renamed.email}`]);
+  for (const table of ["team_members", "project_assignments", "members"])
+    await db.query(`DELETE FROM identity.${table} WHERE organization_id=$1 AND user_id=$2`, [
+      removed.organizationId,
+      removed.userId,
+    ]);
+  const removedRows = {
+    teamMembers: teamMemberships.filter(
+      (item) => item.organizationId === removed.organizationId && item.userId === removed.userId,
+    ).length,
+    projectAssignments: projectAssignments.filter(
+      (item) => item.organizationId === removed.organizationId && item.userId === removed.userId,
+    ).length,
+  };
+  const outboxBefore = Number((await db.query("SELECT count(*) FROM identity.outbox_events")).rows[0].count);
+  const third = report(run(["src/seed-demo.ts", "--test"]));
+  assert.equal(third.status, "already seeded");
+  assert.ok(Object.values(third.inserted).every((value) => value === 0));
+  assert.deepEqual(third.present, {
+    ...counts,
+    members: counts.members - 1,
+    teamMembers: counts.teamMembers - removedRows.teamMembers,
+    projectAssignments: counts.projectAssignments - removedRows.projectAssignments,
+  });
+  assert.ok(third.warnings.some((warning) => warning.startsWith("members: ")));
+  assert.ok(third.warnings.some((warning) => warning.includes(renamed.id) && warning.includes("e-mail")));
+  assert.equal(
+    (await db.query('SELECT email FROM identity."user" WHERE id=$1', [renamed.id])).rows[0].email,
+    `changed-${renamed.email}`,
+  );
+  assert.equal(
+    (
+      await db.query(
+        "SELECT count(*)::int AS count FROM identity.members WHERE organization_id=$1 AND user_id=$2",
+        [removed.organizationId, removed.userId],
+      )
+    ).rows[0].count,
+    0,
+  );
+  assert.equal(
+    Number((await db.query("SELECT count(*) FROM identity.outbox_events")).rows[0].count),
+    outboxBefore,
+  );
+
+  // First run on a database where a scenario e-mail already belongs to another account.
+  await admin.query(`CREATE DATABASE "${foreignName}"`);
+  foreignCreated = true;
+  const foreignEnv = {
+    IDENTITY_DATABASE_URL: foreignUrl.toString(),
+    IDENTITY_TEST_DATABASE_URL: foreignUrl.toString(),
+  };
+  run(["src/migrate.ts"], foreignEnv);
+  const taken = plain[2];
+  assert.ok(taken);
+  const owner = randomUUID();
+  await foreignDb.query(`INSERT INTO identity."user"(id,email,name) VALUES($1,$2,'Outra conta')`, [
+    owner,
+    taken.email,
+  ]);
+  const of = (items) => items.filter((item) => item.userId === taken.id).length;
+  const skipped = {
+    ...counts,
+    users: counts.users - 1,
+    accounts: counts.accounts - 1,
+    members: counts.members - of(memberships),
+    teamMembers: counts.teamMembers - of(teamMemberships),
+    projectAssignments: counts.projectAssignments - of(projectAssignments),
+  };
+  const foreign = report(run(["src/seed-demo.ts", "--test"], foreignEnv));
+  assert.equal(foreign.status, "seeded");
+  assert.deepEqual(foreign.inserted, skipped);
+  assert.deepEqual(foreign.present, skipped);
+  assert.equal(foreign.warnings.length, 1);
+  assert.ok(
+    foreign.warnings[0].includes(`${taken.id}) skipped: its e-mail already belongs to account ${owner}`),
+  );
+  assert.deepEqual(
+    (await foreignDb.query('SELECT id FROM identity."user" WHERE email=$1', [taken.email])).rows,
+    [{ id: owner }],
+  );
   console.log(
-    `Identity demo seed: ${users.length} accounts, ${memberships.length} memberships, idempotent on repeat; logins match claimsFor`,
+    `Identity demo seed: ${users.length} accounts, ${memberships.length} memberships, first run only; logins match claimsFor; divergences reported as warnings`,
   );
 } catch (error) {
   failure = error;
@@ -253,6 +356,12 @@ try {
     }
   });
   await cleanup(() => db.end());
+  await cleanup(() => foreignDb.end());
+  if (foreignCreated)
+    await cleanup(async () => {
+      await waitForConnections(foreignName);
+      await admin.query(`DROP DATABASE "${foreignName}"`);
+    });
   if (created)
     await cleanup(async () => {
       await waitForConnections(databaseName);

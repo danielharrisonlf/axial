@@ -13,10 +13,14 @@ export interface ProjectSeedCounts {
   comments: number;
 }
 export interface ProjectSeedReport {
+  /** `already seeded` when every scenario project already existed, so nothing was written. */
+  status: "seeded" | "already seeded";
   /** Rows written by this run; zero everywhere on a repeated run. */
   inserted: ProjectSeedCounts;
-  /** Rows of the scenario present after the run. */
+  /** Rows of the scenario present after the run, counted by primary key. */
   present: ProjectSeedCounts;
+  /** Divergences from the scenario (skipped projects, removed rows); never fatal. */
+  warnings: string[];
 }
 
 const empty = (): ProjectSeedCounts => ({
@@ -31,28 +35,52 @@ const empty = (): ProjectSeedCounts => ({
 const date = (value: string | null) => (value === null ? null : new Date(value));
 
 /**
- * Writes the demonstration scenario of ms-projects: insert only, idempotent by deterministic id,
- * one transaction per project. Rows keep their historical timestamps and refs; the project task
- * sequence continues after the last seeded number. No outbox rows are written: the history of
+ * Writes the demonstration scenario of ms-projects, one transaction per project, each project
+ * only once: a scenario project whose row already exists was seeded by an earlier run (projects
+ * cannot be deleted, only archived) and is left untouched, so tasks, comments or sprints people
+ * removed afterwards never come back. A project still missing, as after a run interrupted between
+ * two projects, is written in full. Rows keep their historical timestamps and refs; the project
+ * task sequence continues after the last seeded number. No outbox rows are written: the history of
  * the scenario is seeded into ms-audit directly, and publishing it again would duplicate audit
  * events and fire realtime updates and notifications for things that never happened.
  * Existing rows are never updated or deleted (including the older AXL demonstration project).
+ * Divergences never fail the seed: a project key taken by another project skips that project, and
+ * scenario rows missing after the run are reported in `warnings`. Database errors still fail it.
  */
 export async function seedProjects(db: PrismaClient, fixtures: DemoFixtures): Promise<ProjectSeedReport> {
   const inserted = empty();
   const present = empty();
+  const warnings: string[] = [];
+  let written = 0;
   for (const project of fixtures.projects) {
     await db.$transaction(
       async (tx) => {
-        const counts = await seedProject(tx, fixtures, project);
-        for (const key of Object.keys(inserted) as (keyof ProjectSeedCounts)[]) inserted[key] += counts[key];
-        const totals = await verifyProject(tx, fixtures, project);
+        // serializes concurrent seed runs between the existence check and the inserts
+        await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext('axial-projects-demo-seed'))`;
+        const existing = await tx.project.findUnique({ where: { id: project.id }, select: { id: true } });
+        if (!existing) {
+          const clash = await tx.project.findUnique({
+            where: { organizationId_key: { organizationId: project.organizationId, key: project.key } },
+            select: { id: true },
+          });
+          if (clash) {
+            warnings.push(
+              `project ${project.key} (${project.id}) skipped: its key already belongs to project ${clash.id}`,
+            );
+            return;
+          }
+          written++;
+          const counts = await seedProject(tx, fixtures, project);
+          for (const key of Object.keys(inserted) as (keyof ProjectSeedCounts)[])
+            inserted[key] += counts[key];
+        }
+        const totals = await verifyProject(tx, fixtures, project, warnings);
         for (const key of Object.keys(present) as (keyof ProjectSeedCounts)[]) present[key] += totals[key];
       },
       { maxWait: 10_000, timeout: 60_000 },
     );
   }
-  return { inserted, present };
+  return { status: written ? "seeded" : "already seeded", inserted, present, warnings };
 }
 
 async function seedProject(
@@ -62,17 +90,6 @@ async function seedProject(
 ): Promise<ProjectSeedCounts> {
   const owned = <T extends { projectId: string }>(items: T[]) =>
     items.filter((item) => item.projectId === project.id);
-  const clash = await tx.project.findUnique({
-    where: { organizationId_key: { organizationId: project.organizationId, key: project.key } },
-    select: { id: true },
-  });
-  if (clash && clash.id !== project.id)
-    throw new Error(
-      `Project key ${project.key} already belongs to another project (${clash.id}); the demo seed never overwrites it`,
-    );
-  // serializes with concurrent writers of the same project, like the service does
-  if (clash)
-    await tx.$queryRaw`SELECT "id" FROM "projects"."Project" WHERE "id" = ${project.id}::uuid FOR UPDATE`;
   const counts = empty();
   counts.projects = (
     await tx.project.createMany({
@@ -218,18 +235,19 @@ async function seedProject(
 }
 
 /**
- * `skipDuplicates` also skips rows that collide on another unique key (a ref taken by a task
- * of another id, for example). Every scenario row must exist with its own id afterwards;
- * anything missing aborts the project transaction instead of leaving a partial scenario.
+ * Scenario rows of the project present now, each counted by its primary key. A shortfall is a
+ * divergence, not an error: rows removed after the first run, or rows `skipDuplicates` left out
+ * because another record took one of their unique keys (a ref, for example). It is reported in
+ * `warnings` and nothing is restored.
  */
 async function verifyProject(
   tx: Transaction,
   fixtures: DemoFixtures,
   project: DemoProject,
+  warnings: string[],
 ): Promise<ProjectSeedCounts> {
   const ids = <T extends { projectId: string; id: string }>(items: T[]) =>
     items.filter((item) => item.projectId === project.id).map((item) => item.id);
-  const scope = { organizationId: project.organizationId, projectId: project.id };
   const expected = {
     epics: ids(fixtures.epics),
     sprints: ids(fixtures.sprints),
@@ -241,24 +259,21 @@ async function verifyProject(
     .filter((task) => task.projectId === project.id)
     .flatMap((task) => task.blockedByIds.map((dependsOnId) => ({ taskId: task.id, dependsOnId })));
   const found: ProjectSeedCounts = {
-    projects: await tx.project.count({ where: { id: project.id, organizationId: project.organizationId } }),
-    epics: await tx.epic.count({ where: { ...scope, id: { in: expected.epics } } }),
-    sprints: await tx.sprint.count({ where: { ...scope, id: { in: expected.sprints } } }),
-    milestones: await tx.milestone.count({ where: { ...scope, id: { in: expected.milestones } } }),
-    tasks: await tx.task.count({ where: { ...scope, id: { in: expected.tasks } } }),
-    dependencies: dependencies.length
-      ? await tx.taskDependency.count({ where: { ...scope, OR: dependencies } })
-      : 0,
-    comments: await tx.comment.count({ where: { ...scope, id: { in: expected.comments } } }),
+    projects: await tx.project.count({ where: { id: project.id } }),
+    epics: await tx.epic.count({ where: { id: { in: expected.epics } } }),
+    sprints: await tx.sprint.count({ where: { id: { in: expected.sprints } } }),
+    milestones: await tx.milestone.count({ where: { id: { in: expected.milestones } } }),
+    tasks: await tx.task.count({ where: { id: { in: expected.tasks } } }),
+    dependencies: dependencies.length ? await tx.taskDependency.count({ where: { OR: dependencies } }) : 0,
+    comments: await tx.comment.count({ where: { id: { in: expected.comments } } }),
   };
-  const missing = (Object.keys(found) as (keyof ProjectSeedCounts)[]).filter((key) => {
+  const missing = (Object.keys(found) as (keyof ProjectSeedCounts)[]).flatMap((key) => {
     const want = key === "projects" ? 1 : key === "dependencies" ? dependencies.length : expected[key].length;
-    return found[key] !== want;
+    return found[key] < want ? [`${key} ${found[key]} of ${want}`] : [];
   });
   if (missing.length)
-    throw new Error(
-      `Demo project ${project.key} could not be written completely (${missing.join(", ")}); ` +
-        "another record already uses one of its unique keys",
+    warnings.push(
+      `project ${project.key}: scenario rows present: ${missing.join(", ")}; missing rows are not restored`,
     );
   return found;
 }

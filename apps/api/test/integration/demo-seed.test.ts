@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   ATLAS_ORGANIZATION_ID,
   buildDemoFixtures,
@@ -50,7 +51,7 @@ describe("demo seed of ms-projects", () => {
 
   it("inserts the scenario once and is a no-op when repeated", async () => {
     const first = await seedProjects(prisma, fixtures);
-    expect(first).toEqual({ inserted: scenario, present: scenario });
+    expect(first).toEqual({ status: "seeded", inserted: scenario, present: scenario, warnings: [] });
     const second = await seedProjects(prisma, buildDemoFixtures({ now: new Date(Date.now() + 86_400_000) }));
     expect(second.inserted).toEqual({
       projects: 0,
@@ -62,6 +63,8 @@ describe("demo seed of ms-projects", () => {
       comments: 0,
     });
     expect(second.present).toEqual(scenario);
+    expect(second.status).toBe("already seeded");
+    expect(second.warnings).toEqual([]);
     expect(await prisma.outboxEvent.count({ where })).toBe(0);
   });
 
@@ -105,5 +108,92 @@ describe("demo seed of ms-projects", () => {
       "PCL",
       "WEB",
     ]);
+  });
+
+  it("never restores seeded rows removed after the first run and reports them as warnings", async () => {
+    const comment = fixtures.comments[0];
+    const referenced = new Set([
+      ...fixtures.comments.map((item) => item.taskId),
+      ...fixtures.tasks.flatMap((task) => [task.parentId, ...task.blockedByIds]),
+      ...fixtures.tasks.filter((task) => task.blockedByIds.length).map((task) => task.id),
+    ]);
+    const task = fixtures.tasks.find((item) => !referenced.has(item.id));
+    if (!comment || !task) throw new Error("scenario without a removable comment and task");
+    await prisma.comment.delete({ where: { id: comment.id } });
+    await prisma.task.delete({ where: { id: task.id } });
+
+    const again = await seedProjects(prisma, fixtures);
+    expect(again.status).toBe("already seeded");
+    expect(Object.values(again.inserted).every((value) => value === 0)).toBe(true);
+    expect(again.present).toEqual({
+      ...scenario,
+      tasks: scenario.tasks - 1,
+      comments: scenario.comments - 1,
+    });
+    const keyOf = (projectId: string) => fixtures.projects.find((project) => project.id === projectId)?.key;
+    expect(again.warnings.join("\n")).toContain(`project ${keyOf(task.projectId)}: scenario rows present:`);
+    expect(again.warnings.some((warning) => /tasks \d+ of \d+/.test(warning))).toBe(true);
+    expect(again.warnings.some((warning) => /comments \d+ of \d+/.test(warning))).toBe(true);
+    expect(await prisma.task.count({ where: { id: task.id } })).toBe(0);
+    expect(await prisma.comment.count({ where: { id: comment.id } })).toBe(0);
+  });
+
+  it("completes a project missing after an interrupted run and skips a project whose key is taken", async () => {
+    const project = fixtures.projects.find((item) => item.organizationId === ATLAS_ORGANIZATION_ID);
+    if (!project) throw new Error("scenario without an Atlas project");
+    const scope = { organizationId: project.organizationId, projectId: project.id };
+    const removeProject = async () => {
+      await prisma.comment.deleteMany({ where: scope });
+      await prisma.taskDependency.deleteMany({ where: scope });
+      await prisma.task.deleteMany({ where: { ...scope, parentId: { not: null } } });
+      await prisma.task.deleteMany({ where: scope });
+      await prisma.epic.deleteMany({ where: scope });
+      await prisma.sprint.deleteMany({ where: scope });
+      await prisma.milestone.deleteMany({ where: scope });
+      await prisma.project.deleteMany({ where: { id: project.id } });
+    };
+    const owned = (items: { projectId: string }[]) =>
+      items.filter((item) => item.projectId === project.id).length;
+    const own = {
+      projects: 1,
+      epics: owned(fixtures.epics),
+      sprints: owned(fixtures.sprints),
+      milestones: owned(fixtures.milestones),
+      tasks: owned(fixtures.tasks),
+      dependencies: fixtures.tasks
+        .filter((task) => task.projectId === project.id)
+        .reduce((total, task) => total + task.blockedByIds.length, 0),
+      comments: owned(fixtures.comments),
+    };
+    await removeProject();
+    const completed = await seedProjects(prisma, fixtures);
+    expect(completed.status).toBe("seeded");
+    expect(completed.inserted).toEqual(own);
+    // rows removed in the previous test stay removed
+    expect(completed.present).toEqual({
+      ...scenario,
+      tasks: scenario.tasks - 1,
+      comments: scenario.comments - 1,
+    });
+
+    await removeProject();
+    const other = randomUUID();
+    await prisma.project.create({
+      data: {
+        id: other,
+        organizationId: project.organizationId,
+        key: project.key,
+        name: "Outro projeto com a mesma chave",
+        leadId: project.leadId,
+        createdBy: project.createdBy,
+      },
+    });
+    const skipped = await seedProjects(prisma, fixtures);
+    expect(skipped.status).toBe("already seeded");
+    expect(Object.values(skipped.inserted).every((value) => value === 0)).toBe(true);
+    expect(skipped.warnings).toContain(
+      `project ${project.key} (${project.id}) skipped: its key already belongs to project ${other}`,
+    );
+    expect(await prisma.project.count({ where: { id: project.id } })).toBe(0);
   });
 });

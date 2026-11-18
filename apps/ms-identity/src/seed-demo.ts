@@ -18,7 +18,8 @@ import { seedIdentity } from "./demo-seed.js";
  * `tsx src/seed-demo.ts --test` writes IDENTITY_TEST_DATABASE_URL and requires a *_test database.
  * Both refuse NODE_ENV=production and require AXIAL_DEMO_PASSWORD, the password of every seeded
  * account (a development fixture supplied by the environment, never committed). Runs first:
- * identity → projects → audit.
+ * identity → projects → audit. Writes only on the first run; later runs report "already seeded",
+ * and divergences from the scenario are listed in `warnings` without failing (exit code 0).
  */
 loadEnv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet: true });
 if (process.env.NODE_ENV === "production") throw new Error("Demo seed cannot run in production");
@@ -44,7 +45,11 @@ try {
     demoPassword.data,
   );
   console.log(JSON.stringify({ seed: "identity", database: databaseName, ...report }, null, 2));
-  console.log("Demo identity directory ready. Re-running preserves existing records and passwords.");
+  console.log(
+    report.status === "already seeded"
+      ? "Demo identity directory already seeded: nothing written."
+      : "Demo identity directory seeded. Later runs write nothing.",
+  );
 } finally {
   await pool.end();
 }

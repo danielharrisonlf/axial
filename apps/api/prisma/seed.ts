@@ -10,6 +10,8 @@ import { seedProjects } from "./demo-seed.js";
  * `tsx prisma/seed.ts` writes DATABASE_URL and requires a *_dev database;
  * `tsx prisma/seed.ts --test` writes TEST_DATABASE_URL and requires a *_test database.
  * Both refuse NODE_ENV=production. Order with the other seeds: identity → projects → audit.
+ * Each project is written once; later runs report "already seeded", and divergences from the
+ * scenario are listed in `warnings` without failing (exit code 0).
  */
 config({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet: true });
 if (process.env.NODE_ENV === "production") throw new Error("Demo seed cannot run in production");
@@ -34,7 +36,11 @@ try {
       2,
     ),
   );
-  console.log("Demo projects ready. Re-running preserves existing records.");
+  console.log(
+    report.status === "already seeded"
+      ? "Demo projects already seeded: nothing written."
+      : "Demo projects seeded. Later runs write nothing for projects that exist.",
+  );
 } finally {
   await db.$disconnect();
 }

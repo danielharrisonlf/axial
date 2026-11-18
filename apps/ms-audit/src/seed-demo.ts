@@ -9,6 +9,8 @@ import { seedAuditEvents } from "./demo-seed.js";
  * `tsx src/seed-demo.ts` writes AUDIT_DATABASE_URL and requires a *_dev database;
  * `tsx src/seed-demo.ts --test` writes AUDIT_TEST_DATABASE_URL and requires a *_test database.
  * Both refuse NODE_ENV=production. Run after the projects seed (identity → projects → audit).
+ * Writes only on the first run; later runs report "already seeded", and divergences from the
+ * scenario are listed in `warnings` without failing (exit code 0).
  */
 loadEnv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet: true });
 if (process.env.NODE_ENV === "production") throw new Error("Demo seed cannot run in production");
@@ -28,7 +30,11 @@ try {
   const report = await seedAuditEvents(pool, fixtures.auditEvents);
   const excluded = fixtures.excluded.filter((item) => item.kind === "audit");
   console.log(JSON.stringify({ seed: "audit", database: databaseName, ...report, excluded }, null, 2));
-  console.log("Demo audit history ready. Re-running preserves existing records.");
+  console.log(
+    report.status === "already seeded"
+      ? "Demo audit history already seeded: nothing written."
+      : "Demo audit history seeded. Later runs write nothing.",
+  );
 } finally {
   await pool.end();
 }

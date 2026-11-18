@@ -3,7 +3,8 @@ import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 
-// Runs the demo seed twice against a disposable *_test database and checks the audit history.
+// Runs the demo seed against a disposable *_test database: the first run writes the history, later
+// runs write nothing, and an event removed in between is reported as a warning, not restored.
 const url = process.env.AUDIT_TEST_DATABASE_URL;
 if (!url || !new URL(url).pathname.endsWith("_test"))
   throw new Error("AUDIT_TEST_DATABASE_URL must name a _test database");
@@ -46,9 +47,13 @@ try {
     first.excluded.map((item) => item.legacyId),
     ["au69"],
   );
+  assert.equal(first.status, "seeded");
+  assert.deepEqual(first.warnings, []);
   const second = report(run(["src/seed-demo.ts", "--test"]));
+  assert.equal(second.status, "already seeded");
   assert.equal(second.inserted, 0);
   assert.equal(second.present, 74);
+  assert.deepEqual(second.warnings, []);
 
   db = new pg.Pool({ connectionString: testUrl.toString() });
   const types = await db.query(
@@ -69,7 +74,26 @@ try {
   );
   const future = await db.query("SELECT count(*)::int AS count FROM audit.events WHERE occurred_at > now()");
   assert.equal(future.rows[0].count, 0);
-  console.log("Audit demo seed: 74 events, idempotent on repeat");
+
+  // An event removed after the first run is not restored; the shortfall is a warning, exit code 0.
+  // audit.events is append only, so the removal (an operator's manual cleanup, for example) has to
+  // bypass the trigger that refuses deletes; only this disposable database is touched.
+  const removed = (await db.query("SELECT id FROM audit.events ORDER BY occurred_at LIMIT 1")).rows[0].id;
+  await db.query("ALTER TABLE audit.events DISABLE TRIGGER audit_events_no_delete");
+  await db.query("DELETE FROM audit.events WHERE id=$1", [removed]);
+  await db.query("ALTER TABLE audit.events ENABLE TRIGGER audit_events_no_delete");
+  const third = report(run(["src/seed-demo.ts", "--test"]));
+  assert.equal(third.status, "already seeded");
+  assert.equal(third.inserted, 0);
+  assert.equal(third.present, 73);
+  assert.deepEqual(third.warnings, [
+    "events: 73 of 74 scenario events present; missing events are not restored",
+  ]);
+  assert.equal(
+    (await db.query("SELECT count(*)::int AS count FROM audit.events WHERE id=$1", [removed])).rows[0].count,
+    0,
+  );
+  console.log("Audit demo seed: 74 events, first run only; removed events stay removed and are reported");
 } catch (error) {
   failure = error;
 } finally {

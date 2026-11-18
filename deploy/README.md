@@ -26,8 +26,14 @@ O Workspace de produção é sempre o modo API (`VITE_WORKSPACE_SOURCE=api`, fix
 O serviço `setup` roda `deploy/setup.sh` uma vez, antes dos demais (`service_completed_successfully`):
 
 1. gera o par de chaves RS256 no volume `axial-keys` se ele não existir (as chaves nunca entram na imagem nem no Git);
-2. aplica as migrations de projects, identity, notifications e audit;
-3. roda o seed de demonstração Vetor Labs em identity, projects e audit, nessa ordem (só insere o que falta; desligue com `AXIAL_SEED=false`; ver `docs/demo-seed.md`). Com `AXIAL_SEED=true`, `AXIAL_DEMO_PASSWORD` (10 a 128 caracteres) é obrigatória: é a senha das contas de demonstração e, sem ela, o setup para com erro antes de semear. Ela só vale para contas criadas pelo seed; repetir o deploy com outra senha não altera as contas existentes.
+2. aplica as migrations de projects, identity, notifications e audit. Uma migration com falha **falha o setup** e os serviços não sobem, para nunca rodarem sobre um schema sem migrar;
+3. roda o seed de demonstração Vetor Labs em identity, projects e audit, nessa ordem (desligue com `AXIAL_SEED=false`; ver `docs/demo-seed.md`). Cada serviço só é semeado na **primeira** execução: nos deploys seguintes o seed responde `"status": "already seeded"` e não escreve nada, então e-mails, nomes, vínculos, tarefas ou comentários alterados ou apagados pelos usuários continuam como estão. Divergências do cenário aparecem em `warnings` no relatório JSON do seed, sem falhar.
+
+O seed **nunca bloqueia o deploy**. Se um passo falhar (banco fora do ar, erro de programação), o setup imprime o erro completo e, em destaque, `[setup] AVISO: seed de demonstração falhou: <serviço> (código N): <erro>`, pula os passos seguintes e termina com sucesso; os serviços sobem normalmente. Procure esse aviso no log do `setup` depois de cada deploy.
+
+`AXIAL_DEMO_PASSWORD` (10 a 128 caracteres) é a senha das contas de demonstração. Sem ela, com `AXIAL_SEED=true`, o setup avisa (`[setup] AVISO: AXIAL_SEED=true sem AXIAL_DEMO_PASSWORD …`) e pula o seed inteiro: se o demo já foi semeado nada muda; senão, as contas de demonstração só aparecem num deploy com a variável definida. Ela só vale para contas criadas pelo seed; repetir o deploy com outra senha não altera as contas existentes.
+
+`sh deploy/setup.test.sh` testa esse comportamento com stubs no lugar de prisma e tsx (migration com falha falha o setup; seed com falha ou sem senha só avisa).
 
 ## Variáveis (aba Environment do Compose no Dokploy)
 
