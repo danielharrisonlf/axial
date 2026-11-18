@@ -32,6 +32,7 @@
     "dev:notifications": "pnpm --filter @axial/ms-notifications dev",
     "db:notifications:migrate": "pnpm --filter @axial/ms-notifications db:migrate",
     "db:identity:migrate": "pnpm --filter @axial/ms-identity db:migrate",
+    "db:identity:seed": "pnpm --filter @axial/ms-identity db:seed",
     "db:generate": "pnpm --filter @axial/ms-projects db:generate",
     "db:migrate": "pnpm --filter @axial/ms-projects db:migrate",
     "db:seed": "pnpm --filter @axial/ms-projects db:seed",

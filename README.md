@@ -65,8 +65,10 @@ pnpm infra:up
 pnpm dev:keys
 pnpm db:generate
 pnpm db:migrate
+pnpm db:identity:migrate
 pnpm db:audit:migrate
 pnpm --filter "@axial/demo-fixtures..." build
+$env:AXIAL_DEMO_PASSWORD = "<senha local de 10+ caracteres>"
 pnpm db:seed:demo
 pnpm dev
 ```
@@ -80,7 +82,7 @@ pnpm dev
 - Liveness: `http://localhost:3001/api/v1/health/live`
 - Readiness: `http://localhost:3001/api/v1/health/ready`
 
-O seed grava nos schemas de projects e audit o mesmo cenário fictício do Workspace (Vetor Labs e Atlas: 11 projetos, 109 tarefas, sprints, marcos, comentários e histórico de auditoria), com ids determinísticos de `packages/demo-fixtures`. Só insere o que falta e preserva registros existentes quando repetido. Só executa em banco terminado em `_dev` e rejeita `NODE_ENV=production`. Detalhes, ordem (identity → projects → audit) e mapeamentos em [docs/demo-seed.md](docs/demo-seed.md).
+O seed grava nos schemas de identity, projects e audit o mesmo cenário fictício do Workspace (Vetor Labs e Atlas: 18 pessoas, 7 equipes, 11 projetos, 109 tarefas, sprints, marcos, comentários e histórico de auditoria), com ids determinísticos de `packages/demo-fixtures`. As pessoas do cenário entram pelo login real (`POST /api/v1/auth/login`, por exemplo `helena.costa@vetorlabs.dev`) com a senha de `AXIAL_DEMO_PASSWORD` (variável de ambiente ou `.env`, nunca versionada; 10 a 128 caracteres). Só insere o que falta e preserva registros existentes quando repetido. Só executa em banco terminado em `_dev` e rejeita `NODE_ENV=production`. Detalhes, ordem (identity → projects → audit) e mapeamentos em [docs/demo-seed.md](docs/demo-seed.md).
 
 Para abrir somente a interface, sem dependência de Docker ou da API: `pnpm dev:web`. Para iniciar somente o backend: `pnpm dev:api`. O comando `pnpm dev` inicia Workspace e Insights. Serviços adicionais têm atalhos próprios: `pnpm dev:gateway`, `pnpm dev:mcp`, `pnpm dev:audit` e `pnpm dev:insights`.
 
@@ -174,7 +176,7 @@ pnpm perf
 O comando executa, em sequência:
 
 1. `docker compose up -d --wait` (PostgreSQL e Redis);
-2. `db:generate`, migrations de projects/identity/notifications/audit e seed de demonstração (projects e audit);
+2. `db:generate`, migrations de projects/identity/notifications/audit e seed de demonstração (identity, projects e audit; senha `AXIAL_DEMO_PASSWORD` ou a fixture local do script);
 3. build do monorepo;
 4. start de API, identidade, notificações, realtime, audit, MCP, gateway, Workspace e Insights;
 5. geração de token ADMIN e cenários de carga (health, projetos, tarefas, auditoria, notificações);

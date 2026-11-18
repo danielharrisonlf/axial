@@ -25,7 +25,7 @@ O serviço `setup` roda `deploy/setup.sh` uma vez, antes dos demais (`service_co
 
 1. gera o par de chaves RS256 no volume `axial-keys` se ele não existir (as chaves nunca entram na imagem nem no Git);
 2. aplica as migrations de projects, identity, notifications e audit;
-3. roda o seed de demonstração Vetor Labs em projects e audit (só insere o que falta; desligue com `AXIAL_SEED=false`; ver `docs/demo-seed.md`).
+3. roda o seed de demonstração Vetor Labs em identity, projects e audit, nessa ordem (só insere o que falta; desligue com `AXIAL_SEED=false`; ver `docs/demo-seed.md`). Com `AXIAL_SEED=true`, `AXIAL_DEMO_PASSWORD` (10 a 128 caracteres) é obrigatória: é a senha das contas de demonstração e, sem ela, o setup para com erro antes de semear. Ela só vale para contas criadas pelo seed; repetir o deploy com outra senha não altera as contas existentes.
 
 ## Variáveis (aba Environment do Compose no Dokploy)
 
@@ -36,6 +36,7 @@ POSTGRES_URL=postgresql://axial:<senha>@<host interno do axial-db>:5432/axial_de
 REDIS_URL=redis://default:<senha>@<host interno do axial-redis>:6379
 BETTER_AUTH_SECRET=<32+ caracteres aleatórios>
 AXIAL_SEED=true
+AXIAL_DEMO_PASSWORD=<senha das contas de demonstração, 10+ caracteres>
 ```
 
 ## Domínios (HTTPS com Let's Encrypt)

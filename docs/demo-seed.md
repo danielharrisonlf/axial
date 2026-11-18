@@ -9,7 +9,7 @@ O backend recebe o mesmo cenário fictício que o Workspace mostra: a organizaç
 - `shift(now, timeZone)` reproduz `createDemoData(now)` de `apps/web/src/data/seed.ts`: datas sem hora andam dias inteiros (no fuso), instantes mantêm a distância até `now` e nada fica no futuro.
 - `localDay(ymd, timeZone = "America/Sao_Paulo", edge)` converte uma data sem hora em datetime ISO com offset: início do dia local, ou fim (`23:59:59.999`) para prazos, fim de sprint, fim de projeto e marcos.
 - `buildDemoFixtures({ now, timeZone })` devolve o cenário no formato do backend: `organizations`, `roles`, `users`, `teams`, `memberships`, `teamMemberships`, `projectAssignments`, `projects`, `epics`, `sprints`, `milestones`, `tasks`, `comments`, `auditEvents` e `excluded`.
-- As partes que não dependem de data também são exportadas como constantes (`organizations`, `users`, `teams`, `memberships`, `teamMemberships`, `projectAssignments`, `VETOR_ORGANIZATION_ID`), além de `demoUser(email)` e `claimsFor(userId)`, que calcula as claims com as mesmas regras do `claims` do ms-identity.
+- As partes que não dependem de data também são exportadas como constantes (`organizations`, `users`, `teams`, `memberships`, `teamMemberships`, `projectAssignments`, `VETOR_ORGANIZATION_ID`), além de `demoUser(email)` e `claimsFor(userId, organizationId?)`, que calcula as claims com as mesmas regras do `claims` do ms-identity (na organização da pessoa, se `organizationId` for omitido).
 - `validateFixtures`/`assertValidFixtures` conferem o cenário contra os schemas de `@axial/contracts` e as invariantes do ms-projects que o seed contorna ao gravar linhas diretamente: referências dentro da organização e do projeto, equipe da tarefa pertencente ao projeto, no máximo uma sprint ativa por projeto, um nível de subtarefa, subtarefa aberta só sob pai aberto, dependências acíclicas, refs únicas e `taskSequence` igual ao último número.
 
 Mapeamentos:
@@ -24,6 +24,8 @@ Mapeamentos:
 | `acceptance` | `acceptanceCriteria` como `[{ text, done }]` |
 | auditoria `create`/`status`/`assign`/`sprint_start` | `project.created`, `task.created`, `task.status_changed` ou `task.completed` (quando o novo status é `done`, como no serviço), `task.assigned`, `sprint.started` |
 
+Vínculos (`memberships`): cada pessoa na própria organização, com o papel mapeado. No protótipo o administrador enxerga todas as organizações (Dashboard e Equipes); como o backend não tem papel acima da organização, cada `ADMIN` recebe também um vínculo `ADMIN` nas outras organizações. Hoje isso dá a Helena Costa um vínculo na Atlas: 19 vínculos para 18 pessoas, e o login dela pede a escolha da organização.
+
 Atribuições a projetos (`projectAssignments`): o líder do projeto; gestores (PM) e líderes de equipe de cada equipe do projeto, além do líder da equipe; e todo `VIEWER` da organização (Sérgio Tavares) em todos os projetos dela.
 
 Registros deixados de fora, listados em `excluded`: entradas de auditoria que o backend não registra (tentativas negadas, notificações, administração de usuários; não há nenhuma no cenário atual) e dois registros do protótipo que cruzam organizações e que nenhum serviço aceitaria: o comentário `cm12` (autor da Atlas em tarefa da Vetor) e a entrada `au69` (gestor da Vetor atribuindo tarefa da Atlas). O resultado: 33 comentários e 74 eventos de auditoria.
@@ -34,16 +36,18 @@ A ordem é **identity → projects → audit**. Cada passo escreve apenas o pró
 
 ```powershell
 pnpm db:migrate
+pnpm db:identity:migrate
 pnpm db:audit:migrate
 pnpm --filter "@axial/demo-fixtures..." build
-pnpm db:seed:demo        # projects e depois audit (scripts/seed-demo.mjs)
+$env:AXIAL_DEMO_PASSWORD = "<senha local de 10+ caracteres>"
+pnpm db:seed:demo        # identity, projects e audit (scripts/seed-demo.mjs)
 ```
 
-- `pnpm db:seed` roda só o seed do ms-projects; `pnpm db:audit:seed`, só o do ms-audit.
-- Entradas de teste: `pnpm --filter @axial/ms-projects db:seed:test` (usa `TEST_DATABASE_URL`) e `pnpm --filter @axial/ms-audit db:seed:test` (usa `AUDIT_TEST_DATABASE_URL`); ambas aceitam somente bancos `_test`.
+- `pnpm db:identity:seed` roda só o seed do ms-identity; `pnpm db:seed`, só o do ms-projects; `pnpm db:audit:seed`, só o do ms-audit.
+- Entradas de teste: `pnpm --filter @axial/ms-identity db:seed:test` (usa `IDENTITY_TEST_DATABASE_URL`), `pnpm --filter @axial/ms-projects db:seed:test` (usa `TEST_DATABASE_URL`) e `pnpm --filter @axial/ms-audit db:seed:test` (usa `AUDIT_TEST_DATABASE_URL`); todas aceitam somente bancos `_test`.
+- `AXIAL_DEMO_PASSWORD` (10 a 128 caracteres, a mesma política de senha do ms-identity) é obrigatória para o seed do identity: é a senha de todas as contas que ele cria. Vem do ambiente ou do `.env` e nunca é versionada. `pnpm start`/`pnpm perf` usam, sem ela, a fixture só local `localDemoPassword` de `scripts/performance/run.mjs`.
 - As datas são calculadas no momento da primeira execução. Repetir o seed depois não move nada: as linhas já existem e são preservadas. Para datas atuais, recrie um banco de desenvolvimento descartável.
-- O seed do identity ainda não existe; o gancho está marcado com `TODO(identity)` em `scripts/seed-demo.mjs` e `deploy/setup.sh`.
-- Em deploy, `deploy/setup.sh` roda os seeds de projects e audit quando `AXIAL_SEED=true` (padrão).
+- Em deploy, `deploy/setup.sh` roda os seeds de identity, projects e audit quando `AXIAL_SEED=true` (padrão). Nesse caso `AXIAL_DEMO_PASSWORD` precisa estar no ambiente do serviço `setup` (`deploy/compose.yaml` a repassa); sem ela o setup falha com mensagem explícita antes de semear.
 
 ## ms-projects
 
@@ -71,14 +75,17 @@ O projeto `AXL` do seed anterior não é mais criado nem é removido: se existir
 
 O comando lê `packages/demo-fixtures/dist`; compile o pacote antes (`pnpm --filter "@axial/demo-fixtures..." build`).
 
-## O que o seed do identity precisa fazer
+## ms-identity
 
-Para casar com os ids dos outros schemas, o seed do ms-identity deve usar `@axial/demo-fixtures` e gravar, só no schema `identity`:
+`apps/ms-identity/src/seed-demo.ts` (lógica em `src/demo-seed.ts`) grava, só no schema `identity`, numa transação serializada por advisory lock e com `ON CONFLICT DO NOTHING`:
 
-- `organizations` com `id` de `organizations[].id` (nome do protótipo);
-- usuários com `id = users[].id` e o e-mail do cenário (tabelas de usuário do BetterAuth incluídas; senhas de demonstração continuam sendo fixtures de desenvolvimento);
-- `members` a partir de `memberships` (papel já mapeado);
-- `teams` e `team_members` a partir de `teams` e `teamMemberships`;
+- `organizations` com `id` de `organizations[].id` e o nome do protótipo;
+- `identity."user"` do BetterAuth com `id = users[].id`, nome e e-mail do cenário, `emailVerified = true` e `mustChangePassword = false`;
+- `identity.account` com a credencial (`providerId = 'credential'`, id determinístico `demoId("account:<id legado>")`), senha `AXIAL_DEMO_PASSWORD` com `hashPassword` do BetterAuth (scrypt com sal próprio por conta), o mesmo formato que o signup grava. Só contas ainda sem credencial recebem hash, então repetir o seed não refaz hashes nem troca senhas;
+- `members` a partir de `memberships` (papel já mapeado, `title` de `users[].title`, ativo);
+- `teams` com descrição e `lead_user_id`, e `team_members` a partir de `teamMemberships`;
 - `project_assignments` a partir de `projectAssignments`.
 
-Com isso, as claims emitidas pelo ms-identity ficam iguais às de `claimsFor` e às dos tokens de desenvolvimento.
+Antes de gravar, o seed recusa e-mails do cenário que já pertençam a outra conta (outro id); depois, confere que cada linha do cenário existe com o próprio id e aborta a transação se faltar alguma. Os gatilhos de outbox das tabelas de domínio registram as linhas inseridas, como em qualquer escrita (o identity não tem publicador do outbox hoje); uma segunda execução não insere nada e, portanto, não gera eventos.
+
+Com isso, as claims emitidas pelo ms-identity no login real são iguais às de `claimsFor` e às dos tokens de desenvolvimento. `apps/ms-identity/test/seed.mjs` (parte de `pnpm test:identity:integration`) confere isso: semeia duas vezes, faz login de Helena Costa (escolha entre Vetor Labs e Atlas, depois tokens de cada uma) e de Ricardo Nogueira (tokens direto) e compara as claims dos access tokens com `claimsFor`.

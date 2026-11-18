@@ -9,6 +9,7 @@
 #   REDIS_URL              redis://default:senha@host:6379
 #   BETTER_AUTH_SECRET     segredo aleatório com 32+ caracteres
 #   AXIAL_SEED             true (padrão) popula a organização de demonstração
+#   AXIAL_DEMO_PASSWORD    senha (10 a 128 caracteres) das contas de demonstração; obrigatória com AXIAL_SEED=true
 
 x-build: &build
   context: ..
@@ -51,6 +52,7 @@ services:
       REDIS_URL: ${REDIS_URL}
       CORS_ORIGINS: https://${WEB_HOST}
       AXIAL_SEED: ${AXIAL_SEED:-true}
+      AXIAL_DEMO_PASSWORD: ${AXIAL_DEMO_PASSWORD:-}
 
   api:
     <<: *backend

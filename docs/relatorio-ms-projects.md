@@ -129,6 +129,14 @@ Validação local (Windows, PostgreSQL/Redis do Compose, banco isolado com sufix
 
 Validação: seeds executados duas vezes em banco `_test` descartável (segunda execução sem inserções), além do teste de integração `apps/api/test/integration/demo-seed.test.ts` e do script `apps/ms-audit/test/seed.mjs`.
 
+## Atualização de 18/11/2026: seed do ms-identity e política única de senha
+
+- **ms-identity:** `pnpm db:identity:seed` (`apps/ms-identity/src/seed-demo.ts`) grava só no schema `identity` 2 organizações, 18 contas BetterAuth (e-mail verificado, credencial com hash do BetterAuth a partir de `AXIAL_DEMO_PASSWORD`), 19 vínculos com cargo, 7 equipes com descrição e líder, 20 membros de equipe e 32 atribuições a projetos, só inserindo e com ids determinísticos. Roda primeiro em `pnpm db:seed:demo`, em `deploy/setup.sh` (que para com erro se `AXIAL_SEED=true` e faltar `AXIAL_DEMO_PASSWORD`) e em `pnpm start`/`pnpm perf` (fixture só local).
+- **Cenário:** como no protótipo o administrador enxerga todas as organizações, Helena Costa recebe também um vínculo `ADMIN` na Atlas; `claimsFor` aceita a organização.
+- **Senha:** signup, convite, `POST auth/password`, `POST members`, reset administrativo, `bootstrap` e o próprio BetterAuth aceitam de 10 a 128 caracteres (`PASSWORD_MIN_LENGTH`/`PASSWORD_MAX_LENGTH` em `apps/ms-identity/src/common.ts`).
+
+Validação: `apps/ms-identity/test/seed.mjs` (em `pnpm test:identity:integration`) semeia duas vezes um banco `_test` descartável (segunda sem inserções, sem novos hashes nem eventos de outbox), faz login real de Helena Costa (escolha entre as duas organizações) e de Ricardo Nogueira (tokens direto) e confere as claims com `claimsFor`. `pnpm db:seed:demo` rodou duas vezes num banco `_dev` descartável com as migrations de projects, identity e audit (segunda execução sem inserções nos três schemas), e o banco foi removido em seguida.
+
 ## Atualização de 18/11/2026: cadastro de empresas, convites e sessão do navegador (ms-identity)
 
 - **Endereço do cliente:** o gateway confia em `GATEWAY_TRUST_PROXY` saltos (1 atrás do Traefik no Dokploy) e envia aos serviços só o endereço resolvido em `X-Forwarded-For`; o ms-identity confia em um salto (`IDENTITY_TRUST_PROXY=1`). Os limites de tentativa deixaram de ver o IP do gateway e passaram a contar por cliente.

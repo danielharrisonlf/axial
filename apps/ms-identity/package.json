@@ -11,7 +11,9 @@
     "test:unit": "vitest run",
     "db:migrate": "tsx src/migrate.ts",
     "bootstrap": "tsx src/bootstrap.ts",
-    "test:integration": "node test/integration.mjs && node test/oauth-integration.mjs && node test/accounts-integration.mjs",
+    "db:seed": "tsx src/seed-demo.ts",
+    "db:seed:test": "tsx src/seed-demo.ts --test",
+    "test:integration": "node test/integration.mjs && node test/oauth-integration.mjs && node test/accounts-integration.mjs && node test/seed.mjs",
     "test:interop": "node test/interop.mjs"
   },
   "dependencies": {
@@ -27,6 +29,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@axial/demo-fixtures": "workspace:*",
     "@types/express": "5.0.6",
     "@types/node": "catalog:",
     "@types/pg": "8.20.0",

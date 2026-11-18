@@ -101,6 +101,9 @@ async function waitFor(url, timeout = 30_000) {
 const db = process.env.PERF_DATABASE_URL ?? "postgresql://axial:axial_local_only@localhost:5549/axial_dev";
 const redis = process.env.PERF_REDIS_URL ?? "redis://localhost:6389";
 const keys = "../../keys";
+// Fixture só de desenvolvimento local (como o BETTER_AUTH_SECRET abaixo): senha das contas do cenário
+// Vetor Labs semeadas no banco local quando AXIAL_DEMO_PASSWORD não está definida. Nunca use em deploy.
+const localDemoPassword = "vetor-labs-local-only";
 const baseEnv = { ...process.env, NODE_ENV: "development" };
 
 const services = [
@@ -552,13 +555,14 @@ async function prepareData({ skipInfra = false } = {}) {
     IDENTITY_DATABASE_URL: process.env.IDENTITY_DATABASE_URL ?? db,
     NOTIFICATIONS_DATABASE_URL: process.env.NOTIFICATIONS_DATABASE_URL ?? db,
     AUDIT_DATABASE_URL: process.env.AUDIT_DATABASE_URL ?? db,
+    AXIAL_DEMO_PASSWORD: process.env.AXIAL_DEMO_PASSWORD ?? localDemoPassword,
   };
   console.log("[db] migrations e seed");
   await run(pnpm, ["db:generate"], { env });
   await run(pnpm, ["db:migrate"], { env });
   for (const script of ["db:identity:migrate", "db:notifications:migrate", "db:audit:migrate"])
     await run(pnpm, [script], { env });
-  // cenário fictício Vetor Labs em projects e audit; o pacote de fixtures (e contracts) é compilado antes
+  // cenário fictício Vetor Labs em identity, projects e audit; o pacote de fixtures (e contracts) é compilado antes
   await run(pnpm, ["--filter", "@axial/demo-fixtures...", "build"], { env });
   await run(pnpm, ["db:seed:demo"], { env });
 }
@@ -628,6 +632,8 @@ Axial no ar (build local; Ctrl+C encerra tudo)
   Servidor MCP ...... http://localhost:3006/mcp
   Painel de desempenho: em outro terminal, pnpm perf:demo  (http://127.0.0.1:4900)
   Token de teste ...... node scripts/dev-identity.mjs token PROJECT_MANAGER
+  Login de demonstração: helena.costa@vetorlabs.dev (ou outra pessoa do cenário), senha AXIAL_DEMO_PASSWORD
+                         ou, sem ela, a fixture local localDemoPassword de scripts/performance/run.mjs
   Logs ................ output/validation/performance/logs
 `);
   let stopping = false;
