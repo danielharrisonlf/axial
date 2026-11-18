@@ -14,7 +14,7 @@ Fonte primária: apresentação `ProjectFlow (2).pdf`, 11 páginas, fornecida pe
 | Páginas 8-10 | NestJS, TypeScript, PostgreSQL, Redis e BullMQ | Stack implementada e verificável localmente |
 | Página 9 | Alteração e outbox na mesma transação | Mutação e eventos atômicos no PostgreSQL |
 | Página 9 | Relay publica para tempo real, notificações e auditoria | Três filas BullMQ com retry, lease e identificador estável |
-| Páginas 5 e 8 | Agentes externos usam as mesmas APIs via MCP | API com as mesmas permissões; sem mcp-server nesta entrega |
+| Páginas 5 e 8 | Agentes externos usam as mesmas APIs via MCP | API com as mesmas permissões; o `apps/mcp-server` expõe as rotas públicas como ferramentas MCP com o token do usuário ([relatório](relatorio-mcp-server.md)) |
 
 O PDF substitui a arquitetura anterior do protótipo. SNS/SQS, webhooks de saída e assistente interno de IA não são requisitos desta etapa.
 
