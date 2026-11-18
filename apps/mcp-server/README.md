@@ -26,7 +26,7 @@ e a senha do Kairos; o cliente descobre o servidor de autorização pela metadat
 | Cliente | Como conectar |
 | --- | --- |
 | Claude (web e Desktop) | Configurações → Conectores → Adicionar conector personalizado → URL acima → Conectar. |
-| Claude Code | `claude mcp add --transport http kairos https://api.kairos.noxlabs.tech/mcp` e, no Claude Code, `/mcp` → `kairos` → Authenticate. |
+| Claude Code | `claude mcp add --scope user --transport http kairos https://api.kairos.noxlabs.tech/mcp`; abra uma **sessão nova** do Claude Code e use `/mcp` → `kairos` → Authenticate. Sem `--scope user`, o registro vale só para a pasta atual. |
 | ChatGPT | Configurações → Apps e conectores → Configurações avançadas → modo desenvolvedor; conector com a URL e autenticação OAuth. |
 | Cursor | `~/.cursor/mcp.json`: `{"mcpServers":{"kairos":{"url":"https://api.kairos.noxlabs.tech/mcp"}}}` e Login em Settings → MCP. |
 
@@ -273,8 +273,16 @@ produção (`NODE_ENV=production`) todas exigem HTTPS. No `deploy/compose.yaml` 
 pnpm --filter @axial/mcp-server test:unit          # vitest: unitários + integração in-memory + stdio real
 $env:TEST_DATABASE_URL = 'postgresql://axial:axial_local_only@localhost:5550/axial_test?schema=projects'
 $env:TEST_REDIS_URL = 'redis://localhost:6389/10'
-pnpm test:mcp:integration                          # processo HTTP real (upstream simulado) + E2E com ms-projects real
+$env:IDENTITY_TEST_DATABASE_URL = 'postgresql://axial:axial_local_only@localhost:5550/axial_test'
+pnpm test:mcp:integration      # HTTP com upstream simulado + E2E com ms-projects real + OAuth E2E com o SDK
+pnpm test:mcp:oauth:browser    # consentimento OAuth no Chromium (Playwright do apps/web), vindo de outro site
 ```
+
+`test/oauth-e2e.mjs` e `test/oauth-browser.mjs` sobem ms-identity (banco descartável `*_test`, criado e apagado
+a cada execução; o usuário precisa de CREATEDB), ms-projects, mcp-server e gateway como processos
+(`test/support/oauth-stack.mjs`), com chaves efêmeras; o cliente fala só com o gateway, como em produção.
+O teste de navegador precisa do Chromium do Playwright (`pnpm --filter @axial/web exec playwright install chromium`)
+e por isso fica num script próprio, fora do `test:mcp:integration`.
 
 - `test/mcp.integration.test.ts` usa `connectMcpClient` de `@nestjs/mcp/testing` sobre o `AppModule` real e um
   upstream simulado (`test/support/harness.ts`): catálogo completo para token OAuth de leitura+escrita, scope
@@ -287,5 +295,14 @@ pnpm test:mcp:integration                          # processo HTTP real (upstrea
 - `test/integration.mjs` sobe `src/main.ts` e confere 401 + metadata RFC 9728, scopes OAuth e `insufficient_scope`.
 - `test/e2e.mjs` sobe ms-projects e o MCP como processos, com chaves efêmeras e organizações aleatórias (não
   apaga dados), e exercita o fluxo completo pelo cliente MCP. Recusa banco cujo nome não termine em `_test`.
+- `test/oauth-e2e.mjs` usa o SDK oficial (`@modelcontextprotocol/client`) como cliente remoto: 401 →
+  metadata do recurso → metadata do servidor de autorização → registro dinâmico → login (com escolha de
+  organização) → token → initialize → catálogo completo → leituras (ms-projects e diretório do ms-identity) →
+  refresh com rotação → nova chamada; cliente só com `projects:read` lê e tem a escrita recusada (com o pedido
+  de step-up do SDK); formulário de consentimento com cookie CSRF, posts de outro site recusados, nenhuma sessão
+  deixada para trás e retorno para claude.ai, chatgpt.com, `cursor://` e localhost.
+- `test/oauth-browser.mjs` abre o consentimento no Chromium a partir de outro site (mesma aba e popup): cookie
+  `SameSite=Strict` gravado e reenviado, login, escolha de organização, "Cancelar" → `access_denied` e retorno ao
+  callback com código válido.
 
 Relatório da verificação: [docs/relatorio-mcp-server.md](../../docs/relatorio-mcp-server.md).

@@ -67,12 +67,50 @@ Ambiente: Windows 11, Node 24, pnpm 10.11.1, Docker com PostgreSQL de teste em 5
 | `pnpm typecheck` | 15/15 tarefas (o MCP checa também `test/` via `tsconfig.check.json`) |
 | `pnpm build` | 12/12 tarefas |
 | `pnpm test` | 14/14 tarefas; mcp-server 58 testes em 6 arquivos; ms-identity 20 |
-| `pnpm test:mcp:integration` (`TEST_DATABASE_URL=…/axial_test?schema=projects`, `TEST_REDIS_URL=redis://localhost:6389/10`) | `integration.mjs` (processo HTTP real, upstream simulado) e `e2e.mjs` (ms-projects real + MCP HTTP real) passaram |
+| `pnpm test:mcp:integration` (`TEST_DATABASE_URL=…/axial_test?schema=projects`, `TEST_REDIS_URL=redis://localhost:6389/10`, `IDENTITY_TEST_DATABASE_URL=…/axial_test`) | `integration.mjs` (processo HTTP real, upstream simulado), `e2e.mjs` (ms-projects real + MCP HTTP real) e `oauth-e2e.mjs` (SDK oficial contra identity + gateway + MCP + ms-projects reais) passaram |
+| `pnpm test:mcp:oauth:browser` (Chromium do Playwright 1.58.2 do apps/web) | passou |
 | `pnpm test:gateway:integration` | passou |
 | `pnpm test:identity:integration` (`IDENTITY_TEST_DATABASE_URL=…/axial_test`) | integration, oauth-integration (com as novas asserções do diretório), accounts e seed passaram |
 
-`test:mcp:integration` agora roda `integration.mjs` e `e2e.mjs`; o CI já fornece banco `_test`, Redis e Prisma
-gerado antes desse passo.
+`test:mcp:integration` agora roda `integration.mjs`, `e2e.mjs` e `oauth-e2e.mjs`; o CI já fornece os bancos
+`_test` (`TEST_DATABASE_URL`, `IDENTITY_TEST_DATABASE_URL`), Redis e Prisma gerado antes desse passo. O teste de
+navegador fica num script próprio porque o CI só instala o Chromium depois.
+
+## OAuth de ponta a ponta
+
+`test/oauth-e2e.mjs` e `test/oauth-browser.mjs` sobem ms-identity (banco descartável), ms-projects, mcp-server e
+gateway reais (`test/support/oauth-stack.mjs`); o cliente usa só o gateway. Sequência com o SDK oficial
+(`@modelcontextprotocol/client` 2.4.0, `StreamableHTTPClientTransport` com `authProvider`):
+
+1. `POST /mcp` sem token → 401 com `resource_metadata`; metadata RFC 9728 (recurso, `authorization_servers`,
+   scopes) e RFC 8414 (issuer, registro, PKCE S256) pelo gateway.
+2. O SDK registra o cliente (RFC 7591), monta o authorize com PKCE e `resource`; o "navegador" do teste abre o
+   consentimento, envia login e, para a conta em duas organizações, escolhe a segunda; `finishAuth` com `code` e
+   `iss` (RFC 9207).
+3. Token com `scope` `projects:read projects:write`, `aud` [`axial-projects`, recurso], `source: mcp` e a
+   organização escolhida; `initialize` (servidor `axial-projects`), `tools/list` com as 49 ferramentas,
+   `axial://me`, `create-project`, `list-projects` (ms-projects) e `list-members` (diretório do ms-identity com o
+   token delegado).
+4. `auth()` do SDK com o refresh token guardado → `AUTHORIZED`; access e refresh token trocados, organização
+   mantida; nova conexão e `get-project` com o token novo.
+5. Variante só leitura (`auth(..., { scope: "projects:read" })`, conta de uma organização: sem tela de escolha):
+   leitura funciona; `create-project` é recusada com `insufficient_scope`, o SDK pede step-up com
+   `projects:read projects:write` e nada chega ao ms-projects (conferido pela API).
+
+### Pontos do login verificados
+
+| Ponto | Verificação | Resultado |
+| --- | --- | --- |
+| Sessão | contagem de `identity.session` antes e depois de cada login OAuth; `Set-Cookie` da resposta do POST | nenhuma sessão BetterAuth fica no banco; o POST não grava cookie de sessão |
+| Escolha de organização | SDK (conta em 2 organizações escolhe a 2ª; conta em 1 não vê a tela) e Chromium (popup, marca a 2ª) | token e `axial://me` com a organização escolhida; refresh a mantém |
+| CSRF | POST sem cookie, com token errado, com `Sec-Fetch-Site: cross-site` e `same-site` | 403 "Formulário expirado" em todos; com cookie e `same-origin`, 303 |
+| Cookie SameSite vindo de outro site | atributos (`HttpOnly`, `SameSite=Strict`, `Path=/identity/oauth`; `Secure` só com emissor HTTPS) e Chromium real: host em `localhost`, Kairos em `127.0.0.1` (sites diferentes), navegação na mesma aba e em popup (como o claude.ai) | o cookie é gravado na navegação de outro site e reenviado no POST do formulário (navegação de nível superior); login conclui |
+| Redirect de volta | cliente registrado com `https://claude.ai/api/mcp/auth_callback`, `https://chatgpt.com/connector_platform_oauth_redirect`, `cursor://anysphere.cursor-mcp/oauth/callback` e `http://localhost:33418/callback`; CSP sem `form-action` | 303 para cada destino exato com `code`, `state` e `iss`; cada código foi trocado por token; no Chromium o navegador chegou ao callback do host; "Cancelar" → `access_denied` |
+
+Não foi encontrado defeito no login OAuth; nada foi alterado no código de OAuth do ms-identity. Limites: o
+`cursor://` foi verificado no cabeçalho `Location` (o Chromium headless não abre apps externos); o teste usa
+HTTP, então o atributo `Secure` (ativo com emissor HTTPS) e o caminho por Traefik não foram exercidos; ChatGPT e
+Claude reais não foram usados.
 
 Testes do mcp-server:
 

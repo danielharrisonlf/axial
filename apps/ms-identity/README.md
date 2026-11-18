@@ -105,7 +105,7 @@ Configuração: `IDENTITY_OAUTH_RESOURCE` é a URL pública do MCP (padrão `htt
 ### Conectar um cliente
 
 - **Claude (web e Desktop):** Configurações → Conectores → Adicionar conector personalizado → URL `https://api.kairos.noxlabs.tech/mcp` → Conectar e entrar com e-mail e senha do Kairos. Em planos Team/Enterprise, um proprietário adiciona o conector nas configurações da organização. O Claude Desktop usa os conectores da conta.
-- **Claude Code:** `claude mcp add --transport http kairos https://api.kairos.noxlabs.tech/mcp`; depois, dentro do Claude Code, `/mcp` → `kairos` → Authenticate. O navegador abre a página de login e devolve para `http://localhost:<porta>/callback`.
+- **Claude Code:** `claude mcp add --scope user --transport http kairos https://api.kairos.noxlabs.tech/mcp` (sem `--scope user`, o registro vale só para a pasta atual); depois, numa sessão nova do Claude Code, `/mcp` → `kairos` → Authenticate. O navegador abre a página de login e devolve para `http://localhost:<porta>/callback`.
 - **ChatGPT:** Configurações → Apps e conectores → Configurações avançadas → ativar o modo desenvolvedor; depois criar um conector com a URL do MCP e autenticação OAuth. Disponibilidade depende do plano.
 - **Cursor:** em `~/.cursor/mcp.json` (ou `.cursor/mcp.json` do projeto), `{"mcpServers":{"kairos":{"url":"https://api.kairos.noxlabs.tech/mcp"}}}`; em Settings → MCP, clique em Login/Connect no servidor `kairos`.
 
