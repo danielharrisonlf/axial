@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ATLAS_ORGANIZATION_ID,
   buildDemoFixtures,
   calendarDay,
   claimsFor,
@@ -8,6 +9,7 @@ import {
   demoUser,
   legacySeed,
   localDay,
+  memberships,
   organizations,
   projectAssignments,
   shift,
@@ -92,6 +94,24 @@ describe("directory", () => {
     for (const project of vetorProjects.filter((item) => item.teamIds.includes(plataforma)))
       expect(ana.projectIds).toContain(project.id);
     expect(ana.assignableUserIds).toHaveLength(16);
+  });
+
+  it("gives the administrator a membership in both organizations, the others only in their own", () => {
+    const helena = demoUser("helena.costa@vetorlabs.dev");
+    expect(
+      memberships.filter((item) => item.userId === helena.id).map((item) => [item.organizationId, item.role]),
+    ).toEqual([
+      [VETOR_ORGANIZATION_ID, "ADMIN"],
+      [ATLAS_ORGANIZATION_ID, "ADMIN"],
+    ]);
+    expect(memberships).toHaveLength(users.length + 1);
+    expect(claimsFor(helena.id).organizationId).toBe(VETOR_ORGANIZATION_ID);
+    const atlas = claimsFor(helena.id, ATLAS_ORGANIZATION_ID);
+    expect(atlas).toMatchObject({ role: "ADMIN", teamIds: [], projectIds: [] });
+    expect(atlas.assignableUserIds).toHaveLength(3);
+    expect(() => claimsFor(demoUser("ricardo.nogueira@vetorlabs.dev").id, ATLAS_ORGANIZATION_ID)).toThrow(
+      /not a member/,
+    );
   });
 });
 

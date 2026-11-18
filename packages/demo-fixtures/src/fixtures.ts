@@ -55,7 +55,10 @@ export interface DemoTeam {
   leadId: string;
   memberIds: string[];
 }
-/** One organization membership per user (identity.members). */
+/**
+ * identity.members: every user in their own organization and, as in the prototype, where an
+ * administrator sees every organization, each ADMIN also in the other organizations.
+ */
 export interface DemoMembership {
   organizationId: string;
   userId: string;
@@ -269,6 +272,11 @@ function buildDirectory(seed: LegacySeed) {
     userId: user.id,
     role: user.role,
   }));
+  // The prototype scopes an admin to every organization (Dashboard, Teams); the backend has no
+  // cross-organization role, so the admin gets an ADMIN membership in each other organization.
+  for (const user of users.filter((item) => item.role === "ADMIN"))
+    for (const org of organizations.filter((item) => item.id !== user.organizationId))
+      memberships.push({ organizationId: org.id, userId: user.id, role: "ADMIN" });
   const teamMemberships: DemoTeamMembership[] = teams.flatMap((team) =>
     team.memberIds.map((userId) => ({ organizationId: team.organizationId, teamId: team.id, userId })),
   );
@@ -326,27 +334,35 @@ export function demoUser(email: string): DemoUser {
   return user;
 }
 
-/** Claims ms-identity issues to a seeded user: teams, explicit projects and the organization roster. */
-export function claimsFor(userId: string): DemoClaims {
+/**
+ * Claims ms-identity issues to a seeded user in one organization (their own by default): teams,
+ * explicit projects and the organization roster.
+ */
+export function claimsFor(userId: string, organizationId?: string): DemoClaims {
   const user = users.find((candidate) => candidate.id === userId);
   if (!user) throw new Error(`Unknown demo user ${userId}`);
+  const orgId = organizationId ?? user.organizationId;
+  const membership = memberships.find((item) => item.userId === user.id && item.organizationId === orgId);
+  if (!membership) throw new Error(`Demo user ${userId} is not a member of organization ${orgId}`);
   const sorted = (ids: string[]) => [...new Set(ids)].sort();
   return {
     userId: user.id,
-    organizationId: user.organizationId,
-    role: user.role,
+    organizationId: orgId,
+    role: membership.role,
     teamIds: sorted(
-      teamMemberships.filter((member) => member.userId === user.id).map((member) => member.teamId),
+      teamMemberships
+        .filter((member) => member.userId === user.id && member.organizationId === orgId)
+        .map((member) => member.teamId),
     ),
     projectIds: sorted(
-      projectAssignments.filter((entry) => entry.userId === user.id).map((entry) => entry.projectId),
+      projectAssignments
+        .filter((entry) => entry.userId === user.id && entry.organizationId === orgId)
+        .map((entry) => entry.projectId),
     ),
     assignableUserIds: sorted(
-      memberships.filter((member) => member.organizationId === user.organizationId).map((m) => m.userId),
+      memberships.filter((member) => member.organizationId === orgId).map((m) => m.userId),
     ),
-    assignableTeamIds: sorted(
-      teams.filter((team) => team.organizationId === user.organizationId).map((team) => team.id),
-    ),
+    assignableTeamIds: sorted(teams.filter((team) => team.organizationId === orgId).map((team) => team.id)),
   };
 }
 
