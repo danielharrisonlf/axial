@@ -571,6 +571,25 @@ importers:
         specifier: 'catalog:'
         version: 4.1.2(@opentelemetry/api@1.10.0)(@types/node@24.13.3)(vite@8.3.5(@types/node@24.13.3)(jiti@2.7.0)(tsx@4.20.6))
 
+  packages/demo-fixtures:
+    dependencies:
+      '@axial/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.2(@opentelemetry/api@1.10.0)(@types/node@24.13.3)(vite@8.3.5(@types/node@24.13.3)(jiti@2.7.0)(tsx@4.20.6))
+
   packages/observability:
     devDependencies:
       '@types/node':

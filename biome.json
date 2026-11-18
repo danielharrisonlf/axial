@@ -18,6 +18,7 @@
       "!**/.mf",
       "!apps/web/src/styles/prototype.css",
       "!apps/web/src/data/demo-seed.json",
+      "!packages/demo-fixtures/src/demo-seed.json",
       "!docs/performance/evidencias",
       "!docs/performance/resultados.json"
     ]
