@@ -190,9 +190,37 @@ try {
 
     const metadata = await fetch(`http://127.0.0.1:${mcpPort}/.well-known/oauth-protected-resource/mcp`);
     assert.equal(metadata.status, 200);
-    assert.equal((await metadata.json()).resource, env.MCP_RESOURCE);
+    const resourceMetadata = await metadata.json();
+    assert.equal(resourceMetadata.resource, env.MCP_RESOURCE);
+    for (const scope of [
+      "projects:read",
+      "projects:write",
+      "audit:read",
+      "notifications:read",
+      "identity:write",
+    ])
+      assert.ok(resourceMetadata.scopes_supported.includes(scope), `missing scope ${scope}`);
 
-    console.log("Integration passed: MCP auth, tool listing, caller-token forwarding and resource metadata");
+    const viewer = await sign({ role: "VIEWER" });
+    const insufficient = await fetch(endpoint, {
+      method: "POST",
+      headers: { ...headers, authorization: `Bearer ${viewer}` },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 5,
+        method: "tools/call",
+        params: {
+          name: "create-task",
+          arguments: { projectId: "0190f0f0-0000-7000-8000-000000000002", title: "x" },
+        },
+      }),
+    });
+    assert.equal(insufficient.status, 403);
+    assert.match(insufficient.headers.get("www-authenticate") ?? "", /insufficient_scope/);
+
+    console.log(
+      "Integration passed: MCP auth, tool listing, caller-token forwarding, resource metadata and scope step-up",
+    );
   } finally {
     if (server.exitCode === null && server.signalCode === null) server.kill();
     await closed;
