@@ -1,0 +1,144 @@
+/* Entrada (login, escolha de empresa, cadastro, convite, troca de senha) e estados de carga do
+   modo API. Só compõe componentes do protótipo (.panel, .field, .btn, .banner, .empty, .chip)
+   e usa apenas tokens; o protótipo não tinha estas telas. */
+.auth {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6) var(--space-4);
+  background: var(--bg);
+  color: var(--ink);
+}
+.auth-col {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.auth-brand b {
+  font-size: var(--text-14);
+  line-height: var(--lh-14);
+  font-weight: var(--weight-semibold);
+}
+.auth-brand-txt span {
+  font-size: var(--text-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+}
+.auth-brand .auth-brand-txt {
+  display: flex;
+  flex-direction: column;
+}
+.auth .panel-head h1 {
+  font-size: var(--text-16);
+  line-height: var(--lh-16);
+  font-weight: var(--weight-semibold);
+}
+.auth .panel-body > p {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-2);
+  font-size: var(--text-13);
+}
+.auth form .btn-primary {
+  width: 100%;
+  justify-content: center;
+}
+.auth-alt {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1);
+  font-size: var(--text-13);
+  color: var(--ink-2);
+}
+.auth-alt button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-fg);
+  cursor: pointer;
+}
+.auth-alt button:hover {
+  text-decoration: underline;
+}
+.auth-orgs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.auth-org {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.auth-org:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-ctl-hover);
+}
+.auth-org .grow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.auth-org b {
+  font-size: var(--text-13);
+  font-weight: var(--weight-semibold);
+}
+.auth-org .grow span {
+  font-size: var(--text-12);
+  color: var(--ink-2);
+}
+.auth-foot {
+  text-align: center;
+  font-size: var(--text-12);
+  color: var(--ink-3);
+}
+.auth .banner {
+  margin-bottom: 0;
+}
+.invite-link {
+  display: flex;
+  gap: var(--space-2);
+}
+.invite-link .input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: var(--text-12);
+}
+.mcp-snippet {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.mcp-snippet .code {
+  flex: 1;
+  min-width: 0;
+}
+.mcp-snippet .code.wrap {
+  overflow-wrap: anywhere;
+}
+.stale-banner {
+  align-items: center;
+}
+.stale-banner .grow {
+  flex: 1;
+  min-width: 0;
+}

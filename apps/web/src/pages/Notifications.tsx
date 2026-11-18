@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Icon } from "../components/Icon";
 import { Empty, Field, Overlay, PageHead, Switch, TabNav, Who } from "../components/ui";
 import type { Notification, NotificationChannel, NotificationStatus } from "../data/types";
 import { useWorkspace } from "../data/workspace";
 import { fmtDateTime, rel } from "../lib/format";
+import { useSession } from "../session";
 
 const CHANNELS: NotificationChannel[] = ["email", "whatsapp", "sms"];
 const CHANNEL_META: Record<NotificationChannel, { label: string; icon: string }> = {
@@ -34,7 +35,103 @@ function Status({ item, reason = false }: { item: Notification; reason?: boolean
   );
 }
 
+type ChannelRow = { channel: string; enabled: boolean; destination: string | null; verified: boolean };
+
+/**
+ * API mode: only what ms-notifications serves through the gateway, the person's own channels.
+ * History, templates and providers have no endpoint yet, so nothing fictional is shown.
+ */
+function ApiNotifications() {
+  const session = useSession();
+  const [rows, setRows] = useState<ChannelRow[] | null>(null);
+  const [error, setError] = useState(false);
+  const load = useCallback(() => {
+    if (!session) return;
+    setError(false);
+    session
+      .notificationChannels()
+      .then(setRows)
+      .catch(() => setError(true));
+  }, [session]);
+  useEffect(load, [load]);
+  return (
+    <>
+      <PageHead
+        title="Notificações multicanal"
+        sub="Canais pelos quais você recebe os avisos de tarefas e sprints desta empresa."
+      />
+      <div className="banner info">
+        <Icon name="info" size={16} />
+        <span>
+          O histórico de envios, os templates e os provedores ainda não têm serviço disponível no Workspace;
+          por isso não aparecem aqui. Os canais abaixo são somente leitura nesta versão.
+        </span>
+      </div>
+      {error ? (
+        <Empty
+          icon="alert"
+          title="Não foi possível carregar os canais"
+          sub="O serviço de notificações não respondeu."
+        >
+          <button type="button" className="btn" onClick={load}>
+            <Icon name="refresh" size={14} />
+            Tentar novamente
+          </button>
+        </Empty>
+      ) : !rows ? (
+        <div className="empty" role="status" aria-busy="true">
+          <b>Carregando…</b>
+        </div>
+      ) : (
+        <div className="panel">
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Canal</th>
+                  <th>Destino</th>
+                  <th>Situação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {CHANNELS.map((channel) => {
+                  const row = rows.find((item) => item.channel === channel);
+                  return (
+                    <tr key={channel}>
+                      <td>
+                        <span className="who-cell">
+                          <Icon name={CHANNEL_META[channel].icon} size={14} />
+                          {CHANNEL_META[channel].label}
+                        </span>
+                      </td>
+                      <td className="mono t12">{row?.destination ?? "—"}</td>
+                      <td>
+                        {!row?.enabled ? (
+                          <span className="chip">Desligado</span>
+                        ) : row.verified ? (
+                          <span className="chip ok">Ligado e verificado</span>
+                        ) : (
+                          <span className="chip warn">Aguardando verificação</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function Notifications({ tab = "history", open }: { tab?: string; open?: string }) {
+  const session = useSession();
+  return session ? <ApiNotifications /> : <DemoNotifications tab={tab} open={open} />;
+}
+
+function DemoNotifications({ tab = "history", open }: { tab?: string; open?: string }) {
   const { visibleNotifications: mine } = useWorkspace();
   const active = TABS.includes(tab) ? tab : "history";
   // #/notifications/history/<id> (bell menu) opens that delivery, if this profile can see it

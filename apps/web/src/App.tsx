@@ -20,10 +20,12 @@ import {
   UIContext,
   useLayer,
 } from "./components/ui";
+import { toRoleId } from "./data/api/mappers";
 import type { Project } from "./data/types";
 import { useWorkspace } from "./data/workspace";
 import { navigate, rel, STATUS_META } from "./lib/format";
 import { Dashboard } from "./pages/Dashboard";
+import { useSession } from "./session";
 
 // Route-level code splitting: the initial bundle ships the shell, while each
 // page is fetched on demand.
@@ -160,7 +162,9 @@ export default function App() {
     visibleTasks: tasks,
     visibleNotifications,
     accessibleProjects,
+    sync,
   } = useWorkspace();
+  const session = useSession();
   useEffect(() => {
     // "Sistema" leaves the decision to color-scheme (prefers-color-scheme); light/dark force it
     const root = document.documentElement;
@@ -602,45 +606,96 @@ export default function App() {
             >
               <Icon name={dark ? "sun" : "moon"} />
             </button>
-            <MenuButton
-              className="btn btn-ghost btn-icon bell-wrap"
-              label="Notificações"
-              tip="Notificações"
-              items={() => {
-                const recent = notifications.slice(0, 5);
-                return [
-                  "Notificações recentes",
-                  ...(recent.length ? [] : ["Nenhuma notificação"]),
-                  ...recent.map((n) => {
-                    const to = db.users.find((u) => u.id === n.toUserId);
-                    return {
-                      label: n.subject,
-                      icon: n.channel === "email" ? "mail" : n.channel === "sms" ? "sms" : "wapp",
-                      sub: `${to ? `para ${to.name} · ` : ""}${rel(n.ts)}${n.status === "failed" ? " · falhou" : ""}`,
-                      onClick: () => navigate(`/notifications/history/${n.id}`),
-                    };
-                  }),
+            {/* API mode: no endpoint lists deliveries yet, so there is no bell (no fake history) */}
+            {!session && (
+              <MenuButton
+                className="btn btn-ghost btn-icon bell-wrap"
+                label="Notificações"
+                tip="Notificações"
+                items={() => {
+                  const recent = notifications.slice(0, 5);
+                  return [
+                    "Notificações recentes",
+                    ...(recent.length ? [] : ["Nenhuma notificação"]),
+                    ...recent.map((n) => {
+                      const to = db.users.find((u) => u.id === n.toUserId);
+                      return {
+                        label: n.subject,
+                        icon: n.channel === "email" ? "mail" : n.channel === "sms" ? "sms" : "wapp",
+                        sub: `${to ? `para ${to.name} · ` : ""}${rel(n.ts)}${n.status === "failed" ? " · falhou" : ""}`,
+                        onClick: () => navigate(`/notifications/history/${n.id}`),
+                      };
+                    }),
+                    "sep",
+                    {
+                      label: "Ver todas as notificações",
+                      icon: "bell",
+                      onClick: () => navigate("/notifications"),
+                    },
+                  ];
+                }}
+              >
+                <Icon name="bell" />
+                {notifications.some((n) => n.status === "failed") && <span className="notif-dot" />}
+              </MenuButton>
+            )}
+            {session ? (
+              <MenuButton
+                className="profile-btn"
+                label={`${me.name}, ${roles[me.roleId]}. Menu da conta`}
+                menuLabel="Conta"
+                items={() => [
+                  "Empresa",
+                  ...session.memberships.map((m) => ({
+                    label: m.organizationName,
+                    icon: "building",
+                    sub: roles[toRoleId(m.role)],
+                    checked: m.organizationId === session.organizationId,
+                    radio: true,
+                    onClick: () => {
+                      if (m.organizationId !== session.organizationId)
+                        session.switchOrganization(m.organizationId);
+                    },
+                  })),
                   "sep",
-                  {
-                    label: "Ver todas as notificações",
-                    icon: "bell",
-                    onClick: () => navigate("/notifications"),
-                  },
-                ];
-              }}
-            >
-              <Icon name="bell" />
-              {notifications.some((n) => n.status === "failed") && <span className="notif-dot" />}
-            </MenuButton>
-            <div className="profile-btn profile-static">
-              <Avatar user={me} decorative />
-              <span className="who">
-                <b>{me.name}</b>
-                <span>{roles[me.roleId]}</span>
-              </span>
-            </div>
+                  { label: "Sair", icon: "external", onClick: session.logout },
+                ]}
+              >
+                <Avatar user={me} decorative />
+                <span className="who">
+                  <b>{me.name}</b>
+                  <span>{org ? `${roles[me.roleId]} · ${org.name}` : roles[me.roleId]}</span>
+                </span>
+              </MenuButton>
+            ) : (
+              <div className="profile-btn profile-static">
+                <Avatar user={me} decorative />
+                <span className="who">
+                  <b>{me.name}</b>
+                  <span>{roles[me.roleId]}</span>
+                </span>
+              </div>
+            )}
           </header>
           <main className="content" id="conteudo" tabIndex={-1}>
+            {sync?.stale && session && (
+              <div className="banner danger stale-banner" role="alert">
+                <Icon name="alert" size={16} />
+                <span className="grow">
+                  <b>Serviço indisponível.</b> {sync.message} Os dados mostrados são os últimos carregados e
+                  as alterações estão desativadas.
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={sync.refreshing}
+                  onClick={session.reload}
+                >
+                  <Icon name="refresh" size={12} />
+                  {sync.refreshing ? "Recarregando…" : "Tentar novamente"}
+                </button>
+              </div>
+            )}
             <div className={`page${route === "board" || route === "timeline" ? " wide" : ""}`} key={routeKey}>
               <Suspense
                 fallback={

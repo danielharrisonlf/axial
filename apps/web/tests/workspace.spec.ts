@@ -499,6 +499,25 @@ test("access management lists users, roles and the capability matrix", async ({ 
   await expect(page.getByRole("combobox", { name: /Papel de/ })).toHaveCount(0);
 });
 
+test("MCP connect section shows the server URL from the build configuration", async ({
+  page,
+  context,
+}, info) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/#/mcp/connect");
+  // playwright.config.ts starts the dev server with VITE_API_BASE_URL=https://api.gateway.example.test
+  const url = "https://api.gateway.example.test/mcp";
+  await expect(page.locator("pre.code").first()).toHaveText(url);
+  await expect(page.getByText(`claude mcp add --scope user --transport http kairos ${url}`)).toBeVisible();
+  await expect(page.getByText("abra uma nova sessão do Claude Code", { exact: false })).toBeVisible();
+  await expect(page.locator("pre.code", { hasText: '"mcpServers"' })).toContainText(`"url": "${url}"`);
+  const copy = page.getByRole("button", { name: "Copiar endereço do servidor MCP", exact: true });
+  await copy.click();
+  await expect(copy).toHaveText("Copiado");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
+  await evidence(page, info, "mcp-connect");
+});
+
 test("MCP catalog lists the server tools and the console writes with the mcp origin", async ({ page }) => {
   await page.goto("/#/mcp");
   await expect(page.getByRole("heading", { name: "Agentes e integração MCP", exact: true })).toBeVisible();

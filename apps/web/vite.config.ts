@@ -67,7 +67,25 @@ function securityHeadersPlugin(): Plugin {
   return { name: "axial:security-headers", configureServer: apply, configurePreviewServer: apply };
 }
 
-export default defineConfig({
+/**
+ * Data source fixed at build time: "api" for builds (production), "demo" for the dev server
+ * (`pnpm dev:web`, the legacy Playwright suite). VITE_WORKSPACE_SOURCE overrides either way,
+ * e.g. `VITE_WORKSPACE_SOURCE=api pnpm dev:web` against a local stack.
+ */
+function workspaceSource(command: "build" | "serve"): "api" | "demo" {
+  const value = process.env.VITE_WORKSPACE_SOURCE ?? (command === "serve" ? "demo" : "api");
+  if (value !== "api" && value !== "demo")
+    throw new Error(`VITE_WORKSPACE_SOURCE must be "api" or "demo", got "${value}"`);
+  return value;
+}
+// Gateway behind the same-origin proxy when VITE_API_BASE_URL is empty (dev server and preview).
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET ?? "http://localhost:3000";
+
+export default defineConfig(({ command }) => ({
+  define: {
+    "import.meta.env.VITE_WORKSPACE_SOURCE": JSON.stringify(workspaceSource(command)),
+    "import.meta.env.VITE_API_BASE_URL": JSON.stringify(process.env.VITE_API_BASE_URL ?? ""),
+  },
   plugins: [
     react(),
     optionalFontDisplay(),
@@ -85,8 +103,13 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
     strictPort: true,
-    proxy: { "/api": { target: "http://localhost:3001", changeOrigin: true } },
+    // the Origin header is kept, so ms-identity recognizes the Workspace and sets the session cookie
+    proxy: {
+      "/api": { target: apiProxyTarget },
+      "/mcp": { target: apiProxyTarget },
+      "/ws": { target: apiProxyTarget, ws: true },
+    },
   },
   preview: { host: "0.0.0.0", port: 4173, strictPort: true },
   build: { target: "es2022" },
-});
+}));

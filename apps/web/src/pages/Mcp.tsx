@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Icon } from "../components/Icon";
 import { announce, Field, PageHead, TabNav } from "../components/ui";
+import { apiBaseUrl } from "../data/api/http";
 import type { Priority, Project, Task, TaskStatus } from "../data/types";
 import { useWorkspace, workspaceStore } from "../data/workspace";
 import { isOverdue, PRIORITIES, projectProgress, STATUSES, sourceLabel, ymd } from "../lib/format";
+import { useSession } from "../session";
 
 /* ==========================================================================
    Catálogo: espelha as ferramentas registradas em apps/mcp-server/src/tools.ts
@@ -185,7 +187,7 @@ function paged<T>(items: T[], args: Args) {
   };
 }
 
-function execute(ws: Workspace, name: string, args: Args): unknown {
+async function execute(ws: Workspace, name: string, args: Args): Promise<unknown> {
   const tool = toolByName(name) ?? fail("unknown_tool", `Ferramenta desconhecida: ${name}.`);
   const { db, can, act } = ws;
   if (!can(tool.cap))
@@ -331,7 +333,7 @@ function execute(ws: Workspace, name: string, args: Args): unknown {
           dueDate = ymd(when);
         }
       }
-      const created = act.runAs("mcp", () =>
+      const created = await act.runAs("mcp", () =>
         act.createTask({
           projectId: p.id,
           title: title.trim(),
@@ -358,7 +360,7 @@ function execute(ws: Workspace, name: string, args: Args): unknown {
           "version_conflict",
           `${t.ref} mudou desde a leitura (versão atual ${current}, enviada ${version}). Leia de novo com get-task.`,
         );
-      act.runAs("mcp", () => act.moveTask(t.id, status));
+      await act.runAs("mcp", () => act.moveTask(t.id, status));
       const after = workspaceStore.getSnapshot().db.tasks.find((x) => x.id === t.id);
       if (!after || after.status !== status)
         return fail("rejected", "O armazenamento recusou a mudança de status; veja o aviso exibido.");
@@ -394,7 +396,7 @@ function execute(ws: Workspace, name: string, args: Args): unknown {
    ========================================================================== */
 export function Mcp({ tab }: { tab?: string }) {
   const { me } = useWorkspace();
-  const active = tab === "test" ? "test" : "tools";
+  const active = tab === "test" || tab === "connect" ? tab : "tools";
   return (
     <>
       <PageHead
@@ -406,16 +408,143 @@ export function Mcp({ tab }: { tab?: string }) {
         items={[
           { key: "tools", label: `Ferramentas (${TOOLS.length})` },
           { key: "test", label: "Testar ferramenta" },
+          { key: "connect", label: "Conectar um agente" },
         ]}
         active={active}
         base="/mcp/"
       />
-      {active === "tools" ? <Catalog /> : <Console key={me.id} />}
+      {active === "tools" ? <Catalog /> : active === "connect" ? <Connect /> : <Console key={me.id} />}
     </>
   );
 }
 
+/** Address of the MCP server from the build configuration (VITE_API_BASE_URL); same origin when empty. */
+export function mcpServerUrl(): string {
+  return `${apiBaseUrl() || window.location.origin}/mcp`;
+}
+
+/** Copy button with an accessible name and a visible, announced "Copiado" confirmation. */
+function CopyButton({ text, what }: { text: string; what: string }) {
+  const { notify } = useWorkspace();
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    const fail = () => notify("Não foi possível copiar", "Selecione o texto e copie manualmente.", "warn");
+    if (!navigator.clipboard?.writeText) return fail();
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      announce(`${what} copiado.`);
+      setTimeout(() => setCopied(false), 2000);
+    }, fail);
+  };
+  return (
+    <button type="button" className="btn btn-sm" aria-label={`Copiar ${what}`} onClick={copy}>
+      <Icon name={copied ? "check" : "copy"} size={13} />
+      {copied ? "Copiado" : "Copiar"}
+    </button>
+  );
+}
+
+/** Code block with a copy button; `wrap` lets one-line commands break instead of scrolling sideways. */
+function Snippet({ text, what, wrap = false }: { text: string; what: string; wrap?: boolean }) {
+  return (
+    <div className="mcp-snippet">
+      <pre className={`code${wrap ? " wrap" : ""}`} data-copy={what}>
+        {text}
+      </pre>
+      <CopyButton text={text} what={what} />
+    </div>
+  );
+}
+
+/** How to connect Claude, ChatGPT or Cursor (deploy/README.md, "Conectar o MCP"). */
+function Connect() {
+  const url = mcpServerUrl();
+  const cursor = JSON.stringify({ mcpServers: { kairos: { url } } }, null, 2);
+  return (
+    <div className="stack">
+      <div className="panel">
+        <div className="panel-head">
+          <h2>Endereço do servidor MCP</h2>
+        </div>
+        <div className="panel-body">
+          <p className="muted">
+            Cole só este endereço no cliente. Ele descobre o login do Kairos sozinho: você entra com o seu
+            e-mail e a sua senha, e o agente passa a agir com as permissões do seu papel.
+          </p>
+          <Snippet text={url} what="endereço do servidor MCP" wrap />
+        </div>
+      </div>
+      <div className="grid c2">
+        <div className="panel">
+          <div className="panel-head">
+            <h2>Claude Code</h2>
+          </div>
+          <div className="panel-body">
+            <p className="muted">No terminal:</p>
+            <Snippet
+              text={`claude mcp add --scope user --transport http kairos ${url}`}
+              what="comando do Claude Code"
+              wrap
+            />
+            <p className="muted mt-3">
+              Com <span className="mono">--scope user</span> o servidor vale em qualquer pasta; sem ele, só na
+              pasta onde o comando foi executado. Depois, abra uma nova sessão do Claude Code e use{" "}
+              <kbd>/mcp</kbd> → <b>kairos</b> → <b>Authenticate</b>. O navegador abre a página de login do
+              Kairos.
+            </p>
+          </div>
+        </div>
+        <div className="panel">
+          <div className="panel-head">
+            <h2>Claude (web e Desktop)</h2>
+          </div>
+          <div className="panel-body">
+            <p className="muted">
+              Configurações → Conectores → Adicionar conector personalizado → cole o endereço acima → Conectar
+              e entre com o seu acesso do Kairos. Em planos Team ou Enterprise, um proprietário adiciona o
+              conector para a organização. O Claude Desktop usa os conectores da conta.
+            </p>
+          </div>
+        </div>
+        <div className="panel">
+          <div className="panel-head">
+            <h2>ChatGPT</h2>
+          </div>
+          <div className="panel-body">
+            <p className="muted">
+              Configurações → Apps e conectores → Configurações avançadas → ative o modo desenvolvedor. Depois
+              crie um conector com o endereço acima e autenticação OAuth. A disponibilidade depende do plano.
+            </p>
+          </div>
+        </div>
+        <div className="panel">
+          <div className="panel-head">
+            <h2>Cursor</h2>
+          </div>
+          <div className="panel-body">
+            <p className="muted">
+              Em <span className="mono">~/.cursor/mcp.json</span> (ou{" "}
+              <span className="mono">.cursor/mcp.json</span> do projeto):
+            </p>
+            <Snippet text={cursor} what="configuração do Cursor" />
+            <p className="muted mt-3">Em Settings → MCP, clique em Login no servidor kairos.</p>
+          </div>
+        </div>
+      </div>
+      <div className="banner info">
+        <Icon name="info" size={16} />
+        <span>
+          Requisitos: conta ativa numa empresa e senha provisória já trocada no Workspace. Quem participa de
+          mais de uma empresa escolhe a empresa no login do agente. Para desconectar, remova o conector no
+          cliente.
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function Catalog() {
+  const session = useSession();
   return (
     <div className="panel">
       <div className="tbl-wrap">
@@ -447,7 +576,9 @@ function Catalog() {
         </table>
       </div>
       <p className="page-note mt-3 pager">
-        No servidor os ids são UUIDs; o console usa os ids do Workspace (ex.: prj-pcl, tsk1).
+        {session
+          ? "Os ids são UUIDs; o console chama o servidor MCP real com o seu acesso."
+          : "No servidor os ids são UUIDs; o console usa os ids do Workspace (ex.: prj-pcl, tsk1)."}
       </p>
     </div>
   );
@@ -456,18 +587,49 @@ function Catalog() {
 const PLACEHOLDER = "// Execute uma ferramenta para ver a resposta JSON";
 
 /** Test console. Mounted with the profile as key: switching profiles clears tool, arguments and response. */
+/** MCP tool results carry JSON as text content; show it parsed when it is JSON. */
+function readable(response: unknown): unknown {
+  if (typeof response !== "object" || response === null) return response;
+  const rpc = response as {
+    result?: { content?: { type: string; text?: string }[]; isError?: boolean };
+    error?: unknown;
+  };
+  if (rpc.error) return { isError: true, error: rpc.error };
+  const content = rpc.result?.content;
+  if (!content?.length) return rpc.result ?? response;
+  const parsed = content.map((item) => {
+    if (item.type !== "text" || item.text === undefined) return item;
+    try {
+      return JSON.parse(item.text) as unknown;
+    } catch {
+      return item.text;
+    }
+  });
+  const data = parsed.length === 1 ? parsed[0] : parsed;
+  return rpc.result?.isError ? { isError: true, result: data } : data;
+}
+
 function Console() {
   const ws = useWorkspace();
+  const session = useSession();
   const { db, me } = ws;
+  // API mode: examples carry the version the Workspace last read from the service
+  const example = (definition: ToolDef | undefined) => {
+    const value = definition?.example(ws) ?? {};
+    if (session && definition?.name === "update-task-status" && typeof value.taskId === "string")
+      return { ...value, version: session.versionOf(value.taskId) ?? 1 };
+    return value;
+  };
   const [toolName, setToolName] = useState("list-tasks");
   const tool = toolByName(toolName) ?? TOOLS[0];
-  const [args, setArgs] = useState(() => JSON.stringify(tool?.example(ws) ?? {}, null, 2));
+  const [args, setArgs] = useState(() => JSON.stringify(example(tool), null, 2));
   const [argsError, setArgsError] = useState<string | null>(null);
   const [result, setResult] = useState<unknown>(null);
+  const [busy, setBusy] = useState(false);
   const roleName = db.roles.find((r) => r.id === me.roleId)?.name ?? me.roleId;
 
-  const run = () => {
-    if (!tool) return;
+  const run = async () => {
+    if (!tool || busy) return;
     let parsed: unknown;
     try {
       parsed = args.trim() ? JSON.parse(args) : {};
@@ -485,15 +647,28 @@ function Console() {
       return;
     }
     setArgsError(null);
+    setBusy(true);
     try {
       if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
         fail("invalid_args", "Os argumentos devem ser um objeto JSON.");
-      const data = execute(ws, tool.name, parsed as Args);
-      setResult(data);
-      announce("Ferramenta executada com sucesso.");
+      if (session) {
+        const data = readable(await session.callMcp(tool.name, parsed as Args));
+        setResult(data);
+        // the write went through ms-projects: read the organization again (realtime may lag)
+        if (tool.kind === "write") session.reload();
+        announce("Ferramenta executada.");
+      } else {
+        const data = await execute(ws, tool.name, parsed as Args);
+        setResult(data);
+        announce("Ferramenta executada com sucesso.");
+      }
     } catch (error) {
-      if (!(error instanceof ToolError)) throw error;
-      setResult({ isError: true, error: error.code, message: error.message });
+      if (error instanceof ToolError) setResult({ isError: true, error: error.code, message: error.message });
+      else if (error instanceof Error)
+        setResult({ isError: true, error: "request_failed", message: error.message });
+      else throw error;
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -514,7 +689,7 @@ function Console() {
                   const next = toolByName(event.target.value);
                   if (!next) return;
                   setToolName(next.name);
-                  setArgs(JSON.stringify(next.example(ws), null, 2));
+                  setArgs(JSON.stringify(example(next), null, 2));
                   setArgsError(null);
                 }}
               >
@@ -536,12 +711,20 @@ function Console() {
               onChange={(event) => setArgs(event.target.value)}
             />
           </Field>
-          <p className="subtle t12">
-            O console executa a ferramenta sobre os dados do Workspace, com as permissões do perfil ativo (
-            {roleName}). As de escrita alteram os dados e registram auditoria com origem “{sourceLabel("mcp")}
-            ”. O mcp-server real chama a API do ms-projects com o token do agente.
-          </p>
-          <button type="button" className="btn btn-primary" onClick={run}>
+          {session ? (
+            <p className="subtle t12">
+              O console chama o servidor MCP (<span className="mono">/mcp</span>) com o seu token de acesso e
+              as permissões do seu papel ({roleName}). As de escrita alteram os dados reais da empresa.
+            </p>
+          ) : (
+            <p className="subtle t12">
+              O console executa a ferramenta sobre os dados do Workspace, com as permissões do perfil ativo (
+              {roleName}). As de escrita alteram os dados e registram auditoria com origem “
+              {sourceLabel("mcp")}
+              ”. O mcp-server real chama a API do ms-projects com o token do agente.
+            </p>
+          )}
+          <button type="button" className="btn btn-primary" onClick={() => void run()} disabled={busy}>
             <Icon name="play" size={14} />
             Executar ferramenta
           </button>

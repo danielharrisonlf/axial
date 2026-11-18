@@ -7,6 +7,8 @@ const insightsPort = Number(process.env.INSIGHTS_E2E_PORT ?? 5174);
 
 export default defineConfig({
   testDir: "./tests",
+  // demo-mode suite; the API-mode suite against a running stack is playwright.stack.config.ts
+  testIgnore: ["stack/**"],
   timeout: 45_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,
@@ -33,7 +35,11 @@ export default defineConfig({
     {
       command: `pnpm dev --host 127.0.0.1 --port ${webPort}`,
       url: `http://127.0.0.1:${webPort}`,
-      env: { INSIGHTS_REMOTE_ENTRY: `http://localhost:${insightsPort}/remoteEntry.js` },
+      // VITE_API_BASE_URL: a recognizable gateway origin, so the MCP page test proves the URL comes from config
+      env: {
+        INSIGHTS_REMOTE_ENTRY: `http://localhost:${insightsPort}/remoteEntry.js`,
+        VITE_API_BASE_URL: "https://api.gateway.example.test",
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
     },

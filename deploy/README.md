@@ -19,6 +19,8 @@ Um build do monorepo, três imagens finais:
 
 O endereço do remote do Insights entra no build do Workspace pelo argumento `INSIGHTS_REMOTE_ENTRY`.
 
+O Workspace de produção é sempre o modo API (`VITE_WORKSPACE_SOURCE=api`, fixado no Dockerfile): login real no ms-identity e dados lidos dos serviços, sem dados de demonstração no bundle e sem dados de projeto no localStorage. A origem pública do gateway entra no build pelo argumento `VITE_API_BASE_URL` (padrão no Dockerfile: `https://api.kairos.noxlabs.tech`). No `compose.yaml`, em `x-build.args`, ao lado de `INSIGHTS_REMOTE_ENTRY`, acrescente `VITE_API_BASE_URL: https://api.${PUBLIC_HOST}` (sem ela vale o padrão do Dockerfile, o domínio atual). As variáveis que o navegador precisa já existem: `GATEWAY_CORS_ORIGINS` e `IDENTITY_TRUSTED_ORIGINS` com `https://${WEB_HOST}` (cookie de sessão), `IDENTITY_SIGNUP_ENABLED=true` e `MCP_ALLOWED_ORIGINS` com `https://${WEB_HOST}` (console MCP do Workspace).
+
 ## Primeiro passo de cada deploy
 
 O serviço `setup` roda `deploy/setup.sh` uma vez, antes dos demais (`service_completed_successfully`):

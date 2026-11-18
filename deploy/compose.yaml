@@ -21,6 +21,7 @@ x-build: &build
   dockerfile: deploy/Dockerfile
   args:
     INSIGHTS_REMOTE_ENTRY: https://insights.${PUBLIC_HOST}/remoteEntry.js
+    VITE_API_BASE_URL: https://api.${PUBLIC_HOST}
 
 # os sete serviços usam a mesma imagem, construída pelo serviço "setup"
 x-backend: &backend

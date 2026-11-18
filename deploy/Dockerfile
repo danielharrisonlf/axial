@@ -28,6 +28,12 @@ RUN --mount=type=cache,id=axial-pnpm,target=/pnpm/store pnpm install --offline -
 # endereço público do remote do Insights, embutido no build do Workspace
 ARG INSIGHTS_REMOTE_ENTRY=http://localhost:5174/remoteEntry.js
 ENV INSIGHTS_REMOTE_ENTRY=$INSIGHTS_REMOTE_ENTRY
+# origem pública do gateway, embutida no build do Workspace (modo API: login real e dados dos serviços);
+# vazio = mesma origem (só faz sentido com um proxy /api na frente do nginx do Workspace)
+ARG VITE_API_BASE_URL=https://api.kairos.noxlabs.tech
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# o build de produção é sempre "api"; "demo" existe só para pnpm dev:web e o e2e legado
+ENV VITE_WORKSPACE_SOURCE=api
 # 2 tarefas em paralelo: cabe com folga numa VPS de 2 vCPUs
 RUN pnpm turbo run build --concurrency=2
 

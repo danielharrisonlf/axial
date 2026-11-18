@@ -272,14 +272,19 @@ function QuickAdd({
           if (e.key === "Enter" && title.trim()) {
             e.preventDefault();
             // a sprint filtrada só vale se for deste projeto e não estiver encerrada
-            const t = act.createTask({
-              projectId: project.id,
-              title: title.trim(),
-              status,
-              sprintId:
-                sprint && sprint.projectId === project.id && sprint.status !== "done" ? sprint.id : null,
+            const typed = title.trim();
+            void Promise.resolve(
+              act.createTask({
+                projectId: project.id,
+                title: typed,
+                status,
+                sprintId:
+                  sprint && sprint.projectId === project.id && sprint.status !== "done" ? sprint.id : null,
+              }),
+            ).then((t) => {
+              // keep anything typed meanwhile; clear only the title that was created
+              if (t) setTitle((current) => (current.trim() === typed ? "" : current));
             });
-            if (t) setTitle("");
           }
         }}
       />
@@ -367,7 +372,7 @@ export function Board() {
   return (
     <>
       <PageHead title="Kanban" aside={picker}>
-        {can("task.create") && (
+        {can("task.create", p.id) && (
           <button type="button" className="btn btn-primary" onClick={() => ui.task({ projectId: p.id })}>
             <Icon name="plus" size={14} />
             Nova tarefa
@@ -531,7 +536,7 @@ export function Board() {
                       {late}
                     </span>
                   )}
-                  {can("task.create") && (
+                  {can("task.create", p.id) && (
                     <button
                       type="button"
                       className="btn btn-ghost btn-icon btn-sm"
@@ -573,7 +578,7 @@ export function Backlog() {
   return p ? (
     <>
       <PageHead title="Backlog" sub={`Tarefas de ${p.name} ainda fora de sprint.`} aside={picker}>
-        {can("task.create") && (
+        {can("task.create", p.id) && (
           <button
             type="button"
             className="btn btn-primary"
@@ -652,7 +657,7 @@ export function Sprints() {
         b.startDate.localeCompare(a.startDate) ||
         a.name.localeCompare(b.name),
     );
-  const newBtn = can("sprint.manage") && (
+  const newBtn = can("sprint.manage", p.id) && (
     <button type="button" className="btn btn-primary" onClick={() => setModal(true)}>
       <Icon name="plus" size={14} />
       Nova sprint
@@ -706,7 +711,7 @@ export function Sprints() {
                     {fmtDate(s.startDate)} → {fmtDate(s.endDate)}
                   </span>
                   <span className="spacer" />
-                  {can("sprint.manage") && (
+                  {can("sprint.manage", p.id) && (
                     <>
                       {s.status === "planned" && (
                         <button
@@ -841,8 +846,11 @@ function SprintModal({
       requestAnimationFrame(() => document.querySelector<HTMLElement>(".modal-card [aria-invalid]")?.focus());
       return;
     }
-    if (act.createSprint(project.id, { name: n, goal: goal.trim(), startDate: start, endDate: end }))
-      onClose();
+    void Promise.resolve(
+      act.createSprint(project.id, { name: n, goal: goal.trim(), startDate: start, endDate: end }),
+    ).then((created) => {
+      if (created) onClose();
+    });
   };
   return (
     <Overlay

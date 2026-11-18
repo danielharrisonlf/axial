@@ -414,6 +414,8 @@ export function TaskDrawer({ id, onClose }: { id: string; onClose: () => void })
   // keeps the drafts in sync when the task changes elsewhere (another tab, the board, the store)
   useEffect(() => setTitle(t?.title ?? ""), [t?.title]);
   useEffect(() => setDesc(t?.desc ?? ""), [t?.desc]);
+  // API mode: comments and history are read when the drawer opens (the demo keeps them in memory)
+  useEffect(() => workspaceStore.act.loadTask?.(id), [id]);
   // Esc (or any other close) unmounts the drawer before blur fires: commit what was typed
   const draft = useRef({ title, desc });
   draft.current = { title, desc };
@@ -509,7 +511,7 @@ export function TaskDrawer({ id, onClose }: { id: string; onClose: () => void })
 
   const subs = db.tasks.filter((x) => x.parentId === t.id);
   const subDone = subs.filter((x) => x.status === "done").length;
-  const canAddSub = edit && can("task.create") && !t.parentId;
+  const canAddSub = edit && can("task.create", t.projectId) && !t.parentId;
   const accDone = t.acceptance.filter((a) => a.done).length;
   const comments = db.comments.filter((c) => c.taskId === t.id).sort((a, b) => cmp(a.createdAt, b.createdAt));
   const hist = db.audit.filter((a) => a.entityType === "task" && a.entityId === t.id).slice(0, 12);
@@ -902,19 +904,23 @@ export function TaskDrawer({ id, onClose }: { id: string; onClose: () => void })
                 onKeyDown={(e) => {
                   if (!isEnter(e) || !sub.trim()) return;
                   e.preventDefault();
-                  const created = act.createTask({
-                    projectId: t.projectId,
-                    parentId: t.id,
-                    type: "subtask",
-                    title: sub.trim(),
-                    epicId: t.epicId,
-                    sprintId: db.sprints.some((s) => s.id === t.sprintId && s.status !== "done")
-                      ? t.sprintId
-                      : null,
-                    teamId: t.teamId,
-                    silent: true,
+                  const typed = sub.trim();
+                  void Promise.resolve(
+                    act.createTask({
+                      projectId: t.projectId,
+                      parentId: t.id,
+                      type: "subtask",
+                      title: typed,
+                      epicId: t.epicId,
+                      sprintId: db.sprints.some((s) => s.id === t.sprintId && s.status !== "done")
+                        ? t.sprintId
+                        : null,
+                      teamId: t.teamId,
+                      silent: true,
+                    }),
+                  ).then((created) => {
+                    if (created) setSub((current) => (current.trim() === typed ? "" : current));
                   });
-                  if (created) setSub("");
                 }}
               />
             </div>
@@ -941,7 +947,7 @@ export function TaskDrawer({ id, onClose }: { id: string; onClose: () => void })
           </div>
         );
       })}
-      {can("task.create") && (
+      {can("comment.create", t.projectId) && (
         <div className="comment-box">
           <textarea
             className="textarea"

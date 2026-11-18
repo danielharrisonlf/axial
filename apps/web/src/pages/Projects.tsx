@@ -75,7 +75,7 @@ export function ProjectMenu({ p, label = "Ações do projeto" }: { p: Project; l
         navigate("/board");
       },
     },
-    ...(can("project.edit") && !p.archived
+    ...(can("project.edit", p.id) && !p.archived
       ? [{ label: "Editar", icon: "edit", onClick: () => ui.project(p) }]
       : []),
     ...(can("project.archive")
@@ -448,7 +448,7 @@ export function ProjectDetail({ id, tab = "overview" }: { id: string; tab?: stri
   const milestones = db.milestones.filter((m) => m.projectId === id);
   const acts = db.audit.filter((a) => a.projectId === id && a.action !== "denied").slice(0, 7);
   const newEpic = (label: string) =>
-    can("task.create") && (
+    can("task.create", id) && (
       <button type="button" className="btn btn-sm" onClick={() => setEpic(true)}>
         <Icon name="plus" size={12} />
         {label}
@@ -477,7 +477,7 @@ export function ProjectDetail({ id, tab = "overview" }: { id: string; tab?: stri
           <Icon name="board" size={14} />
           Kanban
         </button>
-        {can("task.create") && (
+        {can("task.create", id) && (
           <button type="button" className="btn btn-primary" onClick={() => ui.task({ projectId: id })}>
             <Icon name="plus" size={14} />
             Nova tarefa
@@ -681,7 +681,7 @@ export function ProjectDetail({ id, tab = "overview" }: { id: string; tab?: stri
         </>
       )}
       {tab === "settings" &&
-        (can("project.edit") ? (
+        (can("project.edit", id) ? (
           <div className="stack narrow">
             <div className="panel">
               <div className="panel-head">
@@ -742,7 +742,8 @@ function EpicModal({ project, onClose }: { project: Project; onClose: () => void
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const submit = () => {
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
     const value = name.trim();
     if (!value) {
       setError("Informe o nome");
@@ -755,7 +756,10 @@ function EpicModal({ project, onClose }: { project: Project; onClose: () => void
       setError("Já existe um épico com esse nome neste projeto");
       return;
     }
-    if (!act.createEpic(project.id, { name: value, desc: desc.trim() })) return;
+    setBusy(true);
+    const created = await act.createEpic(project.id, { name: value, desc: desc.trim() });
+    setBusy(false);
+    if (!created) return;
     onClose();
     notify("Épico criado", value, "ok");
   };
@@ -768,7 +772,7 @@ function EpicModal({ project, onClose }: { project: Project; onClose: () => void
           <button type="button" className="btn" onClick={onClose}>
             Cancelar
           </button>
-          <button type="button" className="btn btn-primary" onClick={submit}>
+          <button type="button" className="btn btn-primary" onClick={() => void submit()} disabled={busy}>
             Criar épico
           </button>
         </>

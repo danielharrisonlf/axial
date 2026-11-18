@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { daysLeft, projectRisk, todayLocal } from "../lib/format";
 import demoSeed from "./demo-seed.json";
+import { createWorkspaceStore, STORAGE_KEY } from "./demo-store";
 import { createDemoData, SEED_VERSION } from "./seed";
-import { createWorkspaceStore, STORAGE_KEY } from "./workspace";
 
 const instant = new Date("2026-11-05T12:00:00.000Z");
 function required<T>(value: T | null | undefined): T {

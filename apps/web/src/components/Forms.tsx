@@ -46,7 +46,9 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
       u.id === existing?.leadId ||
       (!u.invited && u.orgId === orgId && ["admin", "pm", "lead"].includes(u.roleId)),
   );
-  const submit = () => {
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (busy) return;
     const er: Record<string, string> = {};
     const k = key.trim().toUpperCase();
     if (!name.trim()) er.name = "Informe o nome do projeto";
@@ -72,10 +74,13 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
       teamIds,
     };
     if (existing) {
-      act.updateProject(existing.id, { ...fields, status });
+      // optimistic in the API mode: the modal closes at once and a refusal rolls back with a toast
+      void act.updateProject(existing.id, { ...fields, status });
       onClose();
     } else {
-      const p = act.createProject({ ...fields, key: k });
+      setBusy(true);
+      const p = await act.createProject({ ...fields, key: k });
+      setBusy(false);
       if (p) {
         onClose();
         navigate(`/projects/${p.id}`);
@@ -92,7 +97,7 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
           <button type="button" className="btn" onClick={onClose}>
             Cancelar
           </button>
-          <button type="button" className="btn btn-primary" onClick={submit}>
+          <button type="button" className="btn btn-primary" onClick={() => void submit()} disabled={busy}>
             {existing ? "Salvar alterações" : "Criar projeto"}
           </button>
         </>
@@ -104,7 +109,7 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          submit();
+          void submit();
         }}
       >
         <Field label="Nome do projeto" wide required error={errors.name}>
@@ -203,7 +208,8 @@ const labelStyle = (name: string) =>
 
 export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults; onClose: () => void }) {
   const { db, me, can, visibleProjects, act } = useWorkspace();
-  const projects = visibleProjects.filter((p) => p.status !== "done");
+  // with a project id the API store applies the per-project policy (TEAM_LEAD: own teams only)
+  const projects = visibleProjects.filter((p) => p.status !== "done" && can("task.create", p.id));
   const membersOf = (projectId: string) => {
     const project = db.projects.find((p) => p.id === projectId);
     return db.users.filter(
@@ -237,14 +243,17 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
     setForm((f) => ({ ...f, [key]: value }));
   const members = membersOf(form.projectId);
   const labels = form.labels ?? [];
-  const submit = () => {
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (busy) return;
     if (!form.title.trim()) {
       setError("Informe o título da tarefa");
       failed();
       return;
     }
     setError("");
-    const t = act.createTask({
+    setBusy(true);
+    const t = await act.createTask({
       ...form,
       title: form.title.trim(),
       desc: form.desc?.trim() ?? "",
@@ -254,6 +263,7 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
         .filter(Boolean)
         .map((text) => ({ text, done: false })),
     });
+    setBusy(false);
     if (t) onClose();
   };
   return (
@@ -275,8 +285,8 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
             type="button"
             className="btn btn-primary"
             aria-keyshortcuts="Control+Enter Meta+Enter"
-            onClick={submit}
-            disabled={!projects.length}
+            onClick={() => void submit()}
+            disabled={!projects.length || busy}
           >
             Criar tarefa
           </button>
@@ -287,10 +297,10 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
         ref={formRef}
         className="form-grid"
         noValidate
-        onKeyDown={submitShortcut(submit)}
+        onKeyDown={submitShortcut(() => void submit())}
         onSubmit={(e) => {
           e.preventDefault();
-          submit();
+          void submit();
         }}
       >
         <Field label="Projeto" wide>

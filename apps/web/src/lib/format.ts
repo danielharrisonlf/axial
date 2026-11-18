@@ -99,7 +99,7 @@ export function dueTone(task: Task): "late" | "soon" | "" {
   return d < 0 ? "late" : d <= 2 ? "soon" : "";
 }
 /** Data keeps a light-palette hex; the interface uses the themed categorical token. */
-const CAT_HEX = [
+export const CAT_HEX = [
   "#2B5FD9",
   "#6D4FC4",
   "#0E7490",
