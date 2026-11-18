@@ -10,6 +10,11 @@
 #   BETTER_AUTH_SECRET     segredo aleatório com 32+ caracteres
 #   AXIAL_SEED             true (padrão) popula a organização de demonstração
 #   AXIAL_DEMO_PASSWORD    senha (10 a 128 caracteres) das contas de demonstração; obrigatória com AXIAL_SEED=true
+#   RESEND_API_KEY         chave do Resend (envio); vazia desliga o e-mail
+#   RESEND_FROM            remetente num domínio verificado no Resend, ex.: Kairos <kairos@mail.noxlabs.tech>
+#   NOTIFICATIONS_VERIFICATION_PEPPER  32 bytes aleatórios em base64 (códigos de verificação)
+#   NOTIFICATIONS_VERIFY_EMAIL         true habilita a confirmação de e-mail por código
+#   NOTIFICATIONS_TRUST_EXTERNAL_VERIFICATION  true libera o envio das notificações comuns
 
 x-build: &build
   context: ..
@@ -118,6 +123,12 @@ services:
       NOTIFICATIONS_PUBLIC_KEY_PATH: /app/keys/dev-public.pem
       NOTIFICATIONS_JWT_ISSUER: https://api.${PUBLIC_HOST}/identity
       NOTIFICATIONS_JWT_AUDIENCE: axial-projects
+      # e-mail pelo Resend; vazios deixam o canal desligado (segredos só no Dokploy)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: ${RESEND_FROM:-}
+      NOTIFICATIONS_VERIFICATION_PEPPER: ${NOTIFICATIONS_VERIFICATION_PEPPER:-}
+      NOTIFICATIONS_VERIFY_EMAIL: ${NOTIFICATIONS_VERIFY_EMAIL:-false}
+      NOTIFICATIONS_TRUST_EXTERNAL_VERIFICATION: ${NOTIFICATIONS_TRUST_EXTERNAL_VERIFICATION:-false}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3003/api/v1/health/live"]
       interval: 15s
