@@ -41,6 +41,22 @@ Convenções baseadas nos repositórios recentes `suporte-app`, `finflow` e `omn
 
 Requisitos: Node.js 22.12 ou superior, pnpm 10.11.1 e Docker com contêineres Linux.
 
+### Tudo com um comando (build local, como na apresentação)
+
+```powershell
+pnpm install --frozen-lockfile
+pnpm start
+```
+
+`pnpm start` cria o `.env` e as chaves locais se faltarem, sobe PostgreSQL e Redis no Docker, aplica as migrations dos quatro schemas e o seed de demonstração, compila o monorepo e inicia os nove serviços a partir do build, sem hot reload. Ele espera todos ficarem saudáveis, mostra os endereços e fica no ar até `Ctrl+C`, que encerra tudo. Em outro terminal, `pnpm stop` faz o mesmo.
+
+- Workspace: `http://localhost:4173` · Insights: `http://localhost:5174` · Gateway: `http://localhost:3000` · Swagger: `http://localhost:3001/docs` · MCP: `http://localhost:3006/mcp`.
+- `AXIAL_SKIP_INFRA=1` reaproveita Docker e banco já prontos; `AXIAL_SKIP_BUILD=1` reaproveita o build anterior (partida em segundos).
+- O comando para antes de começar se o Docker estiver fechado ou se as portas 3000–3006, 4173 e 5174 estiverem ocupadas por outro processo (por exemplo, um `pnpm dev` aberto), e diz qual é.
+- Os serviços rodam com `NODE_ENV=development` de propósito: o Swagger e o seed de demonstração ficam disponíveis. Em `production`, o Swagger é desligado e o seed é recusado. Logs em `output/validation/performance/logs`.
+
+### Passo a passo (desenvolvimento)
+
 ```powershell
 Copy-Item .env.example .env
 pnpm install --frozen-lockfile

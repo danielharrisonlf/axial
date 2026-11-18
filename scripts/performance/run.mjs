@@ -534,28 +534,36 @@ function report() {
   console.log("[report] docs/performance/resultados.json");
 }
 
+/** Docker (PostgreSQL e Redis), cliente Prisma, migrations dos quatro schemas e seed de demonstração. */
+async function prepareData({ skipInfra = false } = {}) {
+  if (!skipInfra) {
+    // sem o daemon, o docker compose falha com uma mensagem técnica: explica o que fazer
+    if (spawnSync("docker", ["info"], { stdio: "ignore" }).status !== 0)
+      throw new Error("O Docker não está rodando. Abra o Docker Desktop, espere ele iniciar e tente de novo.");
+    console.log("[infra] docker compose up");
+    await run("docker", ["compose", "up", "-d", "--wait"]);
+  }
+  const env = {
+    ...process.env,
+    DATABASE_URL: process.env.DATABASE_URL ?? `${db}?schema=projects`,
+    TEST_DATABASE_URL: process.env.TEST_DATABASE_URL ?? `${db}?schema=projects`,
+    IDENTITY_DATABASE_URL: process.env.IDENTITY_DATABASE_URL ?? db,
+    NOTIFICATIONS_DATABASE_URL: process.env.NOTIFICATIONS_DATABASE_URL ?? db,
+    AUDIT_DATABASE_URL: process.env.AUDIT_DATABASE_URL ?? db,
+  };
+  console.log("[db] migrations e seed");
+  await run(pnpm, ["db:generate"], { env });
+  await run(pnpm, ["db:migrate"], { env });
+  await run(pnpm, ["db:seed"], { env });
+  for (const script of ["db:identity:migrate", "db:notifications:migrate", "db:audit:migrate"])
+    await run(pnpm, [script], { env });
+}
+
 async function all() {
   let started = false;
   let failed = false;
   try {
-    if (process.env.PERF_SKIP_INFRA !== "1") {
-      console.log("[infra] docker compose up");
-      await run("docker", ["compose", "up", "-d", "--wait"]);
-    }
-    const env = {
-      ...process.env,
-      DATABASE_URL: process.env.DATABASE_URL ?? `${db}?schema=projects`,
-      TEST_DATABASE_URL: process.env.TEST_DATABASE_URL ?? `${db}?schema=projects`,
-      IDENTITY_DATABASE_URL: process.env.IDENTITY_DATABASE_URL ?? db,
-      NOTIFICATIONS_DATABASE_URL: process.env.NOTIFICATIONS_DATABASE_URL ?? db,
-      AUDIT_DATABASE_URL: process.env.AUDIT_DATABASE_URL ?? db,
-    };
-    console.log("[db] migrations e seed");
-    await run(pnpm, ["db:generate"], { env });
-    await run(pnpm, ["db:migrate"], { env });
-    await run(pnpm, ["db:seed"], { env });
-    for (const script of ["db:identity:migrate", "db:notifications:migrate", "db:audit:migrate"])
-      await run(pnpm, [script], { env });
+    await prepareData({ skipInfra: process.env.PERF_SKIP_INFRA === "1" });
     console.log("[build] monorepo");
     await run(pnpm, ["build"]);
     await start();
@@ -573,9 +581,80 @@ async function all() {
   }
 }
 
+/**
+ * `pnpm start`: a aplicação inteira a partir do build, em um comando, até Ctrl+C.
+ * Prepara .env e chaves locais se faltarem, sobe Docker, aplica migrations e seed, compila,
+ * inicia os nove serviços, espera a saúde de todos e encerra tudo ao sair.
+ * AXIAL_SKIP_INFRA=1 reaproveita Docker e banco prontos; AXIAL_SKIP_BUILD=1 reaproveita o build.
+ */
+async function up() {
+  const pidsFile = join(perfDir, "pids.json");
+  const ours = new Set(
+    existsSync(pidsFile) ? JSON.parse(readFileSync(pidsFile, "utf8")).map((entry) => entry.port) : [],
+  );
+  const busy = [];
+  for (const service of services)
+    if (!ours.has(service.port) && (await portOpen(service.port)))
+      busy.push(`${service.port} (${service.name})`);
+  if (busy.length)
+    throw new Error(
+      `Portas ocupadas por outros processos: ${busy.join(", ")}.\n` +
+        "Feche esses processos (por exemplo, um `pnpm dev` aberto) ou rode `pnpm stop` e tente de novo.",
+    );
+  if (!existsSync(join(root, ".env"))) {
+    copyFileSync(join(root, ".env.example"), join(root, ".env"));
+    console.log("[setup] .env criado a partir de .env.example (credenciais só locais)");
+  }
+  if (!existsSync(join(root, "keys/dev-public.pem"))) {
+    console.log("[setup] gerando as chaves locais de identidade");
+    await run(process.execPath, [join(root, "scripts/dev-identity.mjs"), "init"]);
+  }
+  await prepareData({ skipInfra: process.env.AXIAL_SKIP_INFRA === "1" });
+  if (process.env.AXIAL_SKIP_BUILD !== "1") {
+    console.log("[build] monorepo");
+    await run(pnpm, ["build"]);
+  }
+  await start();
+  console.log(`
+Axial no ar (build local; Ctrl+C encerra tudo)
+  Workspace ......... http://localhost:4173
+  Insights (remote) . http://localhost:5174
+  Gateway ........... http://localhost:3000
+  API e Swagger ..... http://localhost:3001/docs
+  Servidor MCP ...... http://localhost:3006/mcp
+  Painel de desempenho: em outro terminal, pnpm perf:demo  (http://127.0.0.1:4900)
+  Token de teste ...... node scripts/dev-identity.mjs token PROJECT_MANAGER
+  Logs ................ output/validation/performance/logs
+`);
+  let stopping = false;
+  const shutdown = async () => {
+    if (stopping) return;
+    stopping = true;
+    console.log("\n[stack] encerrando…");
+    await stop();
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+  // avisa (uma vez por serviço) se algum processo cair durante a apresentação
+  const down = new Set();
+  setInterval(async () => {
+    for (const service of services) {
+      const open = await portOpen(service.port);
+      if (!open && !down.has(service.name)) {
+        down.add(service.name);
+        console.warn(
+          `[stack] ${service.name} parou de responder na porta ${service.port}; veja logs/${service.name}.log`,
+        );
+      } else if (open && down.delete(service.name)) console.log(`[stack] ${service.name} voltou`);
+    }
+  }, 15_000);
+}
+
 const command = process.argv[2] ?? "all";
 try {
-  if (command === "stack") await start();
+  if (command === "up") await up();
+  else if (command === "stack") await start();
   else if (command === "stop") await stop();
   else if (command === "load") await load();
   else if (command === "web") await web();
@@ -584,6 +663,7 @@ try {
   else if (command === "all") await all();
   else throw new Error(`Comando desconhecido: ${command}`);
 } catch (error) {
-  console.error(error);
+  // `pnpm start` mostra só a mensagem (escrita para quem vai apresentar); os demais, o erro completo
+  console.error(command === "up" && error instanceof Error ? `\n${error.message}` : error);
   process.exitCode = 1;
 }

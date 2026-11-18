@@ -47,6 +47,8 @@
     "test:gateway:integration": "pnpm --filter @axial/gateway test:integration",
     "test:mcp:integration": "pnpm --filter @axial/mcp-server test:integration",
     "test:audit:integration": "pnpm --filter @axial/ms-audit test:integration",
+    "start": "node scripts/performance/run.mjs up",
+    "stop": "node scripts/performance/run.mjs stop",
     "perf": "node scripts/performance/run.mjs all",
     "perf:stack": "node scripts/performance/run.mjs stack",
     "perf:stop": "node scripts/performance/run.mjs stop",
