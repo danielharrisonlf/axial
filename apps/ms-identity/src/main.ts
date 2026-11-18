@@ -1,6 +1,6 @@
 import "reflect-metadata";
+import "./env.js";
 import { createHmac, randomUUID } from "node:crypto";
-import { fileURLToPath } from "node:url";
 import {
   BadRequestException,
   Body,
@@ -20,19 +20,30 @@ import {
   Req,
   Res,
   ServiceUnavailableException,
-  UnauthorizedException,
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
-import { config as loadEnv } from "dotenv";
 import type { Request, Response } from "express";
 import { exportJWK } from "jose";
 import type { PoolClient } from "pg";
 import { z } from "zod";
-import { BETTER_AUTH_BASE_PATH, createAuth } from "./auth.js";
-import { pool } from "./db.js";
+import { BETTER_AUTH_BASE_PATH } from "./auth.js";
+import {
+  email,
+  isDuplicateEmail,
+  name,
+  parse,
+  password,
+  pathUuid,
+  type Role,
+  roles,
+  strict,
+  uuid,
+} from "./common.js";
+import { DirectoryController } from "./directory.controller.js";
+import { deliverLogin, IdentityService } from "./identity.service.js";
+import { InvitationsController, InvitationsService } from "./invitations.js";
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   AUTHORIZATION_CODE_TTL_SECONDS,
@@ -65,50 +76,16 @@ import {
   verifyPkce,
 } from "./oauth.js";
 import { renderAuthorizePage, renderErrorPage } from "./oauth-page.js";
-import {
-  isDelegatedToken,
-  isPasswordChangeToken,
-  issuer,
-  loadKeys,
-  signAccessToken,
-  signDelegatedAccessToken,
-  signPasswordChangeToken,
-  verifyAccessToken,
-} from "./tokens.js";
+import { auth, db, privateKey, publicKey, settings } from "./runtime.js";
+import { issuer, signDelegatedAccessToken } from "./tokens.js";
 
-loadEnv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet: true });
-
-const roles = z.enum(["ADMIN", "PROJECT_MANAGER", "TEAM_LEAD", "CONTRIBUTOR", "VIEWER"]);
-const uuid = z.uuid();
-const email = z
-  .email()
-  .max(254)
-  .transform((value) => value.toLowerCase());
-const password = z.string().min(14).max(128);
-const name = z.string().trim().min(1).max(120);
-const strict = <T extends z.ZodRawShape>(shape: T) => z.strictObject(shape);
-function parse<T>(schema: z.ZodType<T>, data: unknown): T {
-  const result = schema.safeParse(data);
-  if (!result.success) throw new BadRequestException("Invalid request");
-  return result.data;
-}
-function pathUuid(id: string): string {
-  return parse(uuid, id);
-}
-function betterAuthStatus(error: unknown): string | undefined {
-  return (error as { status?: string } | null)?.status;
-}
-function isDuplicateEmail(error: unknown): boolean {
-  const status = betterAuthStatus(error);
-  const message = (error as { body?: { message?: string }; message?: string } | null)?.body?.message ?? "";
-  return (
-    status === "CONFLICT" || status === "UNPROCESSABLE_ENTITY" || /already exists|user already/i.test(message)
-  );
-}
-
-const db = pool();
-const auth = createAuth(db);
-const { privateKey, publicKey } = await loadKeys();
+const MIGRATIONS = [
+  "001_initial",
+  "002_password_activation",
+  "003_betterauth",
+  "004_oauth",
+  "005_profiles_invitations",
+];
 // The OAuth endpoints are mounted under /identity, so they exist only for an issuer with that path.
 const oauthEnabled = issuerServesOAuth(issuer);
 if (!oauthEnabled)
@@ -130,270 +107,6 @@ const ticketKey = createHmac("sha256", betterAuthSecret)
   .update("kairos-oauth-login-ticket")
   .digest("base64url");
 const publicJwk = { ...(await exportJWK(publicKey)), alg: "RS256", use: "sig" };
-type Role = z.infer<typeof roles>;
-interface Actor {
-  userId: string;
-  organizationId: string;
-  role: Role;
-  source: "api" | "ui" | "mcp" | "automation";
-}
-interface Membership {
-  role: Role;
-  must_change_password: boolean;
-}
-
-@Injectable()
-class IdentityService {
-  private readonly attempts = new Map<string, { count: number; until: number }>();
-  private authenticationInFlight = 0;
-
-  async limitAuthentication<T>(ip: string, action: string, work: () => Promise<T>): Promise<T> {
-    const now = Date.now();
-    for (const [key, value] of this.attempts) if (value.until <= now) this.attempts.delete(key);
-    const key = `${action}:${ip}`;
-    const limit = this.attempts.get(key);
-    if ((!limit && this.attempts.size >= 10000) || (limit && limit.count >= 20))
-      throw new HttpException("Too many attempts", 429);
-    if (limit) limit.count++;
-    else this.attempts.set(key, { count: 1, until: now + 60000 });
-    if (this.authenticationInFlight >= 4) throw new HttpException("Too many attempts", 429);
-    this.authenticationInFlight++;
-    try {
-      return await work();
-    } finally {
-      this.authenticationInFlight--;
-    }
-  }
-
-  async membership(userId: string, organizationId: string): Promise<Membership | undefined> {
-    const result = await db.query<Membership>(
-      `SELECT m.role, u."mustChangePassword" AS must_change_password
-         FROM identity.members m
-         JOIN identity."user" u ON u.id = m.user_id
-         JOIN identity.organizations o ON o.id = m.organization_id
-        WHERE m.user_id=$1 AND m.organization_id=$2 AND m.active AND o.active`,
-      [userId, organizationId],
-    );
-    return result.rows[0];
-  }
-
-  async claims(
-    userId: string,
-    organizationId: string,
-    role: Role,
-  ): Promise<Parameters<typeof signAccessToken>[1]> {
-    const [teams, projects, users, assignableTeams] = await Promise.all([
-      db.query<{ id: string }>(
-        "SELECT tm.team_id AS id FROM identity.team_members tm JOIN identity.teams t ON t.organization_id=tm.organization_id AND t.id=tm.team_id WHERE tm.organization_id=$1 AND tm.user_id=$2 AND t.active ORDER BY tm.team_id",
-        [organizationId, userId],
-      ),
-      db.query<{ id: string }>(
-        "SELECT project_id AS id FROM identity.project_assignments WHERE organization_id=$1 AND user_id=$2 ORDER BY project_id",
-        [organizationId, userId],
-      ),
-      db.query<{ id: string }>(
-        'SELECT m.user_id AS id FROM identity.members m JOIN identity."user" u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.active ORDER BY m.user_id',
-        [organizationId],
-      ),
-      db.query<{ id: string }>(
-        "SELECT id FROM identity.teams WHERE organization_id=$1 AND active ORDER BY id",
-        [organizationId],
-      ),
-    ]);
-    const ids = (rows: { id: string }[]) => rows.map((row) => row.id);
-    return {
-      userId,
-      organizationId,
-      role,
-      teamIds: ids(teams.rows),
-      projectIds: ids(projects.rows),
-      assignableUserIds: ids(users.rows),
-      assignableTeamIds: ids(assignableTeams.rows),
-      source: "api",
-    };
-  }
-
-  private async jwtActor(
-    token: string,
-    options: { admin?: boolean; passwordChange?: boolean },
-  ): Promise<Actor> {
-    let claims: Awaited<ReturnType<typeof verifyAccessToken>>;
-    try {
-      claims = await verifyAccessToken(publicKey, token, {
-        passwordChange: options.passwordChange,
-      });
-    } catch {
-      throw new UnauthorizedException();
-    }
-    // Tokens delegated to an MCP client are limited to their scopes on the projects API.
-    if (isDelegatedToken(claims)) throw new UnauthorizedException();
-    const temporary = isPasswordChangeToken(claims);
-    if (options.passwordChange ? !temporary : temporary) throw new UnauthorizedException();
-    const membership = await this.membership(claims.sub, claims.organizationId);
-    if (!membership) throw new UnauthorizedException();
-    if (temporary !== membership.must_change_password) throw new UnauthorizedException();
-    if (options.admin && membership.role !== "ADMIN") throw new ForbiddenException();
-    return {
-      userId: claims.sub,
-      organizationId: claims.organizationId,
-      role: membership.role,
-      source: "api",
-    };
-  }
-
-  private async sessionActor(req: Request, admin = false): Promise<Actor> {
-    const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-    if (!session) throw new UnauthorizedException();
-    const header = req.headers["x-organization-id"];
-    const requested = Array.isArray(header) ? header[0] : header;
-    let organizationId: string | undefined;
-    if (requested) {
-      organizationId = pathUuid(requested);
-      const membership = await this.membership(session.user.id, organizationId);
-      if (!membership) throw new UnauthorizedException();
-      if (membership.must_change_password) throw new UnauthorizedException();
-      if (admin && membership.role !== "ADMIN") throw new ForbiddenException();
-      return { userId: session.user.id, organizationId, role: membership.role, source: "api" };
-    }
-    const memberships = await db.query<{ organization_id: string; role: Role }>(
-      `SELECT m.organization_id, m.role FROM identity.members m
-         JOIN identity."user" u ON u.id=m.user_id
-         JOIN identity.organizations o ON o.id=m.organization_id
-        WHERE m.user_id=$1 AND m.active AND o.active AND NOT u."mustChangePassword"`,
-      [session.user.id],
-    );
-    if (memberships.rowCount !== 1) throw new UnauthorizedException();
-    const only = memberships.rows[0];
-    if (!only) throw new UnauthorizedException();
-    if (admin && only.role !== "ADMIN") throw new ForbiddenException();
-    return {
-      userId: session.user.id,
-      organizationId: only.organization_id,
-      role: only.role,
-      source: "api",
-    };
-  }
-
-  async actor(req: Request, options: { admin?: boolean; passwordChange?: boolean } = {}): Promise<Actor> {
-    const authorization = req.headers.authorization;
-    if (authorization && /^Bearer \S+$/i.test(authorization)) {
-      const token = authorization.slice(7);
-      if (token.split(".").length === 3) return this.jwtActor(token, options);
-    }
-    if (options.passwordChange) throw new UnauthorizedException();
-    return this.sessionActor(req, options.admin);
-  }
-
-  async login(
-    req: Request,
-    data: unknown,
-  ): Promise<{
-    accessToken: string;
-    expiresIn: number;
-    requiresPasswordChange: boolean;
-    sessionToken?: string;
-  }> {
-    const input = parse(strict({ email, password: z.string().max(128), organizationId: uuid }), data);
-    let signedIn: Awaited<ReturnType<typeof auth.api.signInEmail>>;
-    try {
-      signedIn = await auth.api.signInEmail({
-        body: { email: input.email, password: input.password },
-        headers: fromNodeHeaders(req.headers),
-      });
-    } catch {
-      throw new UnauthorizedException("Invalid credentials");
-    }
-    const user = signedIn.user as typeof signedIn.user & { mustChangePassword?: boolean };
-    const membership = await this.membership(user.id, input.organizationId);
-    if (!membership) throw new UnauthorizedException("Invalid credentials");
-    if (membership.must_change_password) {
-      const accessToken = await signPasswordChangeToken(privateKey, user.id, input.organizationId);
-      return {
-        accessToken,
-        expiresIn: 300,
-        requiresPasswordChange: true,
-        sessionToken: signedIn.token,
-      };
-    }
-    const claims = await this.claims(user.id, input.organizationId, membership.role);
-    const accessToken = await signAccessToken(privateKey, claims);
-    if (Buffer.byteLength(`Bearer ${accessToken}`) > 7000)
-      throw new HttpException("Authorization snapshot exceeds the supported header size", 422);
-    return {
-      accessToken,
-      expiresIn: 300,
-      requiresPasswordChange: false,
-      sessionToken: signedIn.token,
-    };
-  }
-
-  async exchangeSession(req: Request): Promise<{ accessToken: string; expiresIn: number }> {
-    const actor = await this.sessionActor(req);
-    const claims = await this.claims(actor.userId, actor.organizationId, actor.role);
-    const accessToken = await signAccessToken(privateKey, claims);
-    if (Buffer.byteLength(`Bearer ${accessToken}`) > 7000)
-      throw new HttpException("Authorization snapshot exceeds the supported header size", 422);
-    return { accessToken, expiresIn: 300 };
-  }
-
-  async logout(req: Request): Promise<{ signedOut: boolean }> {
-    try {
-      await auth.api.signOut({ headers: fromNodeHeaders(req.headers) });
-    } catch {
-      // An already-expired or absent session is still a completed logout.
-    }
-    return { signedOut: true };
-  }
-
-  async changePassword(req: Request, data: unknown): Promise<{ changed: boolean }> {
-    const actor = await this.actor(req, { passwordChange: true });
-    const input = parse(strict({ currentPassword: z.string().max(128), newPassword: password }), data);
-    if (input.currentPassword === input.newPassword)
-      throw new BadRequestException("New password must differ");
-    const current = await db.query<{ password: string | null }>(
-      `SELECT password FROM identity.account WHERE "userId"=$1 AND "providerId"='credential'`,
-      [actor.userId],
-    );
-    const encoded = current.rows[0]?.password;
-    if (!encoded || !(await verifyPassword({ hash: encoded, password: input.currentPassword })))
-      throw new UnauthorizedException("Invalid credentials");
-    const hash = await hashPassword(input.newPassword);
-    await db.query(
-      `UPDATE identity.account SET password=$2, "updatedAt"=now() WHERE "userId"=$1 AND "providerId"='credential'`,
-      [actor.userId, hash],
-    );
-    await db.query(`UPDATE identity."user" SET "mustChangePassword"=false, "updatedAt"=now() WHERE id=$1`, [
-      actor.userId,
-    ]);
-    await db.query(`DELETE FROM identity.session WHERE "userId"=$1`, [actor.userId]);
-    return { changed: true };
-  }
-
-  async resetPassword(actor: Actor, rawId: string, data: unknown): Promise<{ changed: boolean }> {
-    const userId = pathUuid(rawId);
-    const input = parse(strict({ newPassword: password }), data);
-    const member = await db.query("SELECT 1 FROM identity.members WHERE organization_id=$1 AND user_id=$2", [
-      actor.organizationId,
-      userId,
-    ]);
-    if (!member.rowCount) throw new NotFoundException();
-    const hash = await hashPassword(input.newPassword);
-    const updated = await db.query(
-      `UPDATE identity.account SET password=$2, "updatedAt"=now() WHERE "userId"=$1 AND "providerId"='credential'`,
-      [userId, hash],
-    );
-    if (!updated.rowCount)
-      await db.query(
-        `INSERT INTO identity.account(id,"providerId","accountId","userId",password) VALUES($1,'credential',$2,$2,$3)`,
-        [randomUUID(), userId, hash],
-      );
-    await db.query(`UPDATE identity."user" SET "mustChangePassword"=true, "updatedAt"=now() WHERE id=$1`, [
-      userId,
-    ]);
-    await db.query(`DELETE FROM identity.session WHERE "userId"=$1`, [userId]);
-    return { changed: true };
-  }
-}
 
 interface OAuthClient {
   client_id: string;
@@ -894,31 +607,46 @@ class IdentityController {
     return { status: "ok" };
   }
   @Get("health/ready") async ready() {
-    const required = ["001_initial", "002_password_activation", "003_betterauth", "004_oauth"];
     try {
       const result = await db.query("SELECT id FROM identity.schema_migrations WHERE id = ANY($1::text[])", [
-        required,
+        MIGRATIONS,
       ]);
-      if (result.rowCount !== required.length) throw new ServiceUnavailableException();
+      if (result.rowCount !== MIGRATIONS.length) throw new ServiceUnavailableException();
       await db.query('SELECT 1 FROM identity."user" LIMIT 1');
     } catch {
       throw new ServiceUnavailableException("Database not ready");
     }
     return { status: "ok" };
   }
-  @Post("auth/login") login(@Req() req: Request, @Body() body: unknown) {
-    return this.service.limitAuthentication(req.ip ?? "unknown", "login", () =>
+  @Post("auth/login") async login(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: unknown,
+  ) {
+    const result = await this.service.limitAuthentication(req.ip ?? "unknown", "login", () =>
       this.service.login(req, body),
     );
+    return deliverLogin(req, res, result);
+  }
+  @Post("auth/signup") async signup(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: unknown,
+  ) {
+    if (!settings.IDENTITY_SIGNUP_ENABLED) throw new NotFoundException();
+    const result = await this.service.limitAuthentication(req.ip ?? "unknown", "signup", () =>
+      this.service.signup(req, body),
+    );
+    return deliverLogin(req, res, result);
   }
   @Post("auth/session") exchangeSession(@Req() req: Request) {
     return this.service.exchangeSession(req);
   }
-  @Post("auth/logout") @HttpCode(200) logout(@Req() req: Request) {
-    return this.service.logout(req);
+  @Post("auth/logout") @HttpCode(200) logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.service.logout(req, res);
   }
   @Get("me") async me(@Req() req: Request) {
-    return this.service.actor(req);
+    return this.service.me(req);
   }
   @Get("organization") async organization(@Req() req: Request) {
     const a = await this.service.actor(req);
@@ -1414,18 +1142,19 @@ class OAuthController {
   }
 }
 
+const controllers = [IdentityController, DirectoryController, InvitationsController];
 @Module({
-  controllers: oauthEnabled ? [IdentityController, OAuthController] : [IdentityController],
-  providers: [IdentityService, OAuthService],
+  controllers: oauthEnabled ? [...controllers, OAuthController] : controllers,
+  providers: [IdentityService, OAuthService, InvitationsService],
 })
 class AppModule {}
 
 const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
-const origins = (process.env.IDENTITY_TRUSTED_ORIGINS ?? "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-app.enableCors({ origin: origins, credentials: true });
+// Behind the gateway the client address is the last X-Forwarded-For entry; the rate limits
+// count per client. Without a trusted proxy the header is ignored.
+app.set("trust proxy", settings.IDENTITY_TRUST_PROXY || false);
+// Credentials (the session cookie) are accepted only from the configured Workspace origins.
+app.enableCors({ origin: settings.IDENTITY_TRUSTED_ORIGINS, credentials: true });
 // OAuth endpoints and metadata live under the issuer URL, not under the API prefix.
 app.setGlobalPrefix("api/v1", { exclude: UNPREFIXED_ROUTES });
 app.enableShutdownHooks();
@@ -1437,8 +1166,8 @@ app.use((req: Request, res: import("express").Response, next: (error?: unknown) 
     next();
     return;
   }
-  // Public self-signup would create credentials without organization membership.
-  // Accounts are provisioned by an administrator or the bootstrap command.
+  // BetterAuth's signup would create credentials without organization membership. Accounts
+  // come from auth/signup, invitations, an administrator or the bootstrap command.
   if (path.startsWith(`${BETTER_AUTH_BASE_PATH}/sign-up`)) {
     res.writeHead(404, { "content-type": "application/json" });
     res.end('{"error":"Not found"}');

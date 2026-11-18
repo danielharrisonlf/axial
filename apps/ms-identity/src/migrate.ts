@@ -13,7 +13,13 @@ try {
     await client.query("SELECT pg_advisory_xact_lock(hashtext('axial-identity-migrate'))");
     await client.query("CREATE SCHEMA IF NOT EXISTS identity");
     await client.query("CREATE TABLE IF NOT EXISTS identity.schema_migrations (id text PRIMARY KEY)");
-    for (const id of ["001_initial", "002_password_activation", "003_betterauth", "004_oauth"]) {
+    for (const id of [
+      "001_initial",
+      "002_password_activation",
+      "003_betterauth",
+      "004_oauth",
+      "005_profiles_invitations",
+    ]) {
       const exists = await client.query("SELECT 1 FROM identity.schema_migrations WHERE id=$1", [id]);
       if (!exists.rowCount) {
         const sql = await readFile(new URL(`../migrations/${id}.sql`, import.meta.url), "utf8");

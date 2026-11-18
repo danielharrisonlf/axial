@@ -45,6 +45,8 @@ const env = {
   BETTER_AUTH_URL: base,
   IDENTITY_TRUSTED_ORIGINS: "http://localhost:5173",
   IDENTITY_PORT: String(port),
+  // Called directly: X-Forwarded-For is not trusted.
+  IDENTITY_TRUST_PROXY: "0",
   IDENTITY_BOOTSTRAP_EMAIL: "admin@example.test",
   IDENTITY_BOOTSTRAP_PASSWORD: "a-secure-test-password",
   IDENTITY_BOOTSTRAP_ORGANIZATION: "Alpha organization",
@@ -654,6 +656,13 @@ try {
   }
   assert.ok(throttled, "the login form is rate limited");
   assert.match(throttled, /Muitas tentativas/);
+  // Without IDENTITY_TRUST_PROXY a forged X-Forwarded-For does not open a new bucket.
+  const forged = await form(
+    "/identity/oauth/authorize",
+    { ...hidden(limited.html), email: "admin@example.test", password: "wrong-password-value" },
+    { cookie: limited.cookie, "x-forwarded-for": "203.0.113.50" },
+  );
+  assert.equal(forged.status, 429);
 
   console.log(
     "OAuth integration passed: metadata, registration, consent/CSRF, code+PKCE, reuse, expiry, rotation, revocation, organizations and rate limit",
