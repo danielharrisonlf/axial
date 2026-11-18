@@ -238,5 +238,7 @@ Resultados e comparação completa em [relatório de desempenho](docs/performanc
 - [Relatório de realtime e notificações](docs/relatorio-realtime-notifications.md)
 - [Relatório da interface de notificações](docs/relatorio-notificacoes-workspace.md)
 - [Provedores de notificações e limites](docs/relatorio-provedores-notificacoes.md)
+- [Servidor MCP: catálogo, scopes e conexão](apps/mcp-server/README.md)
+- [Relatório do servidor MCP](docs/relatorio-mcp-server.md)
 
-MCP, Insights Vue e o consumidor de auditoria estão implementados; o frontend continua usando dados de demonstração local. Notificações suportam Resend, SMSGo e WhatsApp Cloud API, com confirmação de posse por código; credenciais e templates devem ser configurados. Aceite do provedor não comprova entrega. O WebSocket envia invalidações e exige nova leitura pela API após reconexão.
+MCP (49 ferramentas, recursos `axial://` e 4 prompts sobre as APIs reais, HTTP com OAuth e stdio; conecte em `https://api.kairos.noxlabs.tech/mcp`), Insights Vue e o consumidor de auditoria estão implementados; o frontend continua usando dados de demonstração local. Notificações suportam Resend, SMSGo e WhatsApp Cloud API, com confirmação de posse por código; credenciais e templates devem ser configurados. Aceite do provedor não comprova entrega. O WebSocket envia invalidações e exige nova leitura pela API após reconexão.

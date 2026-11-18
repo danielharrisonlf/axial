@@ -88,7 +88,7 @@ A skill global `C:/Users/daniellima/.agents/skills/astra-orchestrator/SKILL.md` 
 
 ## Limites e próximos componentes
 
-- Não estão implementados ms-identity, ms-notifications, ms-audit, ms-realtime, gateway, mcp-server nem frontends React/Vue.
+- Não estão implementados ms-identity, ms-notifications, ms-audit, ms-realtime, gateway, mcp-server nem frontends React/Vue. (Situação desta entrega; o mcp-server foi entregue depois, com verificação própria em [relatorio-mcp-server.md](relatorio-mcp-server.md), incluindo E2E contra este serviço.)
 - Jobs publicados não comprovam entrega de mensagens, sincronização WebSocket ou gravação no futuro serviço de auditoria.
 - Referências de identidade são snapshots assinados; revogação imediata depende da futura integração com identidade.
 - OpenAPI possui schemas de entrada e parâmetros; não oferece schemas completos de resposta para geração automática de clientes nesta etapa.
