@@ -2,7 +2,7 @@
 
 Independent workspace: `C:/Users/daniellima/code/projetos/axial`.
 
-- Use only GPT-6.1 Sol (`gpt-6.1-sol`) with `high` reasoning for delegated planning, implementation, testing, review and repository operations, per the user's instruction. No automatic model substitution.
+- Delegated planning, implementation, testing, review and repository operations use only **Claude** (Claude Code) or **Gemini with `high` reasoning, Hydro or Argon models** (via Antigravity), per the user's instruction (updated 2026-11-18). Codex/GPT models are no longer used. No automatic model substitution outside this list.
 - Read README.md and docs/architecture.md before changing public behavior. The final ProjectFlow presentation is the source for architecture; see docs/requirements.md.
 - pnpm workspace + Turborepo, NestJS ESM, strict TypeScript, Prisma/PostgreSQL, shared Zod contracts, Biome and Vitest.
 - `apps/api` contains the NestJS ms-projects service; `apps/web` contains the React/Vite Workspace authorized by the user. Preserve the supplied prototype's visual system and interactions. Identity, notifications, audit, realtime, MCP, gateway and Insights remain external boundaries.
