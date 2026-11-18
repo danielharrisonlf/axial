@@ -9,8 +9,10 @@
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx src/migrate.ts",
+    "db:seed": "tsx src/seed-demo.ts",
+    "db:seed:test": "tsx src/seed-demo.ts --test",
     "test:unit": "vitest run",
-    "test:integration": "node test/integration.mjs"
+    "test:integration": "node test/integration.mjs && node test/seed.mjs"
   },
   "dependencies": {
     "@axial/contracts": "workspace:*",
@@ -28,6 +30,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@axial/demo-fixtures": "workspace:*",
     "@types/compression": "1.8.1",
     "@types/express": "5.0.6",
     "@types/node": "catalog:",

@@ -4,6 +4,8 @@ RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/observability/package.json packages/observability/package.json
+# the demo seeds are not part of the image build; the manifest keeps the workspace link resolvable
+COPY packages/demo-fixtures/package.json packages/demo-fixtures/package.json
 COPY apps/api/package.json apps/api/package.json
 RUN pnpm install --frozen-lockfile
 COPY packages/contracts packages/contracts
