@@ -128,3 +128,13 @@ Validação local (Windows, PostgreSQL/Redis do Compose, banco isolado com sufix
 - **Fora do cenário:** o comentário `cm12` e a entrada de auditoria `au69` do protótipo cruzam organizações e não são semeados. O seed do ms-identity ainda não existe; até lá, login real não encontra as pessoas do cenário (os tokens locais funcionam).
 
 Validação: seeds executados duas vezes em banco `_test` descartável (segunda execução sem inserções), além do teste de integração `apps/api/test/integration/demo-seed.test.ts` e do script `apps/ms-audit/test/seed.mjs`.
+
+## Atualização de 18/11/2026: cadastro de empresas, convites e sessão do navegador (ms-identity)
+
+- **Endereço do cliente:** o gateway confia em `GATEWAY_TRUST_PROXY` saltos (1 atrás do Traefik no Dokploy) e envia aos serviços só o endereço resolvido em `X-Forwarded-For`; o ms-identity confia em um salto (`IDENTITY_TRUST_PROXY=1`). Os limites de tentativa deixaram de ver o IP do gateway e passaram a contar por cliente.
+- **Login sem organização:** com um vínculo ativo devolve tokens; com vários, `{requiresOrganization, organizations, sessionToken}` sem access token, e a escolha é feita em `POST auth/session` com `X-Organization-Id`; sem vínculo, 401 genérico.
+- **Sessão do navegador:** cookie `kairos_session` (HttpOnly, Secure configurável, SameSite=Lax, `Path=/api/v1/auth`, host da API) aceito em `auth/session` e apagado em `auth/logout`; tokens dessas sessões têm `source=ui`.
+- **Cadastro e convites:** `POST auth/signup` (desligado por padrão, `IDENTITY_SIGNUP_ENABLED`) cria conta, empresa e administrador numa transação; convites por link (`/api/v1/invitations`, roteado pelo gateway) com token guardado só como hash, 7 dias, uso único; conta existente aceita só com a própria senha.
+- **Diretório:** `GET organization/members` e `GET organization/teams` para qualquer membro ativo; `GET me` com nome, e-mail, cargo e vínculos. Migration `005_profiles_invitations`.
+
+Validação local (Windows, PostgreSQL de teste em 5550): lint, typecheck, build e testes unitários aprovados; `test:identity:integration` (três suítes, incluindo a nova `accounts-integration.mjs`), `test:identity:interop` (com `BETTER_AUTH_SECRET` e Redis lógico 12), `test:gateway:integration` e `test:mcp:integration` aprovados. Não verificado: comportamento real do Traefik do Dokploy com `X-Forwarded-For` e o cookie num navegador no domínio público; o Workspace ainda não usa o cookie nem as telas de cadastro e convite. Não há rota para editar `teams.description`, `teams.lead_user_id` nem o cargo de um membro já existente.

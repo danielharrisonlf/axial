@@ -38,6 +38,7 @@ const env = {
   BETTER_AUTH_URL: "http://localhost:3202",
   IDENTITY_TRUSTED_ORIGINS: "http://localhost:5173",
   IDENTITY_PORT: "3202",
+  IDENTITY_SIGNUP_ENABLED: "false",
   IDENTITY_BOOTSTRAP_EMAIL: "admin@example.test",
   IDENTITY_BOOTSTRAP_PASSWORD: "a-secure-test-password",
   IDENTITY_BOOTSTRAP_ORGANIZATION: "Test organization",
@@ -97,13 +98,32 @@ try {
     return { status: response.status, body: await response.json() };
   }
 
-  for (const migration of ["001_initial", "002_password_activation", "003_betterauth", "004_oauth"]) {
+  for (const migration of [
+    "001_initial",
+    "002_password_activation",
+    "003_betterauth",
+    "004_oauth",
+    "005_profiles_invitations",
+  ]) {
     await db.query("DELETE FROM identity.schema_migrations WHERE id=$1", [migration]);
     assert.equal((await request("health/ready", null, null, "GET")).status, 503);
     assert.equal((await request("health/live", null, null, "GET")).status, 200);
     await db.query("INSERT INTO identity.schema_migrations(id) VALUES ($1)", [migration]);
     assert.equal((await request("health/ready", null, null, "GET")).status, 200);
   }
+
+  // Self-service signup is off unless IDENTITY_SIGNUP_ENABLED=true.
+  const disabled = await request("auth/signup", {
+    name: "Someone",
+    email: "someone@example.test",
+    password: "someone-password",
+    organizationName: "Someone Inc",
+  });
+  assert.equal(disabled.status, 404);
+  assert.equal(
+    (await db.query("SELECT count(*)::int AS count FROM identity.organizations")).rows[0].count,
+    1,
+  );
 
   const login = await request("auth/login", {
     email: "admin@example.test",

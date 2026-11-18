@@ -7,6 +7,13 @@ describe("gateway routing", () => {
     expect(resolveRoute("/api/v1/auth/login")).toBe("identity");
     expect(resolveRoute("/api/v1/me")).toBe("identity");
     expect(resolveRoute("/api/v1/members/1/password")).toBe("identity");
+    expect(resolveRoute("/api/v1/auth/signup")).toBe("identity");
+    expect(resolveRoute("/api/v1/organization/members")).toBe("identity");
+    expect(resolveRoute("/api/v1/organization/teams")).toBe("identity");
+    expect(resolveRoute("/api/v1/organizations")).toBe("identity");
+    expect(resolveRoute("/api/v1/invitations")).toBe("identity");
+    expect(resolveRoute("/api/v1/invitations/token/abc/accept")).toBe("identity");
+    expect(resolveRoute("/api/v1/invitationsx")).toBeUndefined();
     expect(resolveRoute("/api/v1/projects/1/tasks")).toBe("projects");
     expect(resolveRoute("/api/v1/tasks/1/status")).toBe("projects");
     expect(resolveRoute("/api/v1/notification-preferences/email")).toBe("notifications");
@@ -36,6 +43,13 @@ describe("gateway routing", () => {
     expect(resolveRoute("/api/v1/health/ready")).toBeUndefined();
     expect(resolveRoute("/api/v1/tasksomething")).toBeUndefined();
     expect(resolveRoute("/ws")).toBeUndefined();
+  });
+
+  it("reads the number of proxies trusted in front of the gateway", () => {
+    expect(readConfig({}).GATEWAY_TRUST_PROXY).toBe(0);
+    expect(readConfig({ GATEWAY_TRUST_PROXY: "1" }).GATEWAY_TRUST_PROXY).toBe(1);
+    expect(() => readConfig({ GATEWAY_TRUST_PROXY: "true" })).toThrow(/GATEWAY_TRUST_PROXY/);
+    expect(() => readConfig({ GATEWAY_TRUST_PROXY: "-1" })).toThrow(/GATEWAY_TRUST_PROXY/);
   });
 
   it("requires HTTPS for every upstream in production", () => {

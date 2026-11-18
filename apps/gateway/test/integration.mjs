@@ -47,6 +47,7 @@ try {
             method: request.method,
             url: request.url,
             authorization: request.headers.authorization ?? null,
+            forwardedFor: request.headers["x-forwarded-for"] ?? null,
             body: !body ? null : request.headers["content-type"]?.includes("json") ? JSON.parse(body) : body,
           }),
         );
@@ -71,6 +72,8 @@ try {
     AUDIT_API_URL: `http://127.0.0.1:${auditPort}`,
     MCP_API_URL: `http://127.0.0.1:${mcpPort}`,
     GATEWAY_CORS_ORIGINS: "http://localhost:5173",
+    // As behind the production ingress: one proxy in front of the gateway.
+    GATEWAY_TRUST_PROXY: "1",
   };
   const gateway = spawn(process.execPath, ["--import", "tsx", "src/main.ts"], { env, stdio: "inherit" });
   const closed = new Promise((resolve) => gateway.once("close", resolve));
@@ -100,6 +103,28 @@ try {
         .service,
       "identity",
     );
+    // Upstreams receive only the client address resolved through the trusted ingress hop.
+    const forwardedFor = async (header) =>
+      (
+        await (
+          await fetch(`http://127.0.0.1:${gatewayPort}/api/v1/auth/login`, {
+            method: "POST",
+            headers: header ? { "x-forwarded-for": header } : {},
+          })
+        ).json()
+      ).forwardedFor;
+    assert.equal(await forwardedFor("203.0.113.9"), "203.0.113.9");
+    assert.equal(
+      await forwardedFor("198.51.100.1, 203.0.113.9"),
+      "203.0.113.9",
+      "forged entries are dropped",
+    );
+    assert.match(await forwardedFor(), /^(::ffff:)?127\.0\.0\.1$/, "the socket address without an ingress");
+    assert.equal(
+      (await (await fetch(`http://127.0.0.1:${gatewayPort}/api/v1/invitations/token/abc`)).json()).service,
+      "identity",
+    );
+
     assert.equal(
       (await (await fetch(`http://127.0.0.1:${gatewayPort}/api/v1/notification-preferences`)).json()).service,
       "notifications",

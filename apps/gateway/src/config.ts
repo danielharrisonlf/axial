@@ -24,6 +24,10 @@ const schema = z
       .enum(["true", "false"])
       .default("true")
       .transform((value) => value === "true"),
+    // Reverse proxies in front of the gateway (1 behind the Dokploy/Traefik ingress, 0 when
+    // clients connect directly). The address resolved with it is the only X-Forwarded-For
+    // entry sent upstream, so services trust exactly one hop: the gateway.
+    GATEWAY_TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
     GATEWAY_CORS_ORIGINS: z
       .string()
       .default("http://localhost:5173")
