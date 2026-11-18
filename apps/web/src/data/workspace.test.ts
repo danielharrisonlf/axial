@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysLeft, todayLocal } from "../lib/format";
+import { daysLeft, projectRisk, todayLocal } from "../lib/format";
 import demoSeed from "./demo-seed.json";
 import { createDemoData, SEED_VERSION } from "./seed";
 import { createWorkspaceStore, STORAGE_KEY } from "./workspace";
@@ -55,7 +55,18 @@ describe("local workspace behavior", () => {
     store.act.moveTask(required(before.tasks[0]).id, "done");
     store.act.addComment(required(before.tasks[0]).id, "Not allowed");
     store.act.startSprint("sp-pcl-16");
-    expect(store.getSnapshot().db).toEqual(before);
+    // nothing changes except the audit trail, which records each denied attempt
+    const after = store.getSnapshot().db;
+    expect({ ...after, audit: [] }).toEqual({ ...before, audit: [] });
+    const denied = after.audit.slice(0, after.audit.length - before.audit.length);
+    expect(denied.map((entry) => entry.summary)).toEqual([
+      "tentativa sem permissão: gerenciar sprints",
+      "tentativa sem permissão: comentar em tarefas",
+      "tentativa sem permissão: criar tarefas",
+      "tentativa sem permissão: criar projetos",
+    ]);
+    expect(denied.every((entry) => entry.action === "denied" && entry.userId === "u18")).toBe(true);
+    expect(after.audit.slice(denied.length)).toEqual(before.audit);
     expect(store.getSnapshot().toasts.some((toast) => toast.tone === "err")).toBe(true);
   });
 
@@ -223,7 +234,10 @@ describe("local workspace behavior", () => {
       host: "api.resend.com",
       configured: true,
     });
-    expect(store.getSnapshot().db).toEqual(before);
+    const after = store.getSnapshot().db;
+    expect({ ...after, audit: [] }).toEqual({ ...before, audit: [] });
+    expect(after.audit.slice(0, 2).map((entry) => entry.action)).toEqual(["denied", "denied"]);
+    expect(after.audit.slice(2)).toEqual(before.audit);
     // identical denials are grouped in one toast with a counter
     const denied = store.getSnapshot().toasts.filter((toast) => toast.tone === "err");
     expect(denied).toHaveLength(1);
@@ -348,5 +362,103 @@ describe("due dates on the local calendar", () => {
     expect(daysLeft(todayLocal(-1, now), now)).toBe(-1);
     expect(daysLeft(todayLocal(1, now), now)).toBe(1);
     expect(todayLocal(0, now)).toBe("2026-11-18");
+  });
+});
+
+describe("audit E2E findings (18/11)", () => {
+  it("keeps every seeded instant in the past, newest action on top", () => {
+    const db = createDemoData(instant);
+    const future = db.audit.filter((entry) => Date.parse(entry.ts) > instant.getTime());
+    expect(future).toEqual([]);
+    expect(db.comments.every((c) => Date.parse(c.createdAt) <= instant.getTime())).toBe(true);
+  });
+
+  it("records only the changed fields with a specific action", () => {
+    const { store } = fixture();
+    store.act.updateTask("tsk9", { assigneeId: "u2" });
+    const [entry] = store.getSnapshot().db.audit;
+    expect(entry).toMatchObject({
+      action: "assign",
+      summary: "atribuiu PCL-109 a Ricardo Nogueira",
+      before: { assigneeId: null },
+      after: { assigneeId: "u2" },
+    });
+    store.act.moveTask("tsk9", "todo");
+    expect(store.getSnapshot().db.audit[0]).toMatchObject({
+      action: "status",
+      before: { status: "backlog" },
+      after: { status: "todo" },
+    });
+    expect(Object.keys(store.getSnapshot().db.audit[0]?.after as object)).toEqual(["status"]);
+  });
+
+  it("refuses and audits an assignment to someone else without task.assign", () => {
+    const { store } = fixture();
+    store.act.setUser("u8");
+    expect(
+      store.act.createTask({ projectId: "prj-pcl", title: "Para outra pessoa", assigneeId: "u2" }),
+    ).toBeNull();
+    expect(store.getSnapshot().db.audit[0]).toMatchObject({
+      action: "denied",
+      summary: "tentativa sem permissão: atribuir tarefas a outras pessoas",
+    });
+    expect(store.getSnapshot().toasts.at(-1)).toMatchObject({
+      title: "Sem permissão",
+      message: "O perfil “Desenvolvedor” não pode atribuir tarefas a outras pessoas.",
+    });
+    // taking the task yourself is allowed
+    expect(
+      store.act.createTask({ projectId: "prj-pcl", title: "Para mim", assigneeId: "u8" }),
+    ).not.toBeNull();
+  });
+
+  it("does not count a finished blocker as risk", () => {
+    const db = createDemoData(instant);
+    const project = required(db.projects.find((p) => p.id === "prj-pcl"));
+    const open = db.tasks.filter((t) => t.projectId === "prj-pcl" && !t.parentId && t.status !== "done");
+    const blocker = required(open[0]);
+    const done = { ...blocker, status: "done" as const };
+    const withBlockers = {
+      ...db,
+      tasks: db.tasks.map((t) =>
+        t.id === blocker.id
+          ? done
+          : open.slice(1, 3).some((x) => x.id === t.id)
+            ? { ...t, blockedBy: [blocker.id] }
+            : t,
+      ),
+    };
+    expect(projectRisk(withBlockers, project).blocked).toBe(0);
+  });
+
+  it("lets a team lead edit an unassigned task of a visible project", () => {
+    const { store } = fixture();
+    store.act.setUser("u4");
+    const task = required(store.getSnapshot().db.tasks.find((t) => t.id === "tsk9"));
+    expect(task.assigneeId).toBeNull();
+    expect(store.canTouchTask(task)).toBe(true);
+  });
+
+  it("adds an invited person to the chosen teams", () => {
+    const { store } = fixture();
+    const user = required(
+      store.act.inviteUser({
+        name: "Maria Lima",
+        email: "maria@vetor.dev",
+        title: "QA",
+        roleId: "dev",
+        teamIds: ["tm-web"],
+      }),
+    );
+    expect(store.getSnapshot().db.teams.find((t) => t.id === "tm-web")?.memberIds).toContain(user.id);
+  });
+
+  it("keeps the theme and drops old messages when the demo is restored", () => {
+    const { store } = fixture();
+    store.act.setTheme("dark");
+    store.notify("Antigo", "", "warn");
+    store.act.resetDemo();
+    expect(store.getSnapshot().db.settings.theme).toBe("dark");
+    expect(store.getSnapshot().toasts.map((t) => t.title)).toEqual(["Dados de demonstração restaurados"]);
   });
 });

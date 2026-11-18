@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from "react";
-import { STATUS_META, todayLocal } from "../lib/format";
+import { PRIO_META, plural, ROLE_LABEL, STATUS_META, todayLocal } from "../lib/format";
 import { workspaceDataSchema } from "./schema";
 import { createDemoData, type LegacyData, migrateToCurrent } from "./seed";
 import type {
@@ -131,6 +131,21 @@ export const CAPABILITY_MATRIX: { group: string; items: { cap: string; label: st
   },
 ];
 
+/** What a capability allows, in the words of the denial message ("O perfil “X” não pode …"). */
+const CAP_ACTION: Record<string, string> = {
+  "project.create": "criar projetos",
+  "project.edit": "editar projetos",
+  "project.archive": "arquivar ou restaurar projetos",
+  "task.create": "criar tarefas",
+  "task.edit": "editar tarefas",
+  "task.move": "mover tarefas",
+  "task.assign": "atribuir tarefas a outras pessoas",
+  "task.delete": "excluir tarefas",
+  "sprint.manage": "gerenciar sprints",
+  "team.manage": "gerenciar equipes",
+  "user.manage": "gerenciar usuários",
+  "notif.manage": "alterar notificações e provedores",
+};
 export function roleHasCapability(roleId: RoleId, cap: string): boolean {
   return CAPS[roleId].includes(cap);
 }
@@ -189,9 +204,11 @@ export function createWorkspaceStore(
       (p) =>
         (includeArchived || !p.archived) &&
         (me.roleId === "admin" ||
-          me.roleId === "viewer" ||
           (p.orgId === me.orgId &&
-            (me.roleId === "pm" || p.leadId === me.id || p.teamIds.some((t) => me.teamIds.includes(t))))),
+            (me.roleId === "pm" ||
+              me.roleId === "viewer" ||
+              p.leadId === me.id ||
+              p.teamIds.some((t) => me.teamIds.includes(t))))),
     );
   };
   const canSee = (projectId: string) => visibleProjects().some((p) => p.id === projectId);
@@ -199,8 +216,13 @@ export function createWorkspaceStore(
     const me = currentUser();
     if (!can("task.edit") || !canSee(task.projectId)) return false;
     if (me.roleId === "admin" || me.roleId === "pm") return true;
+    // unassigned tasks are open to anyone who works on the project, leads included
     if (me.roleId === "lead")
-      return (task.teamId !== null && me.teamIds.includes(task.teamId)) || task.assigneeId === me.id;
+      return (
+        (task.teamId !== null && me.teamIds.includes(task.teamId)) ||
+        task.assigneeId === me.id ||
+        !task.assigneeId
+      );
     return task.assigneeId === me.id || task.createdBy === me.id || !task.assigneeId;
   };
   /** Toasts: identical ones are grouped with a counter; at most three stay visible (oldest leaves). */
@@ -244,6 +266,16 @@ export function createWorkspaceStore(
     before: unknown = null,
     after: unknown = null,
   ) => {
+    // updates record only what changed; arrays and objects compare by value (no spurious diffs)
+    if (before && after && typeof before === "object" && typeof after === "object") {
+      const b = before as Record<string, unknown>;
+      const a = after as Record<string, unknown>;
+      const keys = [...new Set([...Object.keys(b), ...Object.keys(a)])].filter(
+        (key) => key !== "updatedAt" && JSON.stringify(b[key]) !== JSON.stringify(a[key]),
+      );
+      before = Object.fromEntries(keys.map((key) => [key, b[key] ?? null]));
+      after = Object.fromEntries(keys.map((key) => [key, a[key] ?? null]));
+    }
     const entry: AuditEntry = {
       id: uid("au"),
       ts: now().toISOString(),
@@ -259,10 +291,22 @@ export function createWorkspaceStore(
     };
     db.audit.unshift(entry);
   };
-  const guard = (cap: string) => {
+  const deny = (what: string) => {
+    write((db) => {
+      audit(db, "denied", "permission", "permission", null, `tentativa sem permissão: ${what}`);
+    });
+    notify("Sem permissão", `O perfil “${ROLE_LABEL[currentUser().roleId]}” não pode ${what}.`, "err");
+  };
+  const guard = (cap: string, what?: string) => {
     if (can(cap)) return true;
-    notify("Sem permissão", "O perfil atual não pode realizar esta ação.", "err");
+    deny(what ?? CAP_ACTION[cap] ?? "realizar esta ação");
     return false;
+  };
+  /** Without task.assign a person may only take a task or drop their own assignment (prototype assignAllowed). */
+  const assignAllowed = (from: string | null, to: string | null) => {
+    if (can("task.assign")) return true;
+    const me = currentUser().id;
+    return to === me || (to === null && from === me);
   };
   const write = <T>(operation: (db: WorkspaceData) => T): T | null => {
     try {
@@ -346,6 +390,11 @@ export function createWorkspaceStore(
     }
   };
   const notificationChannels: NotificationChannel[] = ["email", "whatsapp", "sms"];
+  const CHANNEL_LABEL: Record<NotificationChannel, string> = {
+    email: "e-mail",
+    whatsapp: "WhatsApp",
+    sms: "SMS",
+  };
   const fillTemplate = (value: string, vars: Record<string, string>) =>
     Object.entries(vars).reduce(
       (text, [key, replacement]) => text.split(`{${key}}`).join(replacement),
@@ -416,6 +465,8 @@ export function createWorkspaceStore(
       write((db) => {
         if (!db.users.some((u) => u.id === id && u.active)) throw new Error("Perfil indisponível");
         db.settings.currentUserId = id;
+        // messages of the previous profile do not follow the switch
+        snapshot = { ...snapshot, toasts: [] };
       });
     },
     setCurrentProject(id: string) {
@@ -425,7 +476,11 @@ export function createWorkspaceStore(
       });
     },
     resetDemo() {
-      commit(createDemoData(now()));
+      // the appearance is a preference of whoever is presenting, not demo data
+      const fresh = createDemoData(now());
+      fresh.settings.theme = snapshot.db.settings.theme;
+      snapshot = { ...snapshot, toasts: [] };
+      commit(fresh);
       notify("Dados de demonstração restaurados", "Todo o estado voltou ao cenário inicial.", "ok");
     },
     createProject(input: ProjectInput): Project | null {
@@ -475,7 +530,7 @@ export function createWorkspaceStore(
     },
     updateProject(id: string, fields: Partial<Project>) {
       if (!guard("project.edit")) return;
-      write((db) => {
+      const saved = write((db) => {
         const project = projectFor(db, id);
         validateProjectReferences(db, project.orgId, fields);
         validateDates(
@@ -483,6 +538,7 @@ export function createWorkspaceStore(
           fields.targetDate === undefined ? project.targetDate : fields.targetDate,
         );
         if (fields.name !== undefined && !fields.name.trim()) throw new Error("Informe o nome do projeto.");
+        if (fields.startDate !== undefined && !fields.startDate) throw new Error("Informe a data de início.");
         const before = structuredClone(project);
         const allowed = [
           "name",
@@ -497,24 +553,30 @@ export function createWorkspaceStore(
         for (const field of allowed)
           if (fields[field] !== undefined) Object.assign(project, { [field]: fields[field] });
         audit(db, "update", "project", id, id, `atualizou o projeto ${project.name}`, before, project);
+        return project.name;
       });
+      if (saved) notify("Projeto atualizado", saved, "ok");
     },
     archiveProject(id: string) {
       if (!guard("project.archive")) return;
-      write((db) => {
+      const name = write((db) => {
         const p = projectFor(db, id);
         p.archived = true;
         audit(db, "archive", "project", id, id, `arquivou o projeto ${p.name}`);
+        return p.name;
       });
+      if (name) notify("Projeto arquivado", `${name} pode ser restaurado em Projetos → Arquivados.`, "ok");
     },
     restoreProject(id: string) {
       if (!guard("project.archive")) return;
-      write((db) => {
+      const restored = write((db) => {
         const p = visibleProjects(db, true).find((p) => p.id === id);
         if (!p) throw new Error("Projeto não encontrado.");
         p.archived = false;
         audit(db, "restore", "project", id, id, `restaurou o projeto ${p.name}`);
+        return p.name;
       });
+      if (restored) notify("Projeto restaurado", `${restored} voltou à lista de projetos.`, "ok");
     },
     toggleFavorite(id: string) {
       write((db) => {
@@ -546,6 +608,10 @@ export function createWorkspaceStore(
     },
     createTask(input: TaskInput): Task | null {
       if (!guard("task.create")) return null;
+      if (input.assigneeId && !assignAllowed(null, input.assigneeId)) {
+        deny("atribuir tarefas a outras pessoas");
+        return null;
+      }
       const result = write((db) => {
         const p = projectFor(db, input.projectId);
         if (!input.title.trim()) throw new Error("Informe o título da tarefa.");
@@ -588,7 +654,15 @@ export function createWorkspaceStore(
           createdBy: currentUser().id,
         };
         db.tasks.push(task);
-        audit(db, "create", "task", task.id, p.id, `criou a tarefa ${task.ref}`, null, task);
+        const { title, status, priority, assigneeId, dueDate, type } = task;
+        audit(db, "create", "task", task.id, p.id, `criou a tarefa ${task.ref}`, null, {
+          title,
+          status,
+          priority,
+          assigneeId,
+          dueDate,
+          type,
+        });
         if (task.assigneeId)
           queueNotifications(db, "task.assigned.v1", task.assigneeId, taskNotificationVars(db, task, p.name));
         return task;
@@ -598,6 +672,15 @@ export function createWorkspaceStore(
     },
     updateTask(id: string, fields: Partial<Task>) {
       const old = snapshot.db.tasks.find((t) => t.id === id);
+      if (
+        old &&
+        fields.assigneeId !== undefined &&
+        (fields.assigneeId ?? null) !== old.assigneeId &&
+        !assignAllowed(old.assigneeId, fields.assigneeId ?? null)
+      ) {
+        deny("atribuir tarefas a outras pessoas");
+        return;
+      }
       if (!old || !canTouchTask(old)) {
         notify("Sem permissão", "Este perfil não pode editar a tarefa.", "err");
         return;
@@ -645,11 +728,31 @@ export function createWorkspaceStore(
           if (fields[field] !== undefined) Object.assign(task, { [field]: fields[field] });
         task.updatedAt = now().toISOString();
         if (task.status !== before.status) task.doneAt = task.status === "done" ? task.updatedAt : null;
-        const summary =
-          fields.status && fields.status !== before.status
-            ? `moveu ${task.ref} de ${STATUS_META[before.status].label} para ${STATUS_META[task.status].label}`
-            : `atualizou ${task.ref}`;
-        audit(db, fields.status ? "status" : "update", "task", id, task.projectId, summary, before, task);
+        const userName = (uid: string | null) => db.users.find((u) => u.id === uid)?.name;
+        const changed = (key: keyof Task) => JSON.stringify(before[key]) !== JSON.stringify(task[key]);
+        const added = task.blockedBy.filter((x) => !before.blockedBy.includes(x));
+        const refOf = (tid: string | undefined) => db.tasks.find((x) => x.id === tid)?.ref ?? "?";
+        const [action, summary] =
+          task.status !== before.status
+            ? [
+                "status",
+                `moveu ${task.ref} de ${STATUS_META[before.status].label} para ${STATUS_META[task.status].label}`,
+              ]
+            : changed("assigneeId")
+              ? [
+                  "assign",
+                  task.assigneeId
+                    ? `atribuiu ${task.ref} a ${userName(task.assigneeId) ?? "?"}`
+                    : `removeu o responsável de ${task.ref}`,
+                ]
+              : added.length
+                ? ["block", `marcou ${task.ref} como bloqueada por ${added.map(refOf).join(", ")}`]
+                : task.blockedBy.length < before.blockedBy.length
+                  ? ["unblock", `removeu um bloqueio de ${task.ref}`]
+                  : changed("priority")
+                    ? ["priority", `mudou a prioridade de ${task.ref} para ${PRIO_META[task.priority].label}`]
+                    : ["update", `atualizou ${task.ref}`];
+        audit(db, action, "task", id, task.projectId, summary, before, task);
         if (task.assigneeId && task.assigneeId !== before.assigneeId)
           queueNotifications(
             db,
@@ -671,17 +774,26 @@ export function createWorkspaceStore(
     },
     deleteTask(id: string) {
       if (!guard("task.delete")) return;
-      write((db) => {
+      const removed = write((db) => {
         const t = taskFor(db, id);
         const ids = new Set([id, ...db.tasks.filter((x) => x.parentId === id).map((x) => x.id)]);
         db.tasks = db.tasks.filter((x) => !ids.has(x.id));
         db.comments = db.comments.filter((c) => !ids.has(c.taskId));
         for (const task of db.tasks) task.blockedBy = task.blockedBy.filter((x) => !ids.has(x));
         audit(db, "delete", "task", id, t.projectId, `excluiu a tarefa ${t.ref}`);
+        return { ref: t.ref, subtasks: ids.size - 1 };
       });
+      if (removed)
+        notify(
+          "Tarefa excluída",
+          removed.subtasks
+            ? `${removed.ref} e ${plural(removed.subtasks, "subtarefa", "subtarefas")}.`
+            : removed.ref,
+          "ok",
+        );
     },
     addComment(taskId: string, text: string) {
-      if (!guard("task.create")) return;
+      if (!guard("task.create", "comentar em tarefas")) return;
       write((db) => {
         const t = taskFor(db, taskId);
         if (!text.trim()) throw new Error("Escreva um comentário.");
@@ -719,7 +831,7 @@ export function createWorkspaceStore(
     },
     startSprint(id: string) {
       if (!guard("sprint.manage")) return;
-      write((db) => {
+      const started = write((db) => {
         const s = db.sprints.find((s) => s.id === id);
         if (s?.status !== "planned") throw new Error("Somente sprints planejadas podem iniciar.");
         const project = projectFor(db, s.projectId);
@@ -732,15 +844,20 @@ export function createWorkspaceStore(
           projeto: project.name,
           meta: s.goal,
         });
+        return s.name;
       });
+      if (started) notify("Sprint iniciada", `${started} está ativa.`, "ok");
     },
     completeSprint(id: string) {
       if (!guard("sprint.manage")) return;
-      write((db) => {
+      const ended = write((db) => {
         const s = db.sprints.find((s) => s.id === id);
         if (s?.status !== "active") throw new Error("Somente sprints ativas podem encerrar.");
         const project = projectFor(db, s.projectId);
         s.status = "done";
+        const unfinished = db.tasks.filter(
+          (t) => t.sprintId === id && t.status !== "done" && !t.parentId,
+        ).length;
         for (const t of db.tasks.filter((t) => t.sprintId === id && t.status !== "done")) {
           t.sprintId = null;
           t.status = "backlog";
@@ -751,8 +868,18 @@ export function createWorkspaceStore(
         queueNotifications(db, "sprint.completed.v1", project.leadId, {
           sprint: s.name,
           feitas: String(finished),
+          concluidas: plural(finished, "tarefa concluída", "tarefas concluídas"),
         });
+        return { name: s.name, unfinished };
       });
+      if (ended)
+        notify(
+          "Sprint encerrada",
+          ended.unfinished
+            ? `${ended.name}: ${plural(ended.unfinished, "tarefa voltou", "tarefas voltaram")} ao backlog.`
+            : `${ended.name}: todas as tarefas foram concluídas.`,
+          "ok",
+        );
     },
     createMilestone(projectId: string, input: { name: string; date: string }): Milestone | null {
       if (!guard("project.edit")) return null;
@@ -795,9 +922,11 @@ export function createWorkspaceStore(
           "notification",
           eventType,
           null,
-          `alterou a preferência ${eventType} / ${channel} para ${enabled ? "ligada" : "desligada"}`,
-          { channel, enabled: !enabled },
-          { channel, enabled },
+          `${enabled ? "ligou" : "desligou"} "${
+            db.notificationTemplates.find((t) => t.event === eventType)?.name ?? eventType
+          }" por ${CHANNEL_LABEL[channel]}`,
+          { enabled: !enabled },
+          { enabled },
         );
       });
     },
@@ -825,7 +954,9 @@ export function createWorkspaceStore(
           "notification",
           id,
           null,
-          `reenviou a notificação ${notification.channel} de ${notification.toUserId}`,
+          `reenviou o ${CHANNEL_LABEL[notification.channel]} para ${
+            db.users.find((u) => u.id === notification.toUserId)?.name ?? "?"
+          }`,
         );
         return provider.configured;
       });
@@ -846,7 +977,14 @@ export function createWorkspaceStore(
           host: fields.host.trim(),
           configured: fields.configured,
         });
-        audit(db, "update", "notification", channel, null, `configurou o provedor de ${channel}`);
+        audit(
+          db,
+          "update",
+          "notification",
+          channel,
+          null,
+          `configurou o provedor de ${CHANNEL_LABEL[channel]}`,
+        );
       });
       if (saved === null) return;
       notify(
@@ -869,9 +1007,9 @@ export function createWorkspaceStore(
           "user",
           id,
           null,
-          `alterou o papel de ${user.name}`,
-          { role: before },
-          { role: roleId },
+          `alterou o papel de ${user.name} para ${ROLE_LABEL[roleId]}`,
+          { role: ROLE_LABEL[before] },
+          { role: ROLE_LABEL[roleId] },
         );
       });
       if (saved !== null)
@@ -914,7 +1052,10 @@ export function createWorkspaceStore(
           favoriteProjectIds: [],
         };
         db.users.push(user);
-        audit(db, "create", "user", user.id, null, `convidou ${user.name} como ${user.roleId}`);
+        for (const team of db.teams)
+          if (input.teamIds.includes(team.id) && !team.memberIds.includes(user.id))
+            team.memberIds.push(user.id);
+        audit(db, "create", "user", user.id, null, `convidou ${user.name} como ${ROLE_LABEL[user.roleId]}`);
         return user;
       });
       if (created)
@@ -956,9 +1097,21 @@ export function useWorkspace() {
   );
   const me = useMemo(() => workspaceStore.currentUser(snapshot.db), [snapshot.db]);
   const favoriteIds = useMemo(() => new Set(me.favoriteProjectIds), [me]);
+  /** Own deliveries; admin and project managers (who see every project of the organization) also
+   * see the organization's. The page and the bell use this same list. */
+  const visibleNotifications = useMemo(() => {
+    const orgWide = me.roleId === "admin" || me.roleId === "pm";
+    return snapshot.db.notifications.filter((n) => {
+      if (n.toUserId === me.id) return true;
+      if (!orgWide) return false;
+      const to = snapshot.db.users.find((u) => u.id === n.toUserId);
+      return !!to && (me.roleId === "admin" || to.orgId === me.orgId);
+    });
+  }, [snapshot.db.notifications, snapshot.db.users, me]);
   return {
     ...snapshot,
     me,
+    visibleNotifications,
     /** Favorites of the current profile (seed 9 keeps them per person). */
     isFavorite: (projectId: string) => favoriteIds.has(projectId),
     visibleProjects,

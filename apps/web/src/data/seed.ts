@@ -1,3 +1,4 @@
+import { ROLE_LABEL } from "../lib/format";
 import original from "./demo-seed.json";
 import type { Notification, NotificationChannel, Task, WorkspaceData } from "./types";
 
@@ -82,7 +83,13 @@ export function buildSeedNotifications(db: WorkspaceData, now: Date): Notificati
   }
   if (dueSoon) {
     // sent yesterday morning: one more day was left at that moment
-    const vars = { ref: dueSoon.ref, titulo: dueSoon.title, dias: String(dueDays + 1) };
+    const left = dueDays + 1;
+    const vars = {
+      ref: dueSoon.ref,
+      titulo: dueSoon.title,
+      dias: String(left),
+      prazo: `${left} ${left === 1 ? "dia" : "dias"}`,
+    };
     push(at(-1, 8, 4), "email", "nt-due", dueSoon.assigneeId, vars);
     push(at(-1, 8, 4), "sms", "nt-due", dueSoon.assigneeId, vars, "Provedor de SMS não configurado");
   }
@@ -109,12 +116,16 @@ export function buildSeedNotifications(db: WorkspaceData, now: Date): Notificati
       "email",
       "nt-sprint-end",
       endedProject.leadId,
-      {
-        sprint: ended.name,
-        feitas: String(
-          db.tasks.filter((t) => t.sprintId === ended.id && !t.parentId && t.status === "done").length,
-        ),
-      },
+      (() => {
+        const done = db.tasks.filter(
+          (t) => t.sprintId === ended.id && !t.parentId && t.status === "done",
+        ).length;
+        return {
+          sprint: ended.name,
+          feitas: String(done),
+          concluidas: `${done} ${done === 1 ? "tarefa concluída" : "tarefas concluídas"}`,
+        };
+      })(),
       "Servidor de destino recusou a mensagem (SMTP 452: caixa temporariamente indisponível)",
     );
   const blocked = openTop.find((t) => t.blockedBy.length);
@@ -137,8 +148,16 @@ export function migrateToCurrent(input: LegacyData, now: Date): WorkspaceData {
   for (const u of data.users)
     if (!Array.isArray(u.favoriteProjectIds)) u.favoriteProjectIds = [...globalFavorites];
   for (const p of data.projects) delete p.favorite;
-  for (const tpl of data.notificationTemplates)
+  for (const tpl of data.notificationTemplates) {
     tpl.subject = tpl.subject.replace(/^Sprint \{sprint\}/, "{sprint}");
+    // plurals come ready in the variables ("1 dia", "2 tarefas concluídas")
+    tpl.body = tpl.body
+      .replace("vence em {dias} dia(s).", "vence em {prazo}.")
+      .replace("foi encerrada com {feitas} tarefas concluídas.", "foi encerrada com {concluidas}.");
+  }
+  // the Visualizador cannot open the audit center (ms-audit scopes it to ADMIN, PM and TEAM_LEAD)
+  for (const role of data.roles) role.name = ROLE_LABEL[role.id];
+  for (const u of data.users) if (u.title === "Auditor Interno") u.title = "Gerente de Operações";
   const migrated = data as unknown as WorkspaceData;
   // deliveries produced by actions in this browser (ids "nf-<uuid>") are kept
   const own = migrated.notifications.filter((n) => n.id.startsWith("nf-"));
@@ -156,7 +175,18 @@ export function createDemoData(now = new Date()): WorkspaceData {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const seededDay = new Date(seedDate.getFullYear(), seedDate.getMonth(), seedDate.getDate());
   const shift = today.getTime() - seededDay.getTime();
-  const elapsed = now.getTime() - seedDate.getTime();
+  // some seeded instants (audit, comments, updates) are later than seededAt; shifting by the
+  // elapsed time minus that overhang keeps every instant in the past and their relative order
+  const instants: number[] = [];
+  const collect = (value: unknown): void => {
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(value))
+      instants.push(Date.parse(value));
+    else if (Array.isArray(value)) value.forEach(collect);
+    else if (value !== null && typeof value === "object") Object.values(value).forEach(collect);
+  };
+  collect({ ...data, meta: null });
+  const overhang = Math.max(0, ...instants.map((t) => t - seedDate.getTime()));
+  const elapsed = now.getTime() - seedDate.getTime() - overhang - (overhang ? 60_000 : 0);
   const shiftValue = (value: unknown): unknown => {
     if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}(?:T[\d:.]+Z)?$/.test(value)) {
       if (value.length === 10) {

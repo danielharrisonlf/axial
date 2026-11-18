@@ -44,12 +44,12 @@
     },
     {
       "id": "dev",
-      "name": "Desenvolvedor / Colaborador",
+      "name": "Desenvolvedor",
       "desc": "Vê projetos autorizados e trabalha nas próprias tarefas."
     },
     {
       "id": "viewer",
-      "name": "Visualizador / Auditor",
+      "name": "Visualizador",
       "desc": "Acesso de leitura a relatórios e histórico."
     }
   ],
@@ -301,7 +301,7 @@
       "email": "sergio.tavares@vetorlabs.dev",
       "initials": "ST",
       "color": "#7A5C2E",
-      "title": "Auditor Interno",
+      "title": "Gerente de Operações",
       "roleId": "viewer",
       "orgId": "org-vetor",
       "teamIds": [],
@@ -5754,7 +5754,7 @@
       "event": "task.due_soon.v1",
       "name": "Prazo próximo",
       "subject": "[{ref}] Vence em breve",
-      "body": "A tarefa {ref} — {titulo} vence em {dias} dia(s)."
+      "body": "A tarefa {ref} — {titulo} vence em {prazo}."
     },
     {
       "id": "nt-mention",
@@ -5775,7 +5775,7 @@
       "event": "sprint.completed.v1",
       "name": "Sprint concluída",
       "subject": "Sprint {sprint} concluída",
-      "body": "A {sprint} foi encerrada com {feitas} tarefas concluídas."
+      "body": "A {sprint} foi encerrada com {concluidas}."
     },
     {
       "id": "nt-blocked",

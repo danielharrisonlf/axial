@@ -163,7 +163,12 @@ export function projectRisk(
 ): { level: "high" | "mid" | "ok"; label: string; late?: number; blocked?: number } {
   const tasks = db.tasks.filter((task) => task.projectId === project.id && !task.parentId);
   const late = tasks.filter(isOverdue).length;
-  const blocked = tasks.filter((task) => task.blockedBy.length && task.status !== "done").length;
+  // blocked = open task with at least one blocker still open (same rule as Insights and the prototype)
+  const blocked = tasks.filter(
+    (task) =>
+      task.status !== "done" &&
+      task.blockedBy.some((id) => db.tasks.some((other) => other.id === id && other.status !== "done")),
+  ).length;
   const target = daysLeft(project.targetDate) ?? 99;
   const progress = projectProgress(db, project.id);
   if (project.status === "done") return { level: "ok", label: "Entregue" };
@@ -175,3 +180,11 @@ export function projectRisk(
 export function navigate(path: string): void {
   window.location.hash = path.startsWith("#") ? path : `#${path.startsWith("/") ? path : `/${path}`}`;
 }
+/** Role names shown in the interface (the backend calls them ADMIN, PROJECT_MANAGER, TEAM_LEAD, CONTRIBUTOR, VIEWER). */
+export const ROLE_LABEL: Record<"admin" | "pm" | "lead" | "dev" | "viewer", string> = {
+  admin: "Administrador da organização",
+  pm: "Gestor de projetos",
+  lead: "Líder de equipe",
+  dev: "Desenvolvedor",
+  viewer: "Visualizador",
+};
