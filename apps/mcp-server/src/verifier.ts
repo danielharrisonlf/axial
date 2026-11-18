@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { roleSchema, sourceSchema } from "@axial/contracts";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import { Injectable } from "@nestjs/common";
 import type { McpTokenVerifier } from "@nestjs/mcp";
@@ -7,11 +8,17 @@ import { z } from "zod";
 import { type McpConfig, readConfig } from "./config.js";
 import { grantedScopes } from "./scopes.js";
 
+const uuidList = z.array(z.uuid()).max(10_000).default([]);
 const claimsSchema = z.object({
   sub: z.uuid(),
   organizationId: z.uuid(),
-  role: z.enum(["ADMIN", "PROJECT_MANAGER", "TEAM_LEAD", "CONTRIBUTOR", "VIEWER"]),
-  projectIds: z.array(z.uuid()).default([]),
+  role: roleSchema,
+  teamIds: uuidList,
+  projectIds: uuidList,
+  assignableUserIds: uuidList,
+  assignableTeamIds: uuidList,
+  source: sourceSchema.default("api"),
+  purpose: z.string().optional(),
   exp: z.number().int(),
   aud: z.union([z.string(), z.array(z.string())]).optional(),
   scope: z.string().max(1000).optional(),
@@ -20,9 +27,26 @@ const claimsSchema = z.object({
 
 export type IdentityClaims = z.infer<typeof claimsSchema>;
 
+/** What the verifier stores in `AuthInfo.extra`; read back through `CallerIdentity`. */
+export interface VerifiedIdentity {
+  token: string;
+  userId: string;
+  organizationId: string;
+  role: IdentityClaims["role"];
+  teamIds: string[];
+  projectIds: string[];
+  assignableUserIds: string[];
+  assignableTeamIds: string[];
+  source: IdentityClaims["source"];
+  /** The OAuth client the token was delegated to, or the user id for first-party tokens. */
+  clientId: string;
+  scopes: string[];
+  expiresAt: number;
+}
+
 /**
- * Accepts the same RS256 access tokens the rest of Axial uses, including those ms-identity
- * issues through OAuth to MCP clients, whose `scope` limits the tools they can call.
+ * Accepts the same RS256 access tokens the rest of Kairos uses, including those ms-identity
+ * issues through OAuth to MCP clients, whose `scope` limits the primitives they can call.
  * The MCP server is a resource server: it verifies locally and never issues tokens.
  */
 @Injectable()
@@ -42,7 +66,8 @@ export class IdentityTokenVerifier implements McpTokenVerifier {
     return this.key;
   }
 
-  async verifyAccessToken(token: string): Promise<AuthInfo | null> {
+  /** Verifies signature, issuer, audience, lifetime, identity claims and scopes. Null means "reject". */
+  async verify(token: string): Promise<VerifiedIdentity | null> {
     const key = await this.loadKey();
     let payload: unknown;
     try {
@@ -56,21 +81,37 @@ export class IdentityTokenVerifier implements McpTokenVerifier {
       return null;
     }
     const claims = claimsSchema.safeParse(payload);
-    if (!claims.success) return null;
-    const scopes = grantedScopes(claims.data, this.config.MCP_RESOURCE);
+    // Password-change tokens are single-purpose and never act on business data.
+    if (!claims.success || claims.data.purpose !== undefined) return null;
+    const data = claims.data;
+    const scopes = grantedScopes(data, this.config.MCP_RESOURCE);
     if (!scopes) return null;
     return {
       token,
-      clientId: claims.data.client_id ?? claims.data.sub,
+      userId: data.sub,
+      organizationId: data.organizationId,
+      role: data.role,
+      teamIds: data.teamIds,
+      projectIds: data.projectIds,
+      assignableUserIds: data.assignableUserIds,
+      assignableTeamIds: data.assignableTeamIds,
+      source: data.source,
+      clientId: data.client_id ?? data.sub,
       scopes,
-      expiresAt: claims.data.exp,
+      expiresAt: data.exp,
+    };
+  }
+
+  async verifyAccessToken(token: string): Promise<AuthInfo | null> {
+    const identity = await this.verify(token);
+    if (!identity) return null;
+    return {
+      token,
+      clientId: identity.clientId,
+      scopes: identity.scopes,
+      expiresAt: identity.expiresAt,
       resource: new URL(this.config.MCP_RESOURCE),
-      extra: {
-        token,
-        organizationId: claims.data.organizationId,
-        role: claims.data.role,
-        projectIds: claims.data.projectIds,
-      },
+      extra: { identity },
     };
   }
 
