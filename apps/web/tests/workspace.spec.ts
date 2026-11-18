@@ -481,13 +481,18 @@ test("MCP catalog lists the server tools and the console writes with the mcp ori
   await expect(page.getByText("Histórico de execuções")).toHaveCount(0);
   await page.getByRole("link", { name: "Testar ferramenta", exact: true }).click();
   await page.getByRole("combobox", { name: "Ferramenta", exact: true }).selectOption("update-task-status");
-  await page
-    .getByRole("textbox", { name: "Argumentos (JSON)", exact: true })
-    .fill(JSON.stringify({ taskId: "tsk1", status: "in_review", version: 1 }));
+  // the example carries the task's current version (optimistic concurrency, as the real server)
+  const args = page.getByRole("textbox", { name: "Argumentos (JSON)", exact: true });
+  const example = JSON.parse(await args.inputValue()) as { taskId: string; version: number };
   await page.getByRole("button", { name: "Executar ferramenta", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Resposta JSON", exact: true })).toContainText('"in_review"');
+  const response = page.getByRole("region", { name: "Resposta JSON", exact: true });
+  await expect(response).toContainText('"in_review"');
+  await expect(response).toContainText(`"version": ${example.version + 1}`);
   const audit = (await saved(page))?.audit[0];
   expect(audit?.source).toBe("mcp");
+  // the same arguments again carry a stale version
+  await page.getByRole("button", { name: "Executar ferramenta", exact: true }).click();
+  await expect(response).toContainText('"version_conflict"');
   await page.getByRole("textbox", { name: "Argumentos (JSON)", exact: true }).fill("{ invalid");
   await page.getByRole("button", { name: "Executar ferramenta", exact: true }).click();
   await expect(page.getByRole("region", { name: "Resposta JSON", exact: true })).toContainText(
@@ -603,3 +608,45 @@ for (const theme of ["light", "dark"] as const) {
     }
   });
 }
+
+test("presentation flows: Esc keeps inspector edits, audit finds the moved task, roles gate Insights", async ({
+  page,
+}) => {
+  await page.goto("/#/board");
+  await page.getByRole("button", { name: /^PCL-109 / }).click();
+  const drawer = page.getByRole("dialog", { name: /^Tarefa PCL-109/ });
+  await drawer
+    .getByRole("textbox", { name: "Título da tarefa", exact: true })
+    .fill("Assinatura eletrônica revisada");
+  // Esc closes the inspector before the field blurs; the edit is still saved
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const card = page.getByRole("button", { name: "PCL-109 Assinatura eletrônica revisada", exact: true });
+  await expect(card).toBeVisible();
+  await card.focus();
+  await page.keyboard.press("Alt+ArrowRight");
+  // the audit center finds the moved task by its reference and shows only what changed
+  await page.goto("/#/insights/audit");
+  await page.getByRole("searchbox", { name: "Buscar na auditoria", exact: true }).fill("PCL-109");
+  const firstRow = page.getByRole("table").locator("tbody tr").first();
+  await expect(firstRow).toContainText("Tarefa · PCL-109");
+  await expect(firstRow).toContainText("moveu PCL-109 de Backlog para A fazer");
+  await firstRow.getByRole("button").click();
+  const record = page.getByRole("dialog", { name: "Registro de auditoria" });
+  await expect(record.locator(".diff-table tbody tr")).toHaveCount(1);
+  await expect(record.locator(".diff-table")).toContainText("Backlog");
+  await expect(record.locator(".diff-table")).toContainText("A fazer");
+  await page.keyboard.press("Escape");
+  // a developer has no insights.view: the page explains it
+  await switchProfile(page, /Camila Freitas/);
+  await page.goto("/#/insights");
+  await expect(page.getByText("Acesso restrito", { exact: true })).toBeVisible();
+  await expect(page.getByText(/não tem acesso ao Insights/)).toBeVisible();
+  // destructive confirmations open on "Cancelar"
+  await switchProfile(page, /Helena Costa/);
+  await page.goto("/#/settings/data");
+  await page.getByRole("button", { name: "Restaurar dados de demonstração", exact: true }).click();
+  const confirm = page.getByRole("alertdialog", { name: "Restaurar dados de demonstração", exact: true });
+  await expect(confirm.getByRole("button", { name: "Cancelar", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+});
