@@ -1,119 +1,40 @@
-import "reflect-metadata";
 import { fileURLToPath } from "node:url";
-import {
-  type AuthContext,
-  createEpicSchema,
-  createMilestoneSchema,
-  createProjectSchema,
-  createSprintSchema,
-  createTaskSchema,
-} from "@axial/contracts";
+import { assertValidFixtures, buildDemoFixtures } from "@axial/demo-fixtures";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { config } from "dotenv";
+import { PrismaClient } from "../src/generated/prisma/client.js";
+import { seedProjects } from "./demo-seed.js";
 
+/**
+ * Fictional Vetor Labs/Atlas scenario of ms-projects (packages/demo-fixtures).
+ * `tsx prisma/seed.ts` writes DATABASE_URL and requires a *_dev database;
+ * `tsx prisma/seed.ts --test` writes TEST_DATABASE_URL and requires a *_test database.
+ * Both refuse NODE_ENV=production. Order with the other seeds: identity → projects → audit.
+ */
 config({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet: true });
 if (process.env.NODE_ENV === "production") throw new Error("Demo seed cannot run in production");
-const databaseName = new URL(process.env.DATABASE_URL ?? "").pathname.slice(1);
-if (!databaseName.endsWith("_dev")) throw new Error("Demo seed requires an explicitly named *_dev database");
-process.env.RELAY_ENABLED = "false";
-const { createApp } = await import("../src/app.js");
-const { ProjectsService } = await import("../src/modules/projects.service.js");
-const { PrismaService } = await import("../src/infra/database/prisma.service.js");
-const app = await createApp();
-const actor: AuthContext = {
-  userId: "11111111-1111-4111-8111-111111111111",
-  organizationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  role: "ADMIN",
-  teamIds: ["22222222-2222-4222-8222-222222222222"],
-  projectIds: [],
-  assignableUserIds: ["11111111-1111-4111-8111-111111111111", "33333333-3333-4333-8333-333333333333"],
-  assignableTeamIds: ["22222222-2222-4222-8222-222222222222"],
-  source: "api",
-  correlationId: "development-demo-seed",
-};
+const test = process.argv.includes("--test");
+const variable = test ? "TEST_DATABASE_URL" : "DATABASE_URL";
+const suffix = test ? "_test" : "_dev";
+const url = process.env[variable];
+if (!url) throw new Error(`${variable} is required`);
+const databaseName = decodeURIComponent(new URL(url).pathname.slice(1).split("/")[0] ?? "");
+if (!databaseName.endsWith(suffix))
+  throw new Error(`Demo seed requires an explicitly named *${suffix} database in ${variable}`);
 
+const fixtures = buildDemoFixtures();
+assertValidFixtures(fixtures);
+const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
 try {
-  const service = app.get(ProjectsService);
-  const db = app.get(PrismaService);
-  const project =
-    (await db.project.findUnique({
-      where: { organizationId_key: { organizationId: actor.organizationId, key: "AXL" } },
-    })) ??
-    (await service.createProject(
-      actor,
-      createProjectSchema.parse({
-        key: "AXL",
-        name: "Axial - Demonstracao local",
-        description: "Dados ficticios de desenvolvimento. Nao representam uma organizacao real.",
-        leadId: actor.userId,
-        teamIds: actor.teamIds,
-      }),
-    ));
-  const epic =
-    (await db.epic.findFirst({ where: { projectId: project.id, title: "Primeira entrega" } })) ??
-    (await service.createEpic(actor, project.id, createEpicSchema.parse({ title: "Primeira entrega" })));
-  const start = new Date();
-  const end = new Date(start.getTime() + 14 * 86400000);
-  const sprint =
-    (await db.sprint.findFirst({ where: { projectId: project.id, name: "Sprint de demonstracao" } })) ??
-    (await service.createSprint(
-      actor,
-      project.id,
-      createSprintSchema.parse({
-        name: "Sprint de demonstracao",
-        goal: "Validar o fluxo de planejamento e execucao",
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
-      }),
-    ));
-  let task = await db.task.findFirst({
-    where: { projectId: project.id, title: "Validar fluxo de projetos" },
-  });
-  task ??= await service.createTask(
-    actor,
-    project.id,
-    createTaskSchema.parse({
-      title: "Validar fluxo de projetos",
-      epicId: epic.id,
-      sprintId: sprint.id,
-      assigneeId: actor.userId,
-      teamId: actor.teamIds[0],
-      status: "todo",
-      priority: "high",
-      acceptanceCriteria: ["Planejamento, Kanban e eventos funcionando"],
-      startDate: start.toISOString(),
-      dueDate: end.toISOString(),
-    }),
-  );
-  if (!(await db.task.findFirst({ where: { projectId: project.id, title: "Conferir comentarios" } }))) {
-    await service.createTask(
-      actor,
-      project.id,
-      createTaskSchema.parse({
-        title: "Conferir comentarios",
-        type: "subtask",
-        parentId: task.id,
-        epicId: epic.id,
-        sprintId: sprint.id,
-        assigneeId: actor.userId,
-        teamId: actor.teamIds[0],
-      }),
-    );
-  }
-  if (
-    !(await db.milestone.findFirst({ where: { projectId: project.id, name: "Primeira entrega validada" } }))
-  ) {
-    await service.createMilestone(
-      actor,
-      project.id,
-      createMilestoneSchema.parse({
-        name: "Primeira entrega validada",
-        date: end.toISOString(),
-      }),
-    );
-  }
+  const report = await seedProjects(db, fixtures);
   console.log(
-    `Development demo ready: ${project.key} (${project.id}). Re-running preserves existing records.`,
+    JSON.stringify(
+      { seed: "projects", database: databaseName, ...report, excluded: fixtures.excluded },
+      null,
+      2,
+    ),
   );
+  console.log("Demo projects ready. Re-running preserves existing records.");
 } finally {
-  await app.close();
+  await db.$disconnect();
 }

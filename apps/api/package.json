@@ -14,6 +14,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:test": "tsx prisma/seed.ts --test",
     "openapi": "tsx src/openapi.ts"
   },
   "dependencies": {
@@ -38,6 +39,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@axial/demo-fixtures": "workspace:*",
     "@nestjs/testing": "12.3.3",
     "@types/compression": "1.8.1",
     "@types/express": "5.0.6",
