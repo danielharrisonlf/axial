@@ -31,6 +31,7 @@ apps/
 packages/
   contracts/                # esquemas de entrada, tipos e eventos compartilhados
   observability/            # métricas HTTP/runtime (/api/v1/metrics, Prometheus)
+  demo-fixtures/            # cenário fictício Vetor Labs com ids determinísticos para os seeds
 docs/                       # arquitetura, contratos e relatório
 scripts/                    # emissor de identidade exclusivamente local
 ```
@@ -64,7 +65,9 @@ pnpm infra:up
 pnpm dev:keys
 pnpm db:generate
 pnpm db:migrate
-pnpm db:seed
+pnpm db:audit:migrate
+pnpm --filter "@axial/demo-fixtures..." build
+pnpm db:seed:demo
 pnpm dev
 ```
 
@@ -77,7 +80,7 @@ pnpm dev
 - Liveness: `http://localhost:3001/api/v1/health/live`
 - Readiness: `http://localhost:3001/api/v1/health/ready`
 
-O seed cria dados fictícios em uma organização de demonstração e preserva registros existentes quando repetido. Só executa em banco terminado em `_dev` e rejeita `NODE_ENV=production`.
+O seed grava nos schemas de projects e audit o mesmo cenário fictício do Workspace (Vetor Labs e Atlas: 11 projetos, 109 tarefas, sprints, marcos, comentários e histórico de auditoria), com ids determinísticos de `packages/demo-fixtures`. Só insere o que falta e preserva registros existentes quando repetido. Só executa em banco terminado em `_dev` e rejeita `NODE_ENV=production`. Detalhes, ordem (identity → projects → audit) e mapeamentos em [docs/demo-seed.md](docs/demo-seed.md).
 
 Para abrir somente a interface, sem dependência de Docker ou da API: `pnpm dev:web`. Para iniciar somente o backend: `pnpm dev:api`. O comando `pnpm dev` inicia Workspace e Insights. Serviços adicionais têm atalhos próprios: `pnpm dev:gateway`, `pnpm dev:mcp`, `pnpm dev:audit` e `pnpm dev:insights`.
 
@@ -101,7 +104,7 @@ $headers = @{ Authorization = "Bearer $token" }
 Invoke-RestMethod http://localhost:3001/api/v1/projects -Headers $headers
 ```
 
-O token dura 15 minutos. Para criar tokens locais de outros papéis: `node scripts/dev-identity.mjs token VIEWER` (ou `PROJECT_MANAGER`, `TEAM_LEAD`, `CONTRIBUTOR`). Esses tokens usam os IDs fictícios do seed.
+O token dura 15 minutos. Para criar tokens locais de outros papéis: `node scripts/dev-identity.mjs token VIEWER` (ou `PROJECT_MANAGER`, `TEAM_LEAD`, `CONTRIBUTOR`). Cada papel assina como uma pessoa semeada da Vetor Labs (ADMIN Helena Costa, PROJECT_MANAGER Ricardo Nogueira, TEAM_LEAD Ana Souza, CONTRIBUTOR Camila Freitas, VIEWER Sérgio Tavares), com equipes e projetos atribuídos do cenário; o comando lê o build de `packages/demo-fixtures`.
 
 ## Capacidades
 
@@ -171,7 +174,7 @@ pnpm perf
 O comando executa, em sequência:
 
 1. `docker compose up -d --wait` (PostgreSQL e Redis);
-2. `db:generate`, migrations de projects/identity/notifications/audit e seed;
+2. `db:generate`, migrations de projects/identity/notifications/audit e seed de demonstração (projects e audit);
 3. build do monorepo;
 4. start de API, identidade, notificações, realtime, audit, MCP, gateway, Workspace e Insights;
 5. geração de token ADMIN e cenários de carga (health, projetos, tarefas, auditoria, notificações);

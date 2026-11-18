@@ -27,21 +27,34 @@ if (command === "init") {
   }
 } else if (command === "token") {
   const role = process.argv[3] ?? "ADMIN";
-  if (!["ADMIN", "PROJECT_MANAGER", "TEAM_LEAD", "CONTRIBUTOR", "VIEWER"].includes(role)) {
-    throw new Error("Unknown role.");
-  }
+  // each role signs as a seeded person of the fictional Vetor Labs scenario (pnpm db:seed:demo)
+  const people = {
+    ADMIN: "helena.costa@vetorlabs.dev",
+    PROJECT_MANAGER: "ricardo.nogueira@vetorlabs.dev",
+    TEAM_LEAD: "ana.souza@vetorlabs.dev",
+    CONTRIBUTOR: "camila.freitas@vetorlabs.dev",
+    VIEWER: "sergio.tavares@vetorlabs.dev",
+  };
+  const email = Object.hasOwn(people, role) ? people[role] : undefined;
+  if (!email) throw new Error("Unknown role.");
+  const fixtures = new URL("../packages/demo-fixtures/dist/index.js", import.meta.url);
+  if (!existsSync(fixtures))
+    throw new Error('Demo fixtures are not built: run "pnpm --filter @axial/demo-fixtures... build" first.');
+  const { claimsFor, demoUser } = await import(fixtures.href);
+  const claims = claimsFor(demoUser(email).id);
+  if (claims.role !== role) throw new Error(`Seeded user ${email} is ${claims.role}, not ${role}.`);
   const now = Math.floor(Date.now() / 1000);
   const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
   const encoded = `${encode({ alg: "RS256", typ: "JWT" })}.${encode({
     iss: process.env.JWT_ISSUER ?? "http://localhost:3000/identity",
     aud: process.env.JWT_AUDIENCE ?? "axial-projects",
-    sub: "11111111-1111-4111-8111-111111111111",
-    organizationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    sub: claims.userId,
+    organizationId: claims.organizationId,
     role,
-    teamIds: ["22222222-2222-4222-8222-222222222222"],
-    projectIds: [],
-    assignableUserIds: ["11111111-1111-4111-8111-111111111111", "33333333-3333-4333-8333-333333333333"],
-    assignableTeamIds: ["22222222-2222-4222-8222-222222222222"],
+    teamIds: claims.teamIds,
+    projectIds: claims.projectIds,
+    assignableUserIds: claims.assignableUserIds,
+    assignableTeamIds: claims.assignableTeamIds,
     source: "api",
     jti: randomUUID(),
     iat: now,

@@ -46,7 +46,7 @@ Em produção, Swagger é desabilitado. Termine TLS e aplique limites de tráfeg
 ## Comandos auxiliares
 
 - `pnpm --filter @axial/ms-projects openapi`: regenera docs/api/openapi.json com relay desativado; requer configuração de autenticação e PostgreSQL disponíveis.
-- `pnpm db:seed`: cria demonstração local sem reset, e recusa produção/bancos sem sufixo _dev.
+- `pnpm db:seed:demo`: grava o cenário fictício Vetor Labs em projects e depois em audit (docs/demo-seed.md); só insere o que falta, sem reset, e recusa produção/bancos sem sufixo _dev. `pnpm db:seed` e `pnpm db:audit:seed` rodam um passo cada.
 - `pnpm infra:down`: para os recursos locais; preserva volumes persistentes.
 
 As chaves de desenvolvimento geradas não são usadas em produção. Tokens locais devem ser guardados somente no ambiente de desenvolvimento e expiram em 15 minutos.

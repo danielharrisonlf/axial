@@ -118,3 +118,13 @@ Limites: não houve teste com Claude, ChatGPT ou Cursor reais nem no domínio p�
 - **Correções:** o ms-realtime exige `PROJECTS_API_URL` com `/api/v1` (Compose e script de performance corrigidos); o catálogo do ms-notifications usa os nomes emitidos (`task.assigned` etc.), a migration 005 renomeia preferências `.v1` e remove `task.blocked.v1`, que nunca era emitido.
 
 Validação local (Windows, PostgreSQL/Redis do Compose, banco isolado com sufixo `_test`): lint, typecheck, build e testes unitários aprovados; e2e do ms-projects (15), integração do ms-projects (3), integrações do ms-audit, ms-notifications, ms-realtime e mcp-server aprovadas; `prisma migrate status` e `prisma migrate diff` sem diferença; conversão de dados legados conferida em banco descartável. `test:web:e2e` não foi executado nesta etapa. Os dados fictícios do web ainda usam nomes `.v1` em `apps/web/src/data/demo-seed.json`.
+
+## Atualização de 18/11/2026: seed de demonstração Vetor Labs
+
+- **Cenário compartilhado:** `packages/demo-fixtures` traz o cenário fictício do Workspace (Vetor Labs e Atlas) com ids UUIDv5 determinísticos, o deslocamento de datas do web em `America/Sao_Paulo` e um validador contra os contratos e as invariantes do ms-projects. Detalhes em `docs/demo-seed.md`.
+- **ms-projects:** `pnpm db:seed` grava 11 projetos, 14 épicos, 7 sprints, 10 marcos, 109 tarefas, 1 dependência e 33 comentários, uma transação por projeto, só inserindo. Refs, datas históricas e `taskSequence` preservados (a próxima tarefa de PCL é `PCL-120`). Nenhum evento de outbox é gravado. O projeto `AXL` do seed anterior não é mais criado nem removido.
+- **ms-audit:** `pnpm db:audit:seed` grava 74 eventos com `ON CONFLICT (id) DO NOTHING`.
+- **Tokens locais:** `scripts/dev-identity.mjs` assina como pessoas semeadas da Vetor Labs com as claims do cenário.
+- **Fora do cenário:** o comentário `cm12` e a entrada de auditoria `au69` do protótipo cruzam organizações e não são semeados. O seed do ms-identity ainda não existe; até lá, login real não encontra as pessoas do cenário (os tokens locais funcionam).
+
+Validação: seeds executados duas vezes em banco `_test` descartável (segunda execução sem inserções), além do teste de integração `apps/api/test/integration/demo-seed.test.ts` e do script `apps/ms-audit/test/seed.mjs`.

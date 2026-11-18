@@ -556,9 +556,11 @@ async function prepareData({ skipInfra = false } = {}) {
   console.log("[db] migrations e seed");
   await run(pnpm, ["db:generate"], { env });
   await run(pnpm, ["db:migrate"], { env });
-  await run(pnpm, ["db:seed"], { env });
   for (const script of ["db:identity:migrate", "db:notifications:migrate", "db:audit:migrate"])
     await run(pnpm, [script], { env });
+  // cenário fictício Vetor Labs em projects e audit; o pacote de fixtures (e contracts) é compilado antes
+  await run(pnpm, ["--filter", "@axial/demo-fixtures...", "build"], { env });
+  await run(pnpm, ["db:seed:demo"], { env });
 }
 
 async function all() {

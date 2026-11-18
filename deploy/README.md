@@ -25,7 +25,7 @@ O serviço `setup` roda `deploy/setup.sh` uma vez, antes dos demais (`service_co
 
 1. gera o par de chaves RS256 no volume `axial-keys` se ele não existir (as chaves nunca entram na imagem nem no Git);
 2. aplica as migrations de projects, identity, notifications e audit;
-3. roda o seed de demonstração (idempotente; desligue com `AXIAL_SEED=false`).
+3. roda o seed de demonstração Vetor Labs em projects e audit (só insere o que falta; desligue com `AXIAL_SEED=false`; ver `docs/demo-seed.md`).
 
 ## Variáveis (aba Environment do Compose no Dokploy)
 
