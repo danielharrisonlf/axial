@@ -61,10 +61,10 @@ Cada tela tem 4 arquivos (`-1440-light`, `-1440-dark`, `-390-light`, `-390-dark`
 | `pnpm lint` | 188 arquivos, 0 erros |
 | `pnpm typecheck` | 13/13 tarefas |
 | `pnpm build` | 11/11 tarefas (o aviso `Module Federation DTS TYPE-001` do Insights já existia em `dev` e não falha o build) |
-| `pnpm test` | 12/12 tarefas; `@axial/web` 22 testes (inclui seed 9, migração 8→9, prazo local, favoritos por perfil, `doneAt`, origem MCP e avisos agrupados) |
-| `pnpm test:web:e2e` | 15/15 cenários no Chromium, sem retries e com zero erros de console ou de página por cenário |
+| `pnpm test` | 12/12 tarefas; `@axial/web` 29 testes (inclui seed 9, migração 8→9, prazo local, favoritos por perfil, `doneAt`, origem MCP e avisos agrupados) |
+| `pnpm test:web:e2e` | 16/16 cenários no Chromium, sem retries e com zero erros de console ou de página por cenário |
 | Rolagem horizontal a 390 px | 0 px na página e no conteúdo em 18 rotas × 2 temas (e2e) e nas 38 capturas de 390 |
-| Contraste AA (`getComputedStyle`) | 6.224 textos medidos em 25 telas e estados × 2 temas, 0 abaixo de 4,5:1 (3:1 para texto grande); contornos de controle ≥ 3:1. O e2e repete a medição em 18 rotas × 2 temas |
+| Contraste AA (`getComputedStyle`) | 6.226 textos medidos em 25 telas e estados × 2 temas, 0 abaixo de 4,5:1 (3:1 para texto grande); contornos de controle ≥ 3:1. O e2e repete a medição em 18 rotas × 2 temas |
 | Erros de console | 0 nas 92 capturas e nos 15 cenários |
 
 ### Acessibilidade e teclado verificados no e2e
@@ -76,6 +76,40 @@ Cada tela tem 4 arquivos (`-1440-light`, `-1440-dark`, `-390-light`, `-390-dark`
 - Menus no padrão APG (setas, Home/End, busca por letra, Tab fecha, `menuitemradio`/`menuitemcheckbox`).
 - Kanban: Enter abre o inspector; Alt+→/← move o card de coluna, mantém o foco nele e anuncia a mudança na live region dedicada.
 - Navegação móvel: backdrop, conteúdo inerte, Esc fecha e devolve o foco ao botão de menu.
+
+## Auditoria ponta a ponta (18/11/2026)
+
+Depois da porta, duas auditorias exploratórias percorreram os fluxos da apresentação (planejar, organizar, executar, notificar, acompanhar e MCP) com os cinco perfis, a 1440 e 390 px, nos dois temas, sem erros de console. As suítes de backend rodaram contra `axial_test`. Achados corrigidos:
+
+| Achado | Correção |
+| --- | --- |
+| Esc no inspector descartava título/descrição em edição | O drawer grava o rascunho ao fechar por qualquer caminho |
+| Desenvolvedor abria o Insights (sem `insights.view`) | Página "Acesso restrito"; a matriz e a regra agora concordam |
+| Desenvolvedor atribuía tarefas a outras pessoas (pelo console MCP) | `task.assign` exigido no store, como no protótipo (assumir a própria tarefa continua permitido) |
+| Visualizador via a outra organização | Escopo da própria organização, como no protótipo |
+| Líder via entregas de projetos fora do seu escopo; sino e página com regras diferentes | Uma regra única: próprias entregas; Administrador e Gestor veem as da organização |
+| "Tentativas sem permissão são registradas" não era verdade | Toda negação vira registro `denied` na auditoria, e o aviso diz o que o perfil não pode fazer |
+| Detalhe de auditoria listava a tarefa inteira (21 campos, `[object Object]`) | Só os campos alterados; critérios, booleanos, pessoas e status legíveis |
+| Atribuição e bloqueio registrados como "atualizou" | Ações próprias (Atribuição, Bloqueio, Desbloqueio, Prioridade) com resumo legível |
+| A ação recém-feita aparecia em 6º (registros do seed no futuro, "agora") | Instantes do seed sempre no passado, ordem preservada |
+| Achar a tarefa movida exigia 4 filtros | Busca por referência ou texto; coluna Entidade mostra "Tarefa · PCL-110"; filtros só com opções existentes |
+| Risco diferente entre Workspace e Insights após concluir um bloqueador | Mesma regra: só bloqueador aberto conta; KPI de risco do Início conta projetos ativos |
+| `update-task-status` ignorava a versão | Versão derivada e exigida; versão antiga devolve `version_conflict` |
+| Restaurar focava o botão destrutivo e trocava o tema | Foco em "Cancelar"; o tema é mantido |
+| Projeto salvo sem data de início sumia do Cronograma | Início obrigatório na edição |
+| Subtarefa de tarefa em sprint encerrada falhava | A subtarefa não herda sprint encerrada |
+| Convite não entrava nas equipes, sem foco no erro nem Enter | Entra nas equipes; foco no primeiro inválido; Enter envia |
+| Sem retorno visual em editar/arquivar/restaurar projeto, excluir tarefa e sprints | Avisos de sucesso |
+| Textos: ids crus na auditoria, "dia(s)", "1 tarefas", crase em "acesso à", "Desenvolvedor / Colaborador", "Visualizador / Auditor", "Vence em 1d", vazios que sugeriam ações proibidas | Corrigidos; o seed migra os nomes de papéis e templates |
+| Sino abria só a lista; reenvio fechava o drawer mesmo com falha | O item do sino abre a entrega; o drawer fica aberto e mostra o resultado |
+| Busca a 390 px com 166 px de largura; aba ativa cortada | Resultados na largura da tela; a aba ativa rola para a vista |
+| Teste de integração do relay dependia de outbox vazio | O evento do teste é o mais antigo da fila; não depende de resíduos de outras suítes |
+
+Regras confirmadas e mantidas: a Central de auditoria segue o ms-audit (ADMIN, PROJECT_MANAGER e TEAM_LEAD). Por isso o papel se chama apenas "Visualizador" e Sérgio passou a "Gerente de Operações". A sincronização entre telas é do backend (ms-realtime); a interface de demonstração não abre conexão.
+
+Pendências de baixa severidade: o foco volta ao título (e não à linha da auditoria) ao fechar uma tarefa aberta pelo Insights; o filtro Equipe do Insights não recalcula o progresso; o losango de marco pode cobrir o rótulo da barra no Cronograma (igual ao protótipo); tabelas a 390 px rolam dentro do painel; não há tela para gerenciar integrantes de equipe.
+
+Verificação após as correções: `pnpm lint` (188 arquivos), `pnpm typecheck` 13/13, `pnpm build` 11/11, `pnpm test` 12/12 (web 29 testes), `pnpm test:integration` 3/3, `pnpm test:e2e` 13/13, `pnpm test:web:e2e` 16/16, as suítes de integração de identity, realtime, notifications, gateway, mcp e audit, 92 capturas sem rolagem horizontal nem erro de console e 6.226 textos com contraste AA.
 
 ## Limitações conhecidas
 
