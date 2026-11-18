@@ -1,5 +1,10 @@
 import { defineConfig } from "@playwright/test";
 
+// Ports are configurable so a second checkout (worktree) can run the suite while another
+// dev server holds 5173/5174; reuseExistingServer would otherwise test the other checkout.
+const webPort = Number(process.env.WEB_E2E_PORT ?? 5173);
+const insightsPort = Number(process.env.INSIGHTS_E2E_PORT ?? 5174);
+
 export default defineConfig({
   testDir: "./tests",
   timeout: 45_000,
@@ -11,7 +16,7 @@ export default defineConfig({
   reporter: [["list"], ["html", { outputFolder: "../../output/validation/web/report", open: "never" }]],
   outputDir: "../../output/validation/web/artifacts",
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: `http://127.0.0.1:${webPort}`,
     viewport: { width: 1440, height: 1000 },
     colorScheme: "light",
     headless: true,
@@ -20,14 +25,15 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "pnpm --filter @axial/insights dev --host 127.0.0.1 --port 5174",
-      url: "http://127.0.0.1:5174",
+      command: `pnpm --filter @axial/insights dev --host 127.0.0.1 --port ${insightsPort}`,
+      url: `http://127.0.0.1:${insightsPort}`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },
     {
-      command: "pnpm dev --host 127.0.0.1 --port 5173",
-      url: "http://127.0.0.1:5173",
+      command: `pnpm dev --host 127.0.0.1 --port ${webPort}`,
+      url: `http://127.0.0.1:${webPort}`,
+      env: { INSIGHTS_REMOTE_ENTRY: `http://localhost:${insightsPort}/remoteEntry.js` },
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
     },
