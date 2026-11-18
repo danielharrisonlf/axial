@@ -1,6 +1,8 @@
 export type InsightPriority = "urgent" | "high" | "medium" | "low";
 export type InsightStatus = "backlog" | "todo" | "in_progress" | "in_review" | "done";
 export type InsightRole = "admin" | "pm" | "lead" | "dev" | "viewer";
+/** Page rendered by the remote; the Workspace shell owns the navigation between them. */
+export type InsightsView = "executive" | "analytics" | "audit";
 
 export interface InsightProject {
   id: string;
@@ -12,10 +14,13 @@ export interface InsightProject {
   leadId: string;
   teamIds: string[];
   archived: boolean;
+  /** Light-palette hex kept by the data; the interface maps it to a themed --cat-N token. */
+  color: string;
 }
 
 export interface InsightTask {
   id: string;
+  ref: string;
   projectId: string;
   title: string;
   status: InsightStatus;
@@ -28,6 +33,8 @@ export interface InsightTask {
   createdAt: string;
   updatedAt: string;
   dueDate: string | null;
+  /** Moment the task entered "done" (null while open). Completion metrics use it, never updatedAt. */
+  doneAt: string | null;
 }
 
 export interface InsightUser {
@@ -39,6 +46,7 @@ export interface InsightUser {
   teamIds: string[];
   roleId: InsightRole;
   active: boolean;
+  orgId: string;
 }
 
 export interface InsightTeam {
@@ -61,6 +69,11 @@ export interface InsightOrganization {
   name: string;
 }
 
+export interface InsightRoleName {
+  id: string;
+  name: string;
+}
+
 export interface InsightAudit {
   id: string;
   ts: string;
@@ -75,7 +88,12 @@ export interface InsightAudit {
   source: string;
 }
 
+/**
+ * Module Federation contract. The host already scopes every collection to the
+ * signed-in profile; the remote only filters inside that scope.
+ */
 export interface InsightsProps {
+  view: InsightsView;
   projects: InsightProject[];
   tasks: InsightTask[];
   users: InsightUser[];
@@ -85,10 +103,15 @@ export interface InsightsProps {
   audit: InsightAudit[];
   roleId: InsightRole;
   canAudit: boolean;
-  theme?: "light" | "dark";
+  /** Current profile; a change resets the filters, as the prototype does on profile switch. */
+  meId: string;
+  roles: InsightRoleName[];
+  /** Opens the task inspector of the Workspace; without it task references are plain text. */
+  openTask?: (taskId: string) => void;
 }
 
 export const EMPTY_PROPS: InsightsProps = {
+  view: "executive",
   projects: [],
   tasks: [],
   users: [],
@@ -98,6 +121,6 @@ export const EMPTY_PROPS: InsightsProps = {
   audit: [],
   roleId: "viewer",
   canAudit: false,
+  meId: "",
+  roles: [],
 };
-
-export type InsightsData = InsightsProps & Record<string, unknown>;

@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import BarList from "../components/BarList.vue";
+import BarList, { type BarItem } from "../components/BarList.vue";
+import EmptyState from "../components/EmptyState.vue";
+import { Icon, type IconName } from "../components/Icon";
+import KpiSparkline from "../components/KpiSparkline.vue";
 import LineChart from "../components/LineChart.vue";
+import UserAvatar from "../components/UserAvatar.vue";
 import {
+  byValueDesc,
+  DAY,
+  doneAtTime,
   isOverdue,
   onTimeRate,
+  plural,
   projectRisk,
   rel,
-  STATUS_COLOR,
-  STATUS_LABEL,
+  STATUS_META,
   STATUSES,
   weeklyCompletions,
 } from "../lib";
@@ -16,168 +23,233 @@ import type { InsightAudit, InsightProject, InsightTask, InsightTeam, InsightUse
 
 const props = defineProps<{
   projects: InsightProject[];
+  /** Top-level tasks of the filtered projects (and team). */
   tasks: InsightTask[];
+  /** Every task in scope: risk is computed per project, independent of the team filter. */
+  allTasks: InsightTask[];
+  taskById: Map<string, InsightTask>;
   teams: InsightTeam[];
   users: InsightUser[];
   audit: InsightAudit[];
   period: number;
+  canAudit: boolean;
 }>();
 
-const completed = computed(() => {
-  const cutoff = Date.now() - props.period * 86_400_000;
-  return props.tasks.filter((task) => task.status === "done" && new Date(task.updatedAt).getTime() >= cutoff);
-});
-const late = computed(() => props.tasks.filter(isOverdue));
-const atRisk = computed(
-  () => props.projects.filter((project) => projectRisk(props.tasks, project).level === "high").length,
-);
-const rate = computed(() => onTimeRate(props.tasks));
+const risk = (project: InsightProject) => projectRisk(props.allTasks, project, props.taskById);
 
-const kpis = computed(() => [
+const buckets = computed(() => weeklyCompletions(props.tasks, props.period));
+const completed = computed(() => {
+  const cutoff = Date.now() - props.period * DAY;
+  return props.tasks.filter((task) => doneAtTime(task) >= cutoff).length;
+});
+const late = computed(() => props.tasks.filter(isOverdue).length);
+const rate = computed(() => onTimeRate(props.tasks));
+const atRisk = computed(
+  () =>
+    props.projects.filter((project) => project.status === "active" && risk(project).level === "high").length,
+);
+
+interface Kpi {
+  icon: IconName;
+  label: string;
+  value: string;
+  ctx: string;
+  tone?: "bad" | "good";
+  spark?: number[];
+}
+const kpis = computed<Kpi[]>(() => [
   {
+    icon: "folders",
     label: "Projetos ativos",
-    value: props.projects.filter((project) => project.status === "active").length,
-    context: `${props.projects.length} no recorte`,
+    value: String(props.projects.filter((project) => project.status === "active").length),
+    ctx: plural(props.projects.length, "projeto nos filtros", "projetos nos filtros"),
   },
   {
+    icon: "flag",
     label: "Projetos concluídos",
-    value: props.projects.filter((project) => project.status === "done").length,
-    context: "entregues",
+    value: String(props.projects.filter((project) => project.status === "done").length),
+    ctx: "entregues",
   },
   {
+    icon: "alert",
     label: "Projetos em risco",
-    value: atRisk.value,
-    context: atRisk.value ? "exigem atenção" : "nenhum",
+    value: String(atRisk.value),
+    ctx: atRisk.value ? "exigem atenção" : "nenhum",
     tone: atRisk.value ? "bad" : "good",
   },
   {
+    icon: "check2",
     label: "Tarefas concluídas",
-    value: completed.value.length,
-    context: `últimos ${props.period} dias`,
-    tone: "good",
+    value: String(completed.value),
+    ctx: `últimos ${props.period} dias`,
+    spark: buckets.value.map((bucket) => bucket.y),
   },
   {
+    icon: "clock",
     label: "Tarefas atrasadas",
-    value: late.value.length,
-    context: "em aberto hoje",
-    tone: late.value.length ? "bad" : "good",
+    value: String(late.value),
+    ctx: "em aberto hoje",
+    tone: late.value ? "bad" : "good",
   },
   {
+    icon: "target",
     label: "Cumprimento de prazos",
     value: rate.value == null ? "—" : `${rate.value}%`,
-    context: "entregas no prazo",
-    tone: rate.value != null && rate.value < 70 ? "bad" : "good",
+    ctx: "tarefas concluídas no prazo",
+    tone: rate.value != null && rate.value < 70 ? "bad" : undefined,
   },
 ]);
 
-const statusItems = computed(() =>
+const total = computed(() => buckets.value.reduce((sum, bucket) => sum + bucket.y, 0));
+const chartHead = computed(() => {
+  const weeks = buckets.value.length;
+  const avg = (total.value / weeks).toFixed(1).replace(".", ",");
+  return `tarefas concluídas em ${weeks} semanas · média ${avg}/semana`;
+});
+const chartLabel = computed(
+  () =>
+    `Tarefas concluídas por semana: ${buckets.value.map((bucket) => `${bucket.label} ${bucket.y}`).join(", ")}`,
+);
+
+// status distribution: status color, always with glyph + label (never color alone)
+const statusItems = computed<BarItem[]>(() =>
   STATUSES.map((status) => ({
-    label: STATUS_LABEL[status],
+    label: STATUS_META[status].label,
+    icon: { status },
+    color: STATUS_META[status].color,
     value: props.tasks.filter((task) => task.status === status).length,
-    color: STATUS_COLOR[status],
   })),
 );
 
-const situation = computed(() => {
-  const rows = [
-    { label: "Saudáveis", value: 0, color: "#1d7a4c" },
-    { label: "Atenção", value: 0, color: "#9a5b00" },
-    { label: "Em risco", value: 0, color: "#be3030" },
-    { label: "Entregues", value: 0, color: "#8b93a1" },
-  ];
+const situation = computed<BarItem[]>(() => {
+  const counts = { ok: 0, mid: 0, high: 0, done: 0 };
   for (const project of props.projects) {
-    if (project.status === "done") {
-      rows[3].value += 1;
-      continue;
-    }
-    const risk = projectRisk(props.tasks, project);
-    if (risk.level === "high") rows[2].value += 1;
-    else if (risk.level === "mid") rows[1].value += 1;
-    else rows[0].value += 1;
+    if (project.status === "done") counts.done += 1;
+    else counts[risk(project).level] += 1;
   }
-  return rows;
+  return [
+    { label: "Saudáveis", icon: { icon: "check", color: "var(--ok)" }, color: "var(--ok)", value: counts.ok },
+    {
+      label: "Atenção",
+      icon: { icon: "info", color: "var(--warn)" },
+      color: "var(--warn)",
+      value: counts.mid,
+    },
+    {
+      label: "Em risco",
+      icon: { icon: "alert", color: "var(--danger)" },
+      color: "var(--danger)",
+      value: counts.high,
+    },
+    {
+      label: "Entregues",
+      icon: { icon: "flag", color: "var(--ink-3)" },
+      color: "var(--ink-3)",
+      value: counts.done,
+    },
+  ];
 });
 
-const teamDeadlines = computed(() => {
-  return props.teams
-    .map((team) => ({
-      teamId: team.id,
-      label: team.name,
-      value: onTimeRate(props.tasks.filter((task) => task.teamId === team.id)) ?? 0,
-      count: props.tasks.filter((task) => task.teamId === team.id && task.status === "done" && task.dueDate)
-        .length,
-    }))
-    .filter((row) => row.count > 0)
-    .sort((a, b) => b.value - a.value)
-    .map((row) => ({ label: row.label, value: row.value, display: `${row.value}%` }));
-});
+const teamTasks = (teamId: string) => props.tasks.filter((task) => task.teamId === teamId);
 
-const teamSummary = computed(() =>
+// below 70% on time the bar turns to warning (the value is written next to it)
+const deadlines = computed<BarItem[]>(() =>
   props.teams
-    .map((team) => {
-      const scoped = props.tasks.filter((task) => task.teamId === team.id);
-      const open = scoped.filter((task) => task.status !== "done").length;
-      const done = scoped.length - open;
-      const lateCount = scoped.filter(isOverdue).length;
-      return { team, total: scoped.length, open, done, late: lateCount, rate: onTimeRate(scoped) };
+    .flatMap((team) => {
+      const value = onTimeRate(teamTasks(team.id));
+      return value == null
+        ? []
+        : [{ label: team.name, value, display: `${value}%`, color: value < 70 ? "var(--warn)" : undefined }];
     })
-    .filter((row) => row.total > 0),
+    .sort(byValueDesc),
 );
 
-const recent = computed(() =>
-  props.audit
-    .filter((entry) => entry.action !== "denied")
-    .slice(0, 7)
-    .map((entry) => ({ ...entry, user: props.users.find((user) => user.id === entry.userId) })),
+const summary = computed(() =>
+  props.teams.flatMap((team) => {
+    const scoped = teamTasks(team.id);
+    if (!scoped.length) return [];
+    const open = scoped.filter((task) => task.status !== "done").length;
+    return [
+      {
+        team,
+        open,
+        done: scoped.length - open,
+        late: scoped.filter(isOverdue).length,
+        rate: onTimeRate(scoped),
+      },
+    ];
+  }),
 );
+
+const userById = computed(() => new Map(props.users.map((user) => [user.id, user])));
+const recent = computed(() => {
+  const ids = new Set(props.projects.map((project) => project.id));
+  return props.audit
+    .filter((entry) => entry.action !== "denied" && (!entry.projectId || ids.has(entry.projectId)))
+    .slice(0, 7);
+});
 </script>
 
 <template>
   <div class="stat-strip">
     <div v-for="kpi in kpis" :key="kpi.label" class="stat">
-      <div class="lbl">{{ kpi.label }}</div>
-      <div class="val">{{ kpi.value }}</div>
-      <div class="ctx" :class="kpi.tone">{{ kpi.context }}</div>
+      <div class="lbl"><Icon :name="kpi.icon" :size="14" />{{ kpi.label }}</div>
+      <div class="stat-row">
+        <div class="val">{{ kpi.value }}</div>
+        <KpiSparkline v-if="kpi.spark" :values="kpi.spark" />
+      </div>
+      <div class="ctx" :class="kpi.tone">{{ kpi.ctx }}</div>
     </div>
   </div>
 
   <div class="grid c2">
-    <section class="panel">
+    <div class="panel">
       <div class="panel-head">
-        <h3>Evolução das entregas</h3>
+        <h3>Evolução das conclusões</h3>
         <span class="spacer" />
-        <span class="subtle small">tarefas concluídas por semana</span>
+        <span class="subtle t12">por semana</span>
       </div>
       <div class="panel-body">
-        <LineChart :points="weeklyCompletions(tasks, period)" unit="concluídas" />
+        <div class="chart-head">
+          <span class="big">{{ total }}</span>
+          <span class="muted">{{ chartHead }}</span>
+        </div>
+        <LineChart :points="buckets" :label="chartLabel" unit="concluídas" />
       </div>
-    </section>
-    <section class="panel">
+    </div>
+    <div class="panel">
       <div class="panel-head"><h3>Tarefas por status</h3></div>
       <div class="panel-body">
-        <BarList :items="statusItems" :label-width="130" unit="tarefas" />
+        <BarList :items="statusItems" label="Distribuição de tarefas por status" :label-w="130" unit="tarefas" />
       </div>
-    </section>
-    <section class="panel">
+    </div>
+    <div class="panel">
       <div class="panel-head"><h3>Projetos por situação</h3></div>
       <div class="panel-body">
-        <BarList :items="situation" :label-width="120" unit="projetos" />
+        <BarList :items="situation" label="Projetos por situação" :label-w="120" unit="projetos" />
       </div>
-    </section>
-    <section class="panel">
+    </div>
+    <div class="panel">
       <div class="panel-head">
         <h3>Prazos por equipe</h3>
         <span class="spacer" />
-        <span class="subtle small">% de entregas no prazo</span>
+        <span class="subtle t12">% de tarefas concluídas no prazo</span>
       </div>
       <div class="panel-body">
-        <BarList :items="teamDeadlines" :label-width="130" />
+        <BarList v-if="deadlines.length" :items="deadlines" label="Cumprimento de prazos por equipe" :label-w="130" />
+        <EmptyState
+          v-else
+          compact
+          icon="calendar"
+          title="Sem tarefas concluídas com prazo"
+          msg="Conclua tarefas com prazo definido para medir o cumprimento."
+        />
       </div>
-    </section>
+    </div>
   </div>
 
-  <div class="grid c2-1" style="margin-top: 14px">
-    <section class="panel">
+  <div class="grid c2-1 mt">
+    <div class="panel">
       <div class="panel-head"><h3>Resumo por equipe</h3></div>
       <div class="tbl-wrap">
         <table class="tbl">
@@ -191,31 +263,42 @@ const recent = computed(() =>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in teamSummary" :key="row.team.id">
+            <tr v-for="row in summary" :key="row.team.id">
               <td>{{ row.team.name }}</td>
               <td class="num">{{ row.open }}</td>
               <td class="num">{{ row.done }}</td>
-              <td class="num" :class="{ danger: row.late }">{{ row.late }}</td>
+              <td class="num">
+                <span v-if="row.late" class="text-danger">{{ row.late }}</span>
+                <span v-else class="subtle">0</span>
+              </td>
               <td class="num">{{ row.rate == null ? "—" : `${row.rate}%` }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-    </section>
-    <section class="panel">
+    </div>
+    <div class="panel">
       <div class="panel-head">
         <h3>Atividades recentes</h3>
+        <span class="spacer" />
+        <a v-if="canAudit" class="btn btn-ghost btn-sm" href="#/insights/audit">Auditoria<Icon name="arrowR" :size="12" /></a>
       </div>
       <div class="panel-body">
-        <div v-for="entry in recent" :key="entry.id" class="hist-item">
-          <span class="avatar sm" :style="{ '--av': entry.user?.color ?? '#8b93a1' }">
-            {{ entry.user?.initials ?? "?" }}
-          </span>
-          <span class="grow"><b>{{ entry.user?.name ?? "?" }}</b> {{ entry.summary }}</span>
-          <time>{{ rel(entry.ts) }}</time>
+        <div v-if="recent.length" class="timeline">
+          <div v-for="entry in recent" :key="entry.id" class="hist-item">
+            <UserAvatar :user="userById.get(entry.userId)" size="sm" />
+            <span class="tl-txt"><b>{{ userById.get(entry.userId)?.name ?? "?" }}</b> {{ entry.summary }}</span>
+            <time :datetime="entry.ts">{{ rel(entry.ts) }}</time>
+          </div>
         </div>
-        <p v-if="!recent.length" class="ins-muted">Sem atividades no recorte.</p>
+        <EmptyState
+          v-else
+          compact
+          icon="pulse"
+          title="Sem atividade nos filtros"
+          msg="Ajuste os filtros para ver as ações recentes."
+        />
       </div>
-    </section>
+    </div>
   </div>
 </template>

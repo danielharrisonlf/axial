@@ -1,77 +1,50 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useTip } from "../state";
+import type { InsightStatus } from "../types";
+import { Icon, type IconName } from "./Icon";
+import StatusIcon from "./StatusIcon.vue";
 
-interface BarItem {
+/** Leading glyph of a row: a status ring or a tinted icon (never color alone). */
+export type BarIcon = { status: InsightStatus } | { icon: IconName; color: string };
+export interface BarItem {
   label: string;
   value: number;
-  color?: string;
   display?: string;
+  /** Token reference (var(--…)); the value is always written as text too. */
+  color?: string;
+  icon?: BarIcon;
 }
 
-const props = withDefaults(
-  defineProps<{ items: BarItem[]; labelWidth?: number; unit?: string; emptyText?: string }>(),
-  { labelWidth: 140, unit: "itens", emptyText: "Sem dados no recorte." },
-);
+/** Horizontal bars (HTML): label + glyph on the left, value as text on the right. */
+const props = defineProps<{ items: BarItem[]; label: string; labelW?: number; unit?: string }>();
+const tip = useTip();
 const max = computed(() => Math.max(1, ...props.items.map((item) => item.value)));
+const summary = computed(
+  () =>
+    `${props.label}: ${props.items.map((item) => `${item.label} ${item.display ?? item.value}`).join(", ")}`,
+);
+const shown = (item: BarItem) => item.display ?? String(item.value);
+function move(event: MouseEvent, item: BarItem) {
+  tip.show(event.clientX, event.clientY - 4, [
+    item.label,
+    `${shown(item)}${props.unit ? ` ${props.unit}` : ""}`,
+  ]);
+}
 </script>
 
 <template>
-  <div class="barlist" role="img" :aria-label="`Distribuição em ${unit}`">
-    <p v-if="!items.length" class="ins-muted">{{ emptyText }}</p>
-    <div v-for="item in items" :key="item.label" class="barrow">
-      <span class="barlabel" :style="{ width: `${labelWidth}px` }">{{ item.label }}</span>
-      <div class="bartrack">
-        <div
-          class="barfill"
-          :style="{
-            width: `${Math.round((item.value / max) * 100)}%`,
-            background: item.color ?? 'var(--ins-accent, #2b5fd9)',
-          }"
-        />
-      </div>
-      <span class="barvalue">{{ item.display ?? item.value }}</span>
+  <div class="bar-list" role="img" :aria-label="summary" :style="labelW ? { '--bar-lw': `${labelW}px` } : undefined">
+    <div v-for="item in items" :key="item.label" class="bar-row" @mousemove="move($event, item)" @mouseleave="tip.hide()">
+      <span class="bar-label">
+        <template v-if="item.icon">
+          <StatusIcon v-if="'status' in item.icon" :status="item.icon.status" :size="13" />
+          <span v-else :style="{ display: 'inline-flex', color: item.icon.color }"><Icon :name="item.icon.icon" :size="14" /></span>
+        </template>
+        <span>{{ item.label }}</span>
+      </span>
+      <span class="bar-track"><i :style="{ width: `${Math.round((100 * item.value) / max)}%`, '--bar': item.color }" /></span>
+      <span class="bar-value">{{ shown(item) }}</span>
     </div>
   </div>
 </template>
-
-<style scoped>
-.barrow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 0;
-}
-.barlabel {
-  flex: none;
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--ins-ink-2, #5b6472);
-}
-.bartrack {
-  flex: 1;
-  height: 13px;
-  border-radius: 4px;
-  border: 1px solid var(--ins-border, #e5e8ee);
-  background: var(--ins-surface-2, #f2f4f7);
-  overflow: hidden;
-}
-.barfill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-.barvalue {
-  flex: none;
-  width: 56px;
-  text-align: right;
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.ins-muted {
-  color: var(--ins-ink-3, #8b93a1);
-  font-size: 11.5px;
-}
-</style>

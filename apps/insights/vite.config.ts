@@ -19,5 +19,8 @@ export default defineConfig({
   ],
   server: { host: "0.0.0.0", port: 5174, strictPort: true, cors: true },
   preview: { host: "0.0.0.0", port: 4174, strictPort: true },
-  build: { target: "es2022" },
+  // CSS keeps light-dark() and @scope as written: lowering light-dark() makes the
+  // theme depend on --lightningcss-* variables declared next to color-scheme,
+  // which only exist in the host's stylesheet. Same floor as DESIGN.md §2.
+  build: { target: "es2022", cssTarget: ["chrome123", "edge123", "firefox120", "safari17.5"] },
 });

@@ -1,7 +1,12 @@
+// Contract of the Insights remote (apps/insights/src/types.ts and mount.ts). Kept by hand:
+// the host never imports the remote's source; the remote can be deployed on its own.
 type InsightStatus = "backlog" | "todo" | "in_progress" | "in_review" | "done";
+type InsightRole = "admin" | "pm" | "lead" | "dev" | "viewer";
 
 declare module "insights/mount" {
   export interface InsightsRemoteProps {
+    /** Page rendered by the remote; the Workspace shell owns the navigation between them. */
+    view: "executive" | "analytics" | "audit";
     projects: Array<{
       id: string;
       orgId: string;
@@ -12,9 +17,11 @@ declare module "insights/mount" {
       leadId: string;
       teamIds: string[];
       archived: boolean;
+      color: string;
     }>;
     tasks: Array<{
       id: string;
+      ref: string;
       projectId: string;
       title: string;
       status: InsightStatus;
@@ -27,6 +34,8 @@ declare module "insights/mount" {
       createdAt: string;
       updatedAt: string;
       dueDate: string | null;
+      /** Moment the task entered "done"; completion metrics use it, never updatedAt. */
+      doneAt: string | null;
     }>;
     users: Array<{
       id: string;
@@ -35,8 +44,9 @@ declare module "insights/mount" {
       initials: string;
       color: string;
       teamIds: string[];
-      roleId: "admin" | "pm" | "lead" | "dev" | "viewer";
+      roleId: InsightRole;
       active: boolean;
+      orgId: string;
     }>;
     teams: Array<{ id: string; name: string; orgId: string }>;
     sprints: Array<{
@@ -61,10 +71,17 @@ declare module "insights/mount" {
       summary: string;
       source: string;
     }>;
-    roleId: "admin" | "pm" | "lead" | "dev" | "viewer";
+    roleId: InsightRole;
     canAudit: boolean;
-    theme?: "light" | "dark";
+    meId: string;
+    roles: Array<{ id: string; name: string }>;
+    openTask?: (taskId: string) => void;
+  }
+  /** Unmount callback that also receives new props without remounting (older remotes: no update). */
+  export interface InsightsHandle {
+    (): void;
+    update?: (props: InsightsRemoteProps) => void;
   }
 
-  export function mount(element: HTMLElement, props: InsightsRemoteProps): () => void;
+  export function mount(element: HTMLElement, props: InsightsRemoteProps): InsightsHandle;
 }
