@@ -747,7 +747,7 @@ export function NoAccess({ what }: { what: string }) {
     <Empty
       icon="block"
       title="Acesso restrito"
-      sub={`O perfil “${roles[me.roleId]}” não tem acesso ${what}. Troque o perfil no canto superior direito para experimentar.`}
+      sub={`O perfil “${roles[me.roleId]}” não tem acesso ${what}.`}
     >
       <a className="btn" href="#/dashboard">
         Voltar ao início

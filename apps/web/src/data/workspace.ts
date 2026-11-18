@@ -475,14 +475,6 @@ export function createWorkspaceStore(
         db.settings.currentProjectId = id;
       });
     },
-    resetDemo() {
-      // the appearance is a preference of whoever is presenting, not demo data
-      const fresh = createDemoData(now());
-      fresh.settings.theme = snapshot.db.settings.theme;
-      snapshot = { ...snapshot, toasts: [] };
-      commit(fresh);
-      notify("Dados de demonstração restaurados", "Todo o estado voltou ao cenário inicial.", "ok");
-    },
     createProject(input: ProjectInput): Project | null {
       if (!guard("project.create")) return null;
       const result = write((db) => {
@@ -1065,7 +1057,7 @@ export function createWorkspaceStore(
   };
   if (recovery)
     notify(
-      "Demonstração restaurada",
+      "Dados recuperados",
       "Os dados locais estavam incompatíveis. O cenário inicial foi recuperado.",
       "warn",
     );

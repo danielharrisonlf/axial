@@ -19,9 +19,33 @@ async function saved(page: Page) {
     storageKey,
   );
 }
+// the Workspace has no profile switcher: the test chooses the signed-in user in the saved state
 async function switchProfile(page: Page, name: RegExp) {
-  await page.getByRole("button", { name: "Trocar perfil de demonstração", exact: true }).click();
-  await page.getByRole("menuitemradio", { name }).click();
+  // before the first change nothing is saved yet: re-selecting the current theme writes the state
+  if (!(await page.evaluate((key) => localStorage.getItem(key) !== null, storageKey))) {
+    const back = page.url();
+    await page.goto("/#/settings");
+    await page
+      .getByRole("radiogroup", { name: "Tema da interface" })
+      .getByRole("radio", { name: "Sistema" })
+      .click();
+    await page.goto(back);
+  }
+  await page.evaluate(
+    ([key, source, flags]) => {
+      const data = JSON.parse(localStorage.getItem(key) ?? "null") as {
+        users: Array<{ id: string; name: string }>;
+        settings: { currentUserId: string };
+      };
+      const user = data.users.find((u) => new RegExp(source, flags).test(u.name));
+      if (!user) throw new Error(`no user matches ${source}`);
+      data.settings.currentUserId = user.id;
+      localStorage.setItem(key, JSON.stringify(data));
+    },
+    [storageKey, name.source, name.flags] as const,
+  );
+  await page.reload();
+  await expect(page.locator(".profile-btn .who b")).toHaveText(name);
 }
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
@@ -344,7 +368,7 @@ test("incompatible local data recovers visibly and remains usable", async ({ pag
   }, storageKey);
   await page.goto("/#/projects");
   await expect(page.getByRole("table").locator("tbody tr")).toHaveCount(11);
-  await expect(page.getByText("Demonstração restaurada", { exact: true })).toBeVisible();
+  await expect(page.getByText("Dados recuperados", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Mudar para tema escuro", exact: true }).click();
   expect((await saved(page))?.settings.theme).toBe("dark");
   expect(await page.evaluate(() => localStorage.getItem("projectflow.db.v1"))).toBe(
@@ -420,6 +444,7 @@ test("archived projects remain scoped in lists and direct links after profile sw
     page.getByRole("button", { name: "Diagnóstico Industrial Andrade", exact: true }),
   ).toBeVisible();
   await switchProfile(page, /Ricardo Nogueira/);
+  await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("archived");
   await expect(page.getByText("Nenhum projeto encontrado", { exact: true })).toBeVisible();
   await expect(page.getByText("Diagnóstico Industrial Andrade", { exact: true })).toHaveCount(0);
   await page.goto("/#/projects/prj-cma");
@@ -644,9 +669,10 @@ test("presentation flows: Esc keeps inspector edits, audit finds the moved task,
   await expect(page.getByText(/não tem acesso ao Insights/)).toBeVisible();
   // destructive confirmations open on "Cancelar"
   await switchProfile(page, /Helena Costa/);
-  await page.goto("/#/settings/data");
-  await page.getByRole("button", { name: "Restaurar dados de demonstração", exact: true }).click();
-  const confirm = page.getByRole("alertdialog", { name: "Restaurar dados de demonstração", exact: true });
+  await page.goto("/#/projects/prj-pcl");
+  await page.getByRole("main").getByRole("button", { name: "Ações do projeto", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Arquivar", exact: true }).click();
+  const confirm = page.getByRole("alertdialog", { name: "Arquivar projeto", exact: true });
   await expect(confirm.getByRole("button", { name: "Cancelar", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
 });

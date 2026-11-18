@@ -94,7 +94,7 @@ const roleName = computed(() => props.roles.find((role) => role.id === props.rol
         <div v-else>
           <h1 tabindex="-1">Visão executiva</h1>
           <div class="sub">
-            Indicadores calculados sobre o estado atual da demonstração — eles reagem às alterações feitas no
+            Indicadores calculados sobre o estado atual do Workspace — eles reagem às alterações feitas no
             Workspace.
           </div>
         </div>

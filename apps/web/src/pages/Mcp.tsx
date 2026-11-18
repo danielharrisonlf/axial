@@ -128,7 +128,7 @@ const TOOLS: ToolDef[] = [
 const toolByName = (name: string) => TOOLS.find((t) => t.name === name);
 
 /* ==========================================================================
-   Execução local: lê e altera o armazenamento da demonstração com o perfil ativo.
+   Execução local: lê e altera os dados do Workspace com o perfil ativo.
    Fora do escopo do perfil, projeto e tarefa respondem como inexistentes.
    ========================================================================== */
 class ToolError extends Error {
@@ -447,8 +447,7 @@ function Catalog() {
         </table>
       </div>
       <p className="page-note mt-3 pager">
-        No servidor real os ids são UUIDs; nesta demonstração o console usa os ids do cenário (ex.: prj-pcl,
-        tsk1).
+        No servidor os ids são UUIDs; o console usa os ids do Workspace (ex.: prj-pcl, tsk1).
       </p>
     </div>
   );
@@ -538,9 +537,9 @@ function Console() {
             />
           </Field>
           <p className="subtle t12">
-            O console executa a ferramenta sobre os dados desta demonstração, com as permissões do perfil
-            ativo ({roleName}). As de escrita alteram os dados e registram auditoria com origem “
-            {sourceLabel("mcp")}”. O mcp-server real chama a API do ms-projects com o token do agente.
+            O console executa a ferramenta sobre os dados do Workspace, com as permissões do perfil ativo (
+            {roleName}). As de escrita alteram os dados e registram auditoria com origem “{sourceLabel("mcp")}
+            ”. O mcp-server real chama a API do ms-projects com o token do agente.
           </p>
           <button type="button" className="btn btn-primary" onClick={run}>
             <Icon name="play" size={14} />

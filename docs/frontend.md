@@ -10,7 +10,7 @@ A referência visual é o protótipo `projectflow-ai-prototipo` na versão do de
 
 **Componentes compartilhados** (`src/components/ui.tsx`): pilha de camadas (modal, drawer, menu e navegação móvel; Esc fecha só a camada do topo, Tab preso nos diálogos, fundo inerte, foco volta ao gatilho, z-index lido de `--z-modal`), `Overlay`/`ConfirmDialog` (`alertdialog`), `MenuButton`/`Menu` (APG), `PropButton`/`PropValue` (inspector), `PageHead` com seletor ao lado do título, `TabNav` (abas que mudam a rota, `aria-current`), `FilterSelect` (`.fsel`), `Segmented`, `Switch`, `Field`/`FieldGroup` (rótulo ligado, `aria-describedby`, `aria-invalid`), `Stat` + `Sparkline`, `TaskRow`, `ActivityFeed`, glifos de status/prioridade/tipo com nome acessível, avatares e pontos com tokens categóricos (`--cat-N`), `Toasts` e a live region dedicada.
 
-**Shell** (`App.tsx`): skip link, `aside` em moldura (`--chrome`), alternador Workspace/Insights, breadcrumb, busca com Ctrl/⌘+K e atalho visível, tema, sino, seletor de perfil com o **único** indicador de demonstração ("Demonstração"), `main#conteudo`, foco no título e anúncio a cada troca de rota, navegação off-canvas abaixo de 860px. No modo Insights a sidebar mostra Visão executiva, Análise de projetos e Central de auditoria, com a marca violeta.
+**Shell** (`App.tsx`): skip link, `aside` em moldura (`--chrome`), alternador Workspace/Insights, breadcrumb, busca com Ctrl/⌘+K e atalho visível, tema, sino, perfil do usuário atual (só exibição, sem troca de perfil nem selo de demonstração), `main#conteudo`, foco no título e anúncio a cada troca de rota, navegação off-canvas abaixo de 860px. No modo Insights a sidebar mostra Visão executiva, Análise de projetos e Central de auditoria, com a marca violeta.
 
 Capturas da referência estão em docs/design-reference, as da implementação em docs/screenshots (mesmo nome de arquivo por par) e as evidências do e2e em output/validation/web.
 
@@ -25,9 +25,9 @@ Capturas da referência estão em docs/design-reference, as da implementação e
 - Cronograma com projetos e marcos.
 - Notificações com histórico multicanal, preferências por evento e canal, catálogo de templates e estado dos provedores.
 - Inspector de tarefa (drawer) como painel de propriedades com menus, faixa de bloqueio, critérios de aceite, subtarefas, comentários (Ctrl+Enter) e histórico com a origem de cada registro.
-- Agentes MCP com o catálogo das 8 ferramentas do `apps/mcp-server` e um console de teste que executa sobre os dados da demonstração (escritas registradas com origem "Agente MCP").
-- Configurações com Aparência e Dados da demonstração (restaurar e exportar). Sem a aba de arquitetura nem o cartão da organização.
-- Tema, perfil de demonstração, busca global e navegação responsiva.
+- Agentes MCP com o catálogo das 8 ferramentas do `apps/mcp-server` e um console de teste que executa sobre os dados do Workspace (escritas registradas com origem "Agente MCP").
+- Configurações só com Aparência. Sem opções de demonstração (restaurar, exportar ou trocar perfil), sem a aba de arquitetura nem o cartão da organização.
+- Tema, busca global e navegação responsiva.
 
 A navegação segue o escopo do PDF ProjectFlow: Workspace operacional, Agentes MCP, Notificações, Insights e Usuários e permissões. O assistente de IA interno não foi implementado — agentes externos usam o servidor MCP com as permissões do usuário. Webhooks não fazem parte da arquitetura do PDF e não são exibidos.
 
@@ -51,7 +51,7 @@ O cenário inicial usa os mesmos 11 projetos e 109 tarefas fictícias do protót
 
 O seed está na **versão 9**, equivalente ao seed 8 do protótipo: histórico de notificações enxuto (8 envios, um por evento, três canais, duas falhas com motivo e reenvio), `doneAt` real nas tarefas (Insights e KPIs não inferem conclusão de `updatedAt`), favoritos por pessoa e assuntos dos templates de sprint sem repetição. Um estado salvo na versão 8 é migrado sem perder as alterações da pessoa (os envios gerados no navegador são mantidos); a chave continua `axial.workspace.demo.v1`. O estado é atualizado imutavelmente e compartilha a mesma fonte entre lista, detalhes, Kanban e contadores. O navegador persiste somente sob a chave axial.workspace.demo.v1; a chave do protótipo original permanece intacta.
 
-Dados locais inválidos são recuperados com aviso. Se o navegador impedir gravação, a aplicação informa que as alterações duram apenas a sessão. Restaurar demonstração repõe o cenário inicial.
+Dados locais inválidos são recuperados com aviso. Se o navegador impedir gravação, a aplicação informa que as alterações duram apenas a sessão.
 
 A tela de Notificações reutiliza os 6 templates, as preferências evento × canal e os 3 provedores do protótipo. Atribuir uma tarefa, bloquear uma tarefa, iniciar ou encerrar uma sprint gera entregas locais; canal sem provedor configurado é registrado como falha e o reenvio só muda para entregue quando o provedor está configurado. Esses dados são fictícios e não representam chamadas ao ms-notifications. Dentro da interface, o único aviso de demonstração é o rótulo no seletor de perfil.
 

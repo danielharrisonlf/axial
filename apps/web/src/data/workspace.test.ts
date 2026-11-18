@@ -452,13 +452,4 @@ describe("audit E2E findings (18/11)", () => {
     );
     expect(store.getSnapshot().db.teams.find((t) => t.id === "tm-web")?.memberIds).toContain(user.id);
   });
-
-  it("keeps the theme and drops old messages when the demo is restored", () => {
-    const { store } = fixture();
-    store.act.setTheme("dark");
-    store.notify("Antigo", "", "warn");
-    store.act.resetDemo();
-    expect(store.getSnapshot().db.settings.theme).toBe("dark");
-    expect(store.getSnapshot().toasts.map((t) => t.title)).toEqual(["Dados de demonstração restaurados"]);
-  });
 });

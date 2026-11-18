@@ -103,7 +103,6 @@ const titles: Record<string, string> = {
   access: "Usuários e permissões",
   settings: "Configurações",
 };
-const DEMO_PROFILES = ["u1", "u2", "u4", "u8", "u18"];
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || "");
 
 function useHash() {
@@ -394,7 +393,7 @@ export default function App() {
     ) : route === "teams" ? (
       <Teams />
     ) : route === "settings" ? (
-      <Settings tab={id} />
+      <Settings />
     ) : (
       <Empty icon="folders" title="Página não encontrada" sub="Escolha uma seção na navegação lateral.">
         <a className="btn" href="#/dashboard">
@@ -473,26 +472,6 @@ export default function App() {
               ))
             )}
           </nav>
-          {can("user.manage") && (
-            <div className="sb-footer">
-              <button
-                type="button"
-                className="sb-item"
-                onClick={() =>
-                  setConfirm({
-                    title: "Restaurar dados de demonstração",
-                    message: "Todas as alterações feitas serão descartadas e o cenário inicial volta.",
-                    label: "Restaurar",
-                    danger: true,
-                    action: act.resetDemo,
-                  })
-                }
-              >
-                <Icon name="refresh" size={16} />
-                <span className="grow">Restaurar dados de demonstração</span>
-              </button>
-            </div>
-          )}
         </aside>
         {navOpen && narrow && (
           <NavLayer sidebar={sidebarRef} trigger={burgerRef.current} onClose={() => setNavOpen(false)} />
@@ -653,46 +632,13 @@ export default function App() {
               <Icon name="bell" />
               {notifications.some((n) => n.status === "failed") && <span className="notif-dot" />}
             </MenuButton>
-            <MenuButton
-              label="Trocar perfil de demonstração"
-              className="profile-btn"
-              items={() => [
-                "Perfis de demonstração",
-                ...DEMO_PROFILES.map((uid) => db.users.find((u) => u.id === uid))
-                  .filter((u): u is NonNullable<typeof u> => !!u)
-                  .map((u) => ({
-                    label: u.name,
-                    sub: `${roles[u.roleId]} · ${u.title}`,
-                    node: <Avatar user={u} size="sm" decorative />,
-                    radio: true,
-                    checked: u.id === me.id,
-                    onClick: () => act.setUser(u.id),
-                  })),
-                "sep",
-                "Outros usuários",
-                ...db.users
-                  .filter((u) => !DEMO_PROFILES.includes(u.id) && !u.invited)
-                  .slice(0, 5)
-                  .map((u) => ({
-                    label: u.name,
-                    sub: roles[u.roleId],
-                    node: <Avatar user={u} size="sm" decorative />,
-                    radio: true,
-                    checked: u.id === me.id,
-                    onClick: () => act.setUser(u.id),
-                  })),
-              ]}
-            >
-              <span className="chip demo-tag" aria-hidden="true">
-                Demonstração
-              </span>
+            <div className="profile-btn profile-static">
               <Avatar user={me} decorative />
               <span className="who">
                 <b>{me.name}</b>
                 <span>{roles[me.roleId]}</span>
               </span>
-              <Icon name="chevD" size={13} />
-            </MenuButton>
+            </div>
           </header>
           <main className="content" id="conteudo" tabIndex={-1}>
             <div className={`page${route === "board" || route === "timeline" ? " wide" : ""}`} key={routeKey}>

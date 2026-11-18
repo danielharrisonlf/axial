@@ -374,11 +374,7 @@ code, pre, kbd { font-family: var(--mono); }
   background: var(--neutral-bg); color: var(--ink-2); font-variant-numeric: tabular-nums;
 }
 .sb-item.active .cnt, .sb-item[aria-current="page"] .cnt { background: var(--accent-bg); color: var(--accent-fg); }
-.sb-footer { border-top: 1px solid var(--border); padding: var(--space-2); flex: none; }
 /* ação destrutiva no rodapé: sinaliza o risco no hover */
-.sb-footer .sb-item { color: var(--ink-3); height: auto; min-height: var(--control-h-md); padding-block: var(--space-1); }
-.sb-footer .sb-item:hover { color: var(--danger); background: var(--danger-bg); }
-.sb-footer .sb-item:hover > .ico { color: var(--danger); }
 
 /* ---- área principal ---- */
 .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -437,7 +433,8 @@ code, pre, kbd { font-family: var(--mono); }
 .profile-btn .who { text-align: left; line-height: var(--lh-12); }
 .profile-btn .who b { display: block; font-size: var(--text-12); color: var(--ink); font-weight: var(--weight-semibold); }
 .profile-btn .who span { display: block; font-size: var(--text-12); color: var(--ink-2); }
-.profile-btn .demo-tag { margin-right: var(--space-1); }
+.profile-static { cursor: default; }
+.profile-static:hover { background: transparent; }
 
 .content { flex: 1; overflow-y: auto; min-height: 0; }
 /* alvos de foco programático (troca de rota) não são operáveis: sem anel */
@@ -1823,7 +1820,7 @@ a.list-item:hover, button.list-item:hover { background: var(--surface-hover); te
   .crumbs a, .crumbs .sep { display: none; }
   .crumbs { flex: 0 0 auto; max-width: 40%; }
   .tb-search { width: auto; flex: 1 1 auto; min-width: 0; }
-  .profile-btn .who, .profile-btn .demo-tag { display: none; }
+  .profile-btn .who { display: none; }
   .page { padding: var(--space-4) var(--space-4) var(--space-7); }
   .page-head h1 { font-size: var(--text-19); line-height: var(--lh-19); }
   .form-grid { grid-template-columns: minmax(0, 1fr); }
