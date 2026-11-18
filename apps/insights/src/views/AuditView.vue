@@ -59,18 +59,26 @@ const projectOptions = computed(() => [
     label: project.name + (project.archived ? " (arquivado)" : ""),
   })),
 ]);
-const actionOptions = [
-  { value: "", label: "Todas" },
-  ...Object.entries(ACTION_LABEL).map(([value, label]) => ({ value, label })),
-];
-const sourceOptions = [
-  { value: "", label: "Todas" },
-  ...Object.entries(SOURCE_LABEL).map(([value, label]) => ({ value, label })),
-];
-const entityOptions = [
-  { value: "", label: "Todas" },
-  ...Object.entries(ENTITY_LABEL).map(([value, label]) => ({ value, label })),
-];
+// options come from the records in scope, in the label order: none that can never match
+const present = (key: "action" | "source" | "entityType", labels: Record<string, string>) => {
+  const seen = new Set(props.audit.map((entry) => entry[key]));
+  return [
+    { value: "", label: "Todas" },
+    ...Object.entries(labels)
+      .filter(([value]) => seen.has(value))
+      .map(([value, label]) => ({ value, label })),
+    ...[...seen].filter((value) => !(value in labels)).map((value) => ({ value, label: value })),
+  ];
+};
+const actionOptions = computed(() => present("action", ACTION_LABEL));
+const sourceOptions = computed(() => present("source", SOURCE_LABEL));
+const entityOptions = computed(() => present("entityType", ENTITY_LABEL));
+const taskRef = computed(() => new Map(props.tasks.map((task) => [task.id, task.ref])));
+/** "Tarefa · PCL-110": the reference the presenter just saw on the Kanban. */
+const entityText = (entry: InsightAudit) => {
+  const ref = entry.entityType === "task" && entry.entityId ? taskRef.value.get(entry.entityId) : undefined;
+  return ref ? `${entityLabel(entry.entityType)} · ${ref}` : entityLabel(entry.entityType);
+};
 const periodOptions = [
   { value: "7", label: "7 dias" },
   { value: "30", label: "30 dias" },
@@ -80,13 +88,16 @@ const periodOptions = [
 
 // any filter change goes back to the first page
 watch(
-  () => [aud.userId, aud.projectId, aud.action, aud.source, aud.entityType, aud.period],
+  () => [aud.userId, aud.projectId, aud.action, aud.source, aud.entityType, aud.period, aud.q],
   () => {
     aud.page = 0;
   },
 );
-const filtered = computed(() => aud.userId || aud.projectId || aud.action || aud.source || aud.entityType);
+const filtered = computed(
+  () => aud.userId || aud.projectId || aud.action || aud.source || aud.entityType || aud.q,
+);
 function clear() {
+  aud.q = "";
   aud.userId = "";
   aud.projectId = "";
   aud.action = "";
@@ -96,9 +107,11 @@ function clear() {
 
 const rows = computed(() => {
   const cutoff = Date.now() - Number(aud.period) * DAY;
+  const q = aud.q.trim().toLowerCase();
   return props.audit.filter(
     (entry) =>
       new Date(entry.ts).getTime() >= cutoff &&
+      (!q || `${entityText(entry)} ${entry.summary}`.toLowerCase().includes(q)) &&
       (!aud.userId || entry.userId === aud.userId) &&
       (!aud.projectId || entry.projectId === aud.projectId) &&
       (!aud.action || entry.action === aud.action) &&
@@ -135,12 +148,19 @@ function openTaskFromDrawer(taskId: string) {
       <h1 tabindex="-1">Central de auditoria</h1>
       <div class="sub">
         Trilha completa das ações: quem fez, o quê, em qual entidade, com valores anteriores e novos, e a origem
-        (interface, IA, agente MCP, automação ou API).
+        (interface, agente MCP, automação ou API).
       </div>
     </div>
   </div>
 
   <div class="fbar">
+    <input
+      v-model="aud.q"
+      class="input search"
+      type="search"
+      placeholder="Buscar por referência ou texto…"
+      aria-label="Buscar na auditoria"
+    />
     <FilterSelect v-model="aud.userId" label="Usuário" :options="userOptions" />
     <FilterSelect v-model="aud.projectId" label="Projeto" :options="projectOptions" />
     <FilterSelect v-model="aud.action" label="Ação" :options="actionOptions" />
@@ -185,7 +205,7 @@ function openTaskFromDrawer(taskId: string) {
             <td>
               <span class="chip" :class="chipTone(entry.action)">{{ actionLabel(entry.action) }}</span>
             </td>
-            <td>{{ entityLabel(entry.entityType) }}</td>
+            <td class="nowrap">{{ entityText(entry) }}</td>
             <td>{{ (entry.projectId && projectById.get(entry.projectId)?.name) || "—" }}</td>
             <td>
               <span class="src-tag" :class="entry.source">{{ sourceLabel(entry.source) }}</span>

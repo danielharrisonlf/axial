@@ -80,7 +80,7 @@ const roleName = computed(() => props.roles.find((role) => role.id === props.rol
         v-else
         icon="block"
         title="Acesso restrito"
-        :msg="`O perfil “${roleName}” não tem acesso a Central de auditoria. Troque o perfil no canto superior direito para experimentar.`"
+        :msg="`O perfil “${roleName}” não tem acesso à Central de auditoria. Troque o perfil no canto superior direito para experimentar.`"
       >
         <a class="btn" href="#/dashboard">Voltar ao início</a>
       </EmptyState>

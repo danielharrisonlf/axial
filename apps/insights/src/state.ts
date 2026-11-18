@@ -15,6 +15,8 @@ export interface AuditFilters {
   source: string;
   entityType: string;
   period: string;
+  /** Free text: task reference (PCL-110) or words of the summary. */
+  q: string;
   page: number;
 }
 export interface InsightsState {
@@ -34,7 +36,7 @@ const TIP: InjectionKey<ChartTip> = Symbol("insights-tooltip");
 const shared = reactive<InsightsState>({
   meId: "",
   ins: { orgId: "", projectId: "", teamId: "", period: "90" },
-  aud: { userId: "", projectId: "", action: "", source: "", entityType: "", period: "90", page: 0 },
+  aud: { userId: "", projectId: "", action: "", source: "", entityType: "", period: "90", q: "", page: 0 },
 });
 
 export function provideState(): InsightsState {
@@ -51,6 +53,7 @@ export function bindProfile(state: InsightsState, meId: string): void {
   state.ins.teamId = "";
   state.aud.userId = "";
   state.aud.projectId = "";
+  state.aud.q = "";
   state.aud.page = 0;
 }
 

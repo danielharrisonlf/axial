@@ -48,6 +48,12 @@ const after = computed(() => asRecord(props.entry.after));
 const keys = computed(() => [
   ...new Set([...Object.keys(before.value ?? {}), ...Object.keys(after.value ?? {})]),
 ]);
+/** Task reference instead of the internal id; other entities show only their type. */
+const entityRef = computed(() =>
+  props.entry.entityType === "task"
+    ? (props.tasks.find((task) => task.id === props.entry.entityId)?.ref ?? null)
+    : null,
+);
 const isTask = computed(
   () => props.entry.entityType === "task" && props.tasks.some((task) => task.id === props.entry.entityId),
 );
@@ -74,7 +80,17 @@ function fmtVal(key: string, value: unknown): string {
   }
   if (key === "sprintId" && typeof value === "string")
     return props.sprints.find((sprint) => sprint.id === value)?.name ?? value;
-  if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  if (Array.isArray(value)) {
+    if (!value.length) return "—";
+    // acceptance criteria: "✓ texto" / "○ texto"
+    return value
+      .map((item) => {
+        const rec = asRecord(item);
+        return rec && "text" in rec ? `${rec.done ? "✓" : "○"} ${String(rec.text)}` : String(item);
+      })
+      .join("; ");
+  }
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
 }
@@ -137,7 +153,7 @@ onMounted(() => dialog.value?.focus());
         <span class="pl">Papel</span>
         <span>{{ roleName }}</span>
         <span class="pl">Entidade</span>
-        <span>{{ entityLabel(entry.entityType) }}{{ entry.entityId ? ` · ${entry.entityId}` : "" }}</span>
+        <span>{{ entityLabel(entry.entityType) }}{{ entityRef ? ` · ${entityRef}` : "" }}</span>
         <span class="pl">Projeto</span>
         <a v-if="project" :href="`#/projects/${project.id}`">{{ project.name }}</a>
         <span v-else>—</span>
