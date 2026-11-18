@@ -1,29 +1,66 @@
-import { useState } from "react";
+import { type CSSProperties, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import type { Priority, Project, TaskInput } from "../data/types";
 import { useWorkspace } from "../data/workspace";
-import { LABELS, navigate, PRIO_META, PRIORITIES } from "../lib/format";
-import { Field, LabelChip, Overlay, Select, type TaskDefaults } from "./ui";
+import { LABEL_META, LABELS, labelName, navigate, PRIO_META, PRIORITIES, todayLocal } from "../lib/format";
+import { Field, FieldGroup, Overlay, Select, type TaskDefaults } from "./ui";
+
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || "");
+
+/**
+ * Validation on submit: after each attempt with errors, focus moves to the first invalid field
+ * (the Field component marks it with aria-invalid and links the error by aria-describedby).
+ */
+function useFocusFirstInvalid() {
+  const form = useRef<HTMLFormElement>(null);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (attempt) form.current?.querySelector<HTMLElement>("[aria-invalid=true]")?.focus();
+  }, [attempt]);
+  return { form, failed: () => setAttempt((n) => n + 1) };
+}
+/** Ctrl/⌘+Enter submits the form from any field. */
+const submitShortcut = (submit: () => void) => (e: KeyboardEvent<HTMLFormElement>) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    submit();
+  }
+};
+
 export function ProjectModal({ existing, onClose }: { existing?: Project; onClose: () => void }) {
   const { db, me, act } = useWorkspace();
-  const [name, setName] = useState(existing?.name || ""),
-    [key, setKey] = useState(existing?.key || ""),
-    [desc, setDesc] = useState(existing?.desc || ""),
-    [priority, setPriority] = useState<Priority>(existing?.priority || "medium"),
-    [leadId, setLead] = useState(existing?.leadId || me.id),
-    [startDate, setStart] = useState(existing?.startDate || new Date().toISOString().slice(0, 10)),
-    [targetDate, setTarget] = useState(existing?.targetDate || ""),
-    [status, setStatus] = useState<Project["status"]>(existing?.status || "active"),
-    [teamIds, setTeams] = useState(existing?.teamIds || []),
-    [errors, setErrors] = useState<Record<string, string>>({});
+  const orgId = existing?.orgId ?? me.orgId;
+  const [name, setName] = useState(existing?.name || "");
+  const [key, setKey] = useState(existing?.key || "");
+  const [desc, setDesc] = useState(existing?.desc || "");
+  const [priority, setPriority] = useState<Priority>(existing?.priority || "medium");
+  const [leadId, setLead] = useState(existing?.leadId || me.id);
+  const [startDate, setStart] = useState(existing?.startDate || todayLocal());
+  const [targetDate, setTarget] = useState(existing?.targetDate || "");
+  const [status, setStatus] = useState<Project["status"]>(existing?.status || "active");
+  const [teamIds, setTeams] = useState(existing?.teamIds || []);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const { form, failed } = useFocusFirstInvalid();
+  // the current owner always stays an option, so saving without changes keeps it (audit CODE-05)
+  const leads = db.users.filter(
+    (u) =>
+      u.id === existing?.leadId ||
+      (!u.invited && u.orgId === orgId && ["admin", "pm", "lead"].includes(u.roleId)),
+  );
   const submit = () => {
     const er: Record<string, string> = {};
+    const k = key.trim().toUpperCase();
     if (!name.trim()) er.name = "Informe o nome do projeto";
-    if (!existing && !/^[A-Z]{2,4}$/.test(key.trim().toUpperCase())) er.key = "Use 2 a 4 letras";
-    else if (!existing && db.projects.some((p) => p.key === key.trim().toUpperCase()))
-      er.key = "Chave já usada por outro projeto";
-    if (targetDate && targetDate < startDate) er.target = "A entrega deve ser após o início";
+    if (!existing) {
+      if (!/^[A-Z]{2,4}$/.test(k)) er.key = "Use 2 a 4 letras";
+      else if (db.projects.some((p) => p.key === k)) er.key = "Chave já usada por outro projeto";
+    }
+    if (startDate && targetDate && targetDate < startDate)
+      er.target = "A entrega não pode ser anterior ao início";
     setErrors(er);
-    if (Object.keys(er).length) return;
+    if (Object.keys(er).length) {
+      failed();
+      return;
+    }
     const fields = {
       name: name.trim(),
       desc: desc.trim(),
@@ -37,7 +74,7 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
       act.updateProject(existing.id, { ...fields, status });
       onClose();
     } else {
-      const p = act.createProject({ ...fields, key: key.trim().toUpperCase() });
+      const p = act.createProject({ ...fields, key: k });
       if (p) {
         onClose();
         navigate(`/projects/${p.id}`);
@@ -61,25 +98,25 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
       }
     >
       <form
+        ref={form}
         className="form-grid"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           submit();
         }}
       >
-        <Field label="Nome do projeto" wide error={errors.name}>
-          <input
-            className="input"
-            aria-label="Nome do projeto"
-            maxLength={80}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+        <Field label="Nome do projeto" wide required error={errors.name}>
+          <input className="input" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Chave" error={errors.key} hint="2 a 4 letras usadas nos identificadores (ex.: PCL-124)">
+        <Field
+          label="Chave"
+          required={!existing}
+          error={errors.key}
+          hint="2 a 4 letras usadas nos identificadores (ex.: PCL-124)"
+        >
           <input
             className="input mono"
-            aria-label="Chave"
             placeholder="ex.: PCL"
             maxLength={4}
             disabled={!!existing}
@@ -89,7 +126,6 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
         </Field>
         <Field label="Prioridade">
           <Select
-            label="Prioridade"
             value={priority}
             onChange={(v) => setPriority(v as Priority)}
             options={PRIORITIES.map((value) => ({ value, label: PRIO_META[value].label }))}
@@ -97,21 +133,14 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
         </Field>
         <Field label="Responsável">
           <Select
-            label="Responsável"
             value={leadId}
             onChange={setLead}
-            options={db.users
-              .filter(
-                (u) =>
-                  u.orgId === (existing?.orgId ?? me.orgId) && ["admin", "pm", "lead"].includes(u.roleId),
-              )
-              .map((u) => ({ value: u.id, label: u.name }))}
+            options={leads.map((u) => ({ value: u.id, label: u.name }))}
           />
         </Field>
         {existing ? (
           <Field label="Status">
             <Select
-              label="Status"
               value={status}
               onChange={(v) => setStatus(v as Project["status"])}
               options={[
@@ -125,91 +154,99 @@ export function ProjectModal({ existing, onClose }: { existing?: Project; onClos
           <span />
         )}
         <Field label="Início">
-          <input
-            className="input"
-            aria-label="Início"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStart(e.target.value)}
-          />
+          <input className="input" type="date" value={startDate} onChange={(e) => setStart(e.target.value)} />
         </Field>
-        <Field label="Entrega prevista" error={errors.target}>
+        <Field label="Data de entrega" error={errors.target}>
           <input
             className="input"
-            aria-label="Entrega prevista"
             type="date"
+            min={startDate || undefined}
             value={targetDate}
             onChange={(e) => setTarget(e.target.value)}
           />
         </Field>
         <Field label="Descrição" wide>
-          <textarea
-            className="textarea"
-            aria-label="Descrição"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-          />
+          <textarea className="textarea" value={desc} onChange={(e) => setDesc(e.target.value)} />
         </Field>
-        <Field label="Equipes associadas" wide>
-          {db.teams
-            .filter((tm) => tm.orgId === (existing?.orgId ?? me.orgId))
-            .map((tm) => (
-              <label className="check" key={tm.id}>
-                <input
-                  type="checkbox"
-                  checked={teamIds.includes(tm.id)}
-                  onChange={() =>
-                    setTeams(
-                      teamIds.includes(tm.id) ? teamIds.filter((id) => id !== tm.id) : [...teamIds, tm.id],
-                    )
-                  }
-                />
-                <span>
-                  {tm.name}
-                  <span className="subtle"> — {tm.desc}</span>
-                </span>
-              </label>
-            ))}
-        </Field>
+        <FieldGroup label="Equipes associadas" wide>
+          <div>
+            {db.teams
+              .filter((tm) => tm.orgId === orgId)
+              .map((tm) => (
+                <label className="check" key={tm.id}>
+                  <input
+                    type="checkbox"
+                    checked={teamIds.includes(tm.id)}
+                    onChange={() =>
+                      setTeams(
+                        teamIds.includes(tm.id) ? teamIds.filter((id) => id !== tm.id) : [...teamIds, tm.id],
+                      )
+                    }
+                  />
+                  <span>
+                    {tm.name}
+                    <span className="subtle"> — {tm.desc}</span>
+                  </span>
+                </label>
+              ))}
+          </div>
+        </FieldGroup>
         <button type="submit" hidden />
       </form>
     </Overlay>
   );
 }
+
+const labelStyle = (name: string) =>
+  ({ "--lc": LABEL_META[name] ? `var(--cat-${LABEL_META[name].cat})` : "var(--ink-3)" }) as CSSProperties;
+
 export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults; onClose: () => void }) {
-  const { db, visibleProjects, act } = useWorkspace(),
-    projects = visibleProjects.filter((p) => p.status !== "done");
+  const { db, me, can, visibleProjects, act } = useWorkspace();
+  const projects = visibleProjects.filter((p) => p.status !== "done");
+  const membersOf = (projectId: string) => {
+    const project = db.projects.find((p) => p.id === projectId);
+    return db.users.filter(
+      (u) =>
+        !u.invited &&
+        project?.teamIds.some((tid) => db.teams.find((t) => t.id === tid)?.memberIds.includes(u.id)) &&
+        (can("task.assign") || u.id === me.id),
+    );
+  };
+  const firstProject =
+    defaults.projectId && projects.some((p) => p.id === defaults.projectId)
+      ? defaults.projectId
+      : (projects[0]?.id ?? "");
   const [form, setForm] = useState<TaskInput>({
-      projectId: defaults.projectId || projects[0]?.id || "",
-      title: "",
-      type: defaults.type || "task",
-      priority: defaults.priority || "medium",
-      assigneeId: defaults.assigneeId || null,
-      epicId: defaults.epicId || null,
-      sprintId: defaults.sprintId || null,
-      dueDate: defaults.dueDate || null,
-      desc: "",
-      labels: [],
-      status: defaults.status || "todo",
-    }),
-    [accept, setAccept] = useState(""),
-    [error, setError] = useState("");
+    projectId: firstProject,
+    title: "",
+    type: defaults.type || "task",
+    priority: defaults.priority || "medium",
+    assigneeId: defaults.assigneeId || null,
+    epicId: defaults.epicId || null,
+    sprintId: defaults.sprintId || null,
+    dueDate: defaults.dueDate || null,
+    desc: "",
+    labels: [],
+    status: defaults.status || "todo",
+  });
+  const [accept, setAccept] = useState("");
+  const [error, setError] = useState("");
+  const { form: formRef, failed } = useFocusFirstInvalid();
   const update = <K extends keyof TaskInput>(key: K, value: TaskInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
-  const project = db.projects.find((p) => p.id === form.projectId),
-    members = db.users.filter(
-      (u) =>
-        project?.teamIds.some((tid) => db.teams.find((t) => t.id === tid)?.memberIds.includes(u.id)) &&
-        !u.invited,
-    );
+  const members = membersOf(form.projectId);
+  const labels = form.labels ?? [];
   const submit = () => {
     if (!form.title.trim()) {
       setError("Informe o título da tarefa");
+      failed();
       return;
     }
+    setError("");
     const t = act.createTask({
       ...form,
       title: form.title.trim(),
+      desc: form.desc?.trim() ?? "",
       acceptance: accept
         .split("\n")
         .map((s) => s.trim())
@@ -225,17 +262,31 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
       onClose={onClose}
       foot={
         <>
+          <span className="foot-hint" aria-hidden="true">
+            <kbd>{isMac ? "⌘" : "Ctrl"}</kbd>
+            <kbd>Enter</kbd>
+            cria a tarefa
+          </span>
           <button type="button" className="btn" onClick={onClose}>
             Cancelar
           </button>
-          <button type="button" className="btn btn-primary" onClick={submit} disabled={!projects.length}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            aria-keyshortcuts="Control+Enter Meta+Enter"
+            onClick={submit}
+            disabled={!projects.length}
+          >
             Criar tarefa
           </button>
         </>
       }
     >
       <form
+        ref={formRef}
         className="form-grid"
+        noValidate
+        onKeyDown={submitShortcut(submit)}
         onSubmit={(e) => {
           e.preventDefault();
           submit();
@@ -243,18 +294,24 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
       >
         <Field label="Projeto" wide>
           <Select
-            label="Projeto"
             value={form.projectId}
             onChange={(value) =>
-              setForm((f) => ({ ...f, projectId: value, assigneeId: null, epicId: null, sprintId: null }))
+              setForm((f) => ({
+                ...f,
+                projectId: value,
+                assigneeId: membersOf(value).some((u) => u.id === defaults.assigneeId)
+                  ? (defaults.assigneeId ?? null)
+                  : null,
+                epicId: null,
+                sprintId: null,
+              }))
             }
             options={projects.map((p) => ({ value: p.id, label: p.name }))}
           />
         </Field>
-        <Field label="Título" wide error={error}>
+        <Field label="Título" wide required error={error}>
           <input
             className="input"
-            aria-label="Título"
             maxLength={120}
             placeholder="O que precisa ser feito?"
             value={form.title}
@@ -263,7 +320,6 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
         </Field>
         <Field label="Tipo">
           <Select
-            label="Tipo"
             value={form.type || "task"}
             onChange={(v) => update("type", v as TaskInput["type"])}
             options={[
@@ -274,7 +330,6 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
         </Field>
         <Field label="Prioridade">
           <Select
-            label="Prioridade"
             value={form.priority || "medium"}
             onChange={(v) => update("priority", v as Priority)}
             options={PRIORITIES.map((value) => ({ value, label: PRIO_META[value].label }))}
@@ -282,7 +337,6 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
         </Field>
         <Field label="Responsável">
           <Select
-            label="Responsável"
             value={form.assigneeId || ""}
             onChange={(v) => update("assigneeId", v || null)}
             options={[
@@ -293,7 +347,6 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
         </Field>
         <Field label="Épico">
           <Select
-            label="Épico"
             value={form.epicId || ""}
             onChange={(v) => update("epicId", v || null)}
             options={[
@@ -306,7 +359,6 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
         </Field>
         <Field label="Sprint">
           <Select
-            label="Sprint"
             value={form.sprintId || ""}
             onChange={(v) => update("sprintId", v || null)}
             options={[
@@ -317,42 +369,35 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
             ]}
           />
         </Field>
-        <Field label="Vencimento">
+        <Field label="Prazo">
           <input
             className="input"
-            aria-label="Vencimento"
             type="date"
             value={form.dueDate || ""}
             onChange={(e) => update("dueDate", e.target.value || null)}
           />
         </Field>
-        <Field label="Etiquetas" wide>
-          {LABELS.map((l) => (
-            <label
-              key={l}
-              className="check"
-              style={{ display: "inline-flex", marginRight: 10, padding: "2px 0" }}
-            >
-              <input
-                type="checkbox"
-                checked={form.labels?.includes(l) || false}
-                onChange={() =>
-                  update(
-                    "labels",
-                    form.labels?.includes(l)
-                      ? form.labels.filter((x) => x !== l)
-                      : [...(form.labels || []), l],
-                  )
+        <FieldGroup label="Etiquetas" wide>
+          <div className="chip-toggles">
+            {LABELS.map((l) => (
+              <button
+                key={l}
+                type="button"
+                className="label-chip"
+                style={labelStyle(l)}
+                aria-pressed={labels.includes(l)}
+                onClick={() =>
+                  update("labels", labels.includes(l) ? labels.filter((x) => x !== l) : [...labels, l])
                 }
-              />
-              <LabelChip name={l} />
-            </label>
-          ))}
-        </Field>
+              >
+                {labelName(l)}
+              </button>
+            ))}
+          </div>
+        </FieldGroup>
         <Field label="Descrição" wide>
           <textarea
             className="textarea"
-            aria-label="Descrição"
             placeholder="Contexto, requisitos, links…"
             value={form.desc || ""}
             onChange={(e) => update("desc", e.target.value)}
@@ -361,7 +406,6 @@ export function TaskModal({ defaults = {}, onClose }: { defaults?: TaskDefaults;
         <Field label="Critérios de aceite" wide>
           <textarea
             className="textarea"
-            aria-label="Critérios de aceite"
             placeholder="Um critério de aceite por linha"
             value={accept}
             onChange={(e) => setAccept(e.target.value)}
